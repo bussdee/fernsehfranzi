@@ -1,0 +1,60 @@
+#!/usr/bin/python3 -I
+"""FernsehFranzi 3.0 - Chromium-Whitelist als Richtlinie schreiben (läuft als root über sudo).
+
+Liest die vom Server geschriebene Wunschliste aus dem Datenordner, prüft jeden Eintrag streng
+(Domain oder IPv4, keine Pfade) und schreibt daraus
+    /etc/chromium/policies/managed/fernsehfranzi-whitelist.json
+mit URLBlocklist ["*"] + URLAllowlist [Startseite, erlaubte Domains]. Ist die Sperre aus, wird die
+Datei entfernt. Keine Argumente - nichts vom Aufrufer gelangt ungeprüft in die Richtlinie.
+@HOME@ ersetzt install/install.sh.
+"""
+import ipaddress
+import json
+import os
+import re
+import sys
+
+QUELLE = "@HOME@/fernsehfranzi-daten/whitelist-richtlinie.json"
+ZIEL = "/etc/chromium/policies/managed/fernsehfranzi-whitelist.json"
+DOMAIN = re.compile(r"(?=.{1,253}\Z)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\Z")
+
+
+def gueltig(eintrag):
+    eintrag = eintrag[2:] if eintrag.startswith("*.") else eintrag
+    if DOMAIN.match(eintrag):
+        return eintrag
+    try:
+        return str(ipaddress.IPv4Address(eintrag))
+    except ValueError:
+        return None
+
+
+def main():
+    try:
+        with open(QUELLE, encoding="utf-8") as f:
+            wunsch = json.load(f)
+    except (OSError, ValueError) as fehler:
+        print("Wunschliste nicht lesbar: %s" % fehler, file=sys.stderr)
+        return 1
+    if not wunsch.get("aktiv"):
+        if os.path.exists(ZIEL):
+            os.remove(ZIEL)
+        print("Browser-Sperre aus - Richtlinie entfernt.")
+        return 0
+    erlaubt = ["127.0.0.1:8765"]
+    for eintrag in (wunsch.get("domains") or [])[:500]:
+        sauber = gueltig(str(eintrag).strip().lower())
+        if sauber and sauber not in erlaubt:
+            erlaubt.append(sauber)
+    os.makedirs(os.path.dirname(ZIEL), mode=0o755, exist_ok=True)
+    tmp = ZIEL + ".neu"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"URLBlocklist": ["*"], "URLAllowlist": erlaubt}, f, indent=2)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, ZIEL)
+    print("Browser-Sperre an: %d erlaubte Einträge." % len(erlaubt))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

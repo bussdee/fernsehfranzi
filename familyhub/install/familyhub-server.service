@@ -1,0 +1,17 @@
+[Unit]
+Description=FernsehFranzi Family Hub - Games-Server + Ton-Umschaltung (Port 8765)
+After=graphical.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=family
+WorkingDirectory=/home/family/familyhub
+# DISPLAY, XDG_RUNTIME_DIR und D-Bus ermittelt server.py selbst (v2.4):
+# unter labwc/Wayland ist das X-Display XWayland, die Nummer wechselt.
+ExecStart=/usr/bin/python3 /home/family/familyhub/server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target

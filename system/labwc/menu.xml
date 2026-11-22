@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- FernsehFranzi 4.1 - leere Menüs im Kiosk (kein „Beenden“, kein Terminal über das Arbeitsflächen-Menü). -->
+<openbox_menu>
+  <menu id="root-menu" label="" />
+  <menu id="client-menu" label="" />
+  <menu id="client-list-combined-menu" label="" />
+</openbox_menu>

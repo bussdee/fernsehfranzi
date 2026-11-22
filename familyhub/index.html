@@ -1,0 +1,2563 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>FernsehFranzi - Family Hub</title>
+
+<style>
+:root {
+  --bg: #090d14;
+  --text: #f4f6fb;
+  --muted: #9ba8bb;
+  --line: rgba(255,255,255,.11);
+  --focus: #ffffff;
+  /* Bildschirmschoner: nach X Minuten Inaktivität abdunkeln */
+  --idle-minutes: 5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 15% 0%, rgba(54,87,145,.25), transparent 42%),
+    radial-gradient(ellipse at 95% 100%, rgba(83,48,130,.17), transparent 40%),
+    var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Color Emoji", sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+main {
+  width: 100%;
+  height: 100%;
+  max-width: 1600px;
+  margin: auto;
+  padding: 4vh 7vw 2.5vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 3.5vh;
+}
+
+.eyebrow {
+  color: #91a9d2;
+  font-size: clamp(10px, 1vw, 14px);
+  font-weight: 700;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: .4rem 0 0;
+  font-size: clamp(30px, 4.4vw, 58px);
+  line-height: 1;
+  font-weight: 680;
+  letter-spacing: -.055em;
+}
+
+#gruss {
+  color: #9fb4d8;
+  font-size: clamp(13px, 1.5vw, 20px);
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.header-right {
+  text-align: right;
+}
+
+#clock {
+  font-size: clamp(22px, 2.8vw, 40px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em;
+}
+
+#date {
+  color: var(--muted);
+  font-size: clamp(12px, 1.2vw, 16px);
+  margin-top: 4px;
+}
+
+#termin {
+  display: none;
+  margin-top: 10px;
+  margin-left: auto;
+  width: fit-content;
+  background: rgba(255,200,90,.13);
+  border: 1px solid rgba(255,200,90,.38);
+  color: #ffd48a;
+  padding: 6px 15px;
+  border-radius: 999px;
+  font-size: clamp(12px, 1.2vw, 16px);
+  font-weight: 650;
+}
+
+/* ------------------------------------------------- Kacheln (Apps) */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.6vh 1.5vw;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: clamp(120px, 17.5vh, 190px);
+  padding: clamp(18px, 2.4vw, 30px);
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  color: var(--text);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  outline: none;
+  background: #171e2a;
+  transition: transform .16s ease, border-color .16s ease;
+}
+
+.tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: .95;
+  transition: opacity .16s ease;
+}
+
+.tile::after {
+  content: "";
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  right: -60px;
+  top: -70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  filter: blur(2px);
+  z-index: -1;
+}
+
+.tile.selected {
+  border-color: var(--focus);
+  transform: scale(1.025);
+  box-shadow: 0 12px 40px rgba(0,0,0,.28);
+}
+
+.plex::before    { background: linear-gradient(125deg, #30251a, #a65c20 65%, #e3a34b); }
+.games::before   { background: linear-gradient(125deg, #172c36, #176b70 65%, #40b7a3); }
+.family::before  { background: linear-gradient(125deg, #20243b, #414d86 65%, #858bd3); }
+.books::before   { background: linear-gradient(125deg, #35233c, #824e86 65%, #c17eaa); }
+
+.tile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.icon {
+  font-size: clamp(30px, 3.8vw, 50px);
+  line-height: 1;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.2));
+}
+
+.tile-number {
+  color: rgba(255,255,255,.65);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .15em;
+}
+
+.name {
+  font-size: clamp(20px, 2.3vw, 32px);
+  font-weight: 750;
+  letter-spacing: .015em;
+}
+
+.desc {
+  color: rgba(255,255,255,.78);
+  font-size: clamp(12px, 1.3vw, 16px);
+  margin-top: 4px;
+}
+
+/* ------------------------------------------------- Spielzimmer */
+.spielzimmer {
+  width: 100%;
+  max-width: 1200px;
+  margin: 2.6vh auto 0;
+}
+
+.sz-kopf {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 1.2vh;
+}
+
+.sz-label {
+  color: #9fb4d8;
+  font-size: clamp(12px, 1.3vw, 17px);
+  font-weight: 750;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.sz-hinweis {
+  color: #5f6d81;
+  font-size: clamp(11px, 1vw, 14px);
+  font-weight: 600;
+}
+
+.sz-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1vw;
+}
+
+.sz {
+  position: relative;
+  overflow: hidden;
+  height: clamp(88px, 13.5vh, 128px);
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  padding: 12px 10px 10px;
+  color: var(--text);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  background: #171e2a;
+  outline: none;
+  transition: transform .15s ease, border-color .15s ease;
+}
+
+.sz::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: .92;
+}
+
+.sz.selected {
+  border-color: var(--focus);
+  transform: scale(1.045);
+  box-shadow: 0 10px 32px rgba(0,0,0,.3);
+}
+
+/* Anschlag-Feedback: Pfeil am Rand entlang -> kurzer Stups in die
+   gedrueckte Richtung + dumpfer Ton ("weiter geht es nicht").
+   "translate" statt "transform", damit die Auswahl-Skalierung
+   (.selected) unberuehrt bleibt. */
+.tile.anschlag,
+.sz.anschlag {
+  animation: anschlag .22s ease;
+}
+
+@keyframes anschlag {
+  35% { translate: var(--stoss-x, 0) var(--stoss-y, 0); }
+}
+
+.sz-snake::before   { background: linear-gradient(135deg, #0e3a33, #1d7a5e 68%, #35c28f); }
+.sz-memory::before  { background: linear-gradient(135deg, #3a1740, #8a3b8a 68%, #d16fc0); }
+.sz-ttt::before     { background: linear-gradient(135deg, #3d3010, #a8791c 68%, #f0c245); }
+.sz-mal::before     { background: linear-gradient(135deg, #2b1b47, #6d3fa8 68%, #b08ce8); }
+.sz-witz::before    { background: linear-gradient(135deg, #40260f, #b06520 68%, #f0a04b); }
+.sz-galerie::before { background: linear-gradient(135deg, #122b47, #2a6b9e 68%, #5cb3d6); }
+
+.sz-icon {
+  font-size: clamp(24px, 3.2vh, 38px);
+  line-height: 1;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.25));
+}
+
+.sz-name {
+  font-size: clamp(13px, 1.35vw, 18px);
+  font-weight: 750;
+  text-align: center;
+}
+
+.sz-key {
+  position: absolute;
+  top: 8px;
+  right: 11px;
+  color: rgba(255,255,255,.62);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+/* ------------------------------------------------- Footer */
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #78869a;
+  font-size: clamp(11px, 1vw, 14px);
+  margin-top: auto;
+  padding-top: 2.2vh;
+}
+
+.footer-brand {
+  letter-spacing: .18em;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------- Overlays (Spiele) */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 10, 16, .97);
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.ov-box {
+  width: min(96vw, 1180px);
+  max-height: 96vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+
+.ov-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.ov-kopf h2 {
+  margin: 0;
+  font-size: clamp(22px, 2.6vw, 34px);
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.ov-hinweis {
+  color: #8fa0b8;
+  font-size: clamp(12px, 1.2vw, 16px);
+  text-align: right;
+}
+
+.ov-mitte {
+  display: grid;
+  place-items: center;
+}
+
+.ov-mitte canvas {
+  display: block;
+  max-width: min(96vw, 1180px);
+  max-height: 62vh;
+  width: auto;
+  height: auto;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: #10151f;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  color: #c7d0dd;
+  font-size: clamp(14px, 1.5vw, 19px);
+  font-weight: 600;
+  min-height: 1.5em;
+}
+
+.status .stark {
+  color: #fff;
+}
+
+/* Memory */
+.mem-gitter {
+  display: grid;
+  grid-template-columns: repeat(4, clamp(90px, 15vh, 130px));
+  gap: clamp(8px, 1.2vh, 14px);
+  justify-content: center;
+}
+
+.mem-karte {
+  position: relative;
+  height: clamp(90px, 15vh, 130px);
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  background: #1a2230;
+  font-size: clamp(42px, 7vh, 62px);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform .13s ease, border-color .13s ease;
+  padding: 0;
+}
+
+.mem-karte .inhalt {
+  grid-area: 1 / 1;
+  visibility: hidden;
+}
+
+.mem-karte .rueck {
+  grid-area: 1 / 1;
+  color: #3d4a5e;
+  font-weight: 800;
+  font-size: clamp(30px, 5vh, 44px);
+  visibility: visible;
+}
+
+.mem-karte.offen .inhalt,
+.mem-karte.treffer .inhalt {
+  visibility: visible;
+}
+
+.mem-karte.offen .rueck,
+.mem-karte.treffer .rueck {
+  visibility: hidden;
+}
+
+.mem-karte.zeiger {
+  border-color: #fff;
+  transform: scale(1.06);
+}
+
+.mem-karte.treffer {
+  border-color: #4ade80;
+  background: rgba(74, 222, 128, .12);
+  transform: scale(.98);
+}
+
+/* Drei Gewinnt */
+.ttt-gitter {
+  display: grid;
+  grid-template-columns: repeat(3, clamp(96px, 17vh, 150px));
+  gap: clamp(8px, 1.4vh, 14px);
+  justify-content: center;
+}
+
+.ttt-feld {
+  height: clamp(96px, 17vh, 150px);
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  background: #1a2230;
+  font-size: clamp(48px, 9vh, 76px);
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform .13s ease, border-color .13s ease;
+}
+
+.ttt-feld.zeiger {
+  border-color: #fff;
+  transform: scale(1.05);
+}
+
+.ttt-feld.sieg {
+  border-color: #4ade80;
+  background: rgba(74, 222, 128, .16);
+}
+
+/* Malen */
+.palette {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.farbbutton {
+  width: clamp(40px, 6.4vh, 54px);
+  height: clamp(40px, 6.4vh, 54px);
+  border-radius: 13px;
+  border: 2px solid rgba(255,255,255,.25);
+  color: rgba(255,255,255,.85);
+  font-size: clamp(12px, 1.4vh, 15px);
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  text-shadow: 0 1px 3px rgba(0,0,0,.55);
+  transition: transform .12s ease, border-color .12s ease;
+}
+
+.farbbutton.aktiv {
+  border-color: #fff;
+  transform: scale(1.12);
+}
+
+/* Witz */
+.witz-karte {
+  max-width: 940px;
+  text-align: center;
+  padding: 4vh 5vw;
+}
+
+.witz-icon {
+  font-size: clamp(48px, 8vh, 78px);
+  line-height: 1;
+  margin-bottom: 3vh;
+}
+
+.witz-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2.2vh;
+}
+
+.witz-frage {
+  font-size: clamp(22px, 3vw, 40px);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.witz-antwort {
+  color: #ffd48a;
+  font-size: clamp(19px, 2.5vw, 33px);
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.witz-karte .status {
+  justify-content: center;
+  margin-top: 3.4vh;
+  color: #8fa0b8;
+}
+
+/* Galerie */
+.gal-gitter {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.gal-item {
+  height: clamp(84px, 13vh, 124px);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  place-items: stretch;
+  background: #141a26;
+  padding: 0;
+  cursor: pointer;
+  transition: transform .13s ease, border-color .13s ease;
+}
+
+.gal-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gal-item.zeiger {
+  border-color: #fff;
+  transform: scale(1.05);
+}
+
+.gal-leer {
+  color: #9ba8bb;
+  font-size: clamp(17px, 2vw, 25px);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.6;
+  padding: 6vh 4vw;
+}
+
+.gal-gross {
+  text-align: center;
+}
+
+.gal-gross img {
+  max-width: 92vw;
+  max-height: 68vh;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+}
+
+/* ------------------------------------------------- Meldung & Co */
+#notice {
+  position: fixed;
+  left: 50%;
+  bottom: 7vh;
+  transform: translateX(-50%);
+  background: rgba(30,40,56,.96);
+  border: 1px solid rgba(255,255,255,.18);
+  color: white;
+  padding: 16px 26px;
+  border-radius: 15px;
+  display: none;
+  font-size: 17px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  text-align: center;
+  max-width: 85vw;
+  z-index: 60;
+}
+
+/* Bildschirmschoner: schwarzer Schleier nach Inaktivität */
+#veil {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 3s ease;
+  z-index: 80;
+}
+
+#veil.on {
+  opacity: 1;
+}
+
+/* Konfetti über allem außer Schleier */
+#konfetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 70;
+}
+
+/* Winterschnee: nur Dezember bis Februar, nur auf der Startseite */
+#schnee {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+#schnee i {
+  position: absolute;
+  top: -4vh;
+  border-radius: 50%;
+  background: #fff;
+  animation: fallen linear infinite;
+}
+
+@keyframes fallen {
+  to { transform: translate(var(--wind, 0px), 110vh); }
+}
+
+body:not(.winter) #schnee,
+body.offen #schnee {
+  display: none;
+}
+
+/* ------------------------------------------------* Kleine Bildschirme */
+@media (max-width: 860px) {
+  .sz-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gal-gitter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-height: 700px) {
+  main {
+    padding-top: 2.5vh;
+  }
+
+  header {
+    margin-bottom: 2vh;
+  }
+
+  .tile {
+    min-height: 104px;
+  }
+
+  .sz {
+    height: 76px;
+  }
+}
+</style>
+</head>
+
+<body>
+<main>
+
+  <header>
+    <div>
+      <div class="eyebrow" id="untertitel">Home Entertainment</div>
+      <h1>FernsehFranzi</h1>
+      <div id="gruss">Hallo!</div>
+    </div>
+
+    <div class="header-right">
+      <div id="clock">--:--</div>
+      <div id="date">Willkommen zu Hause</div>
+      <div id="termin"></div>
+    </div>
+  </header>
+
+  <section class="grid" aria-label="Startmenü">
+
+    <a class="tile plex" id="plex" tabindex="-1"
+       href="#" data-link="plex">
+      <div class="tile-top">
+        <div class="icon">&#9635;</div>
+        <div class="tile-number">01</div>
+      </div>
+      <div>
+        <div class="name">PLEX</div>
+        <div class="desc">Filme - Serien - Unterhaltung</div>
+      </div>
+    </a>
+
+    <a class="tile games" id="games" tabindex="-1"
+       href="#" data-aktion="retropie">
+      <div class="tile-top">
+        <div class="icon">&#8855;</div>
+        <div class="tile-number">02</div>
+      </div>
+      <div>
+        <div class="name">GAMES</div>
+        <div class="desc">Die Klassiker von früher</div>
+      </div>
+    </a>
+
+    <a class="tile family" id="family" tabindex="-1"
+       href="#" data-link="familie">
+      <div class="tile-top">
+        <div class="icon">&#8962;</div>
+        <div class="tile-number">03</div>
+      </div>
+      <div>
+        <div class="name">FAMILIE</div>
+        <div class="desc">Unser Zuhause auf einen Blick</div>
+      </div>
+    </a>
+
+    <a class="tile books" id="books" tabindex="-1"
+       href="#" data-link="buecher">
+      <div class="tile-top">
+        <div class="icon">&#9639;</div>
+        <div class="tile-number">04</div>
+      </div>
+      <div>
+        <div class="name">KAVITA</div>
+        <div class="desc">Unsere E-Book-Bibliothek</div>
+      </div>
+    </a>
+
+  </section>
+
+  <section class="spielzimmer" aria-label="Spielzimmer">
+    <div class="sz-kopf">
+      <span class="sz-label">Spielzimmer</span>
+      <span class="sz-hinweis">Tasten 5 - 0 &nbsp;&middot;&nbsp; oder Pfeile / Controller</span>
+    </div>
+    <div class="sz-grid">
+
+      <button class="sz sz-snake" id="f-snake" type="button" tabindex="-1">
+        <span class="sz-icon">&#128013;</span>
+        <span class="sz-name">Snake</span>
+        <span class="sz-key">5</span>
+      </button>
+
+      <button class="sz sz-memory" id="f-memory" type="button" tabindex="-1">
+        <span class="sz-icon">&#129504;</span>
+        <span class="sz-name">Memory</span>
+        <span class="sz-key">6</span>
+      </button>
+
+      <button class="sz sz-ttt" id="f-ttt" type="button" tabindex="-1">
+        <span class="sz-icon">&#11088;</span>
+        <span class="sz-name">Drei Gewinnt</span>
+        <span class="sz-key">7</span>
+      </button>
+
+      <button class="sz sz-mal" id="f-mal" type="button" tabindex="-1">
+        <span class="sz-icon">&#127912;</span>
+        <span class="sz-name">Malen</span>
+        <span class="sz-key">8</span>
+      </button>
+
+      <button class="sz sz-witz" id="f-witz" type="button" tabindex="-1">
+        <span class="sz-icon">&#128516;</span>
+        <span class="sz-name">Witz</span>
+        <span class="sz-key">9</span>
+      </button>
+
+      <button class="sz sz-galerie" id="f-galerie" type="button" tabindex="-1">
+        <span class="sz-icon">&#128444;&#65039;</span>
+        <span class="sz-name">Galerie</span>
+        <span class="sz-key">0</span>
+      </button>
+
+    </div>
+  </section>
+
+  <footer>
+    <span>1-4 Apps &nbsp;&middot;&nbsp; 5-0 Spielzimmer &nbsp;&middot;&nbsp; Pfeile/Steuerkreuz Navigieren &nbsp;&middot;&nbsp; OK &Ouml;ffnen &nbsp;&middot;&nbsp; STOP oder B Zur&uuml;ck &nbsp;&middot;&nbsp; ROT Ton HDMI &nbsp;&middot;&nbsp; GR&Uuml;N Ton Klinke</span>
+    <span class="footer-brand" id="version">FAMILY HUB</span>
+  </footer>
+
+</main>
+
+<!-- ============================================== Overlays: Spiele -->
+
+<section class="overlay" id="ov-snake" hidden>
+  <div class="ov-box">
+    <div class="ov-kopf">
+      <h2>&#128013; Snake</h2>
+      <span class="ov-hinweis">Zur&uuml;ck: STOP, 0 oder B &middot; Pause: P &middot; Lenken: Pfeile/Steuerkreuz</span>
+    </div>
+    <div class="ov-mitte">
+      <canvas id="snake-canvas" width="880" height="520"></canvas>
+    </div>
+    <div class="status" id="snake-status"></div>
+  </div>
+</section>
+
+<section class="overlay" id="ov-memory" hidden>
+  <div class="ov-box">
+    <div class="ov-kopf">
+      <h2>&#129504; Memory</h2>
+      <span class="ov-hinweis">Zur&uuml;ck: STOP, 0 oder B</span>
+    </div>
+    <div class="mem-gitter" id="mem-gitter"></div>
+    <div class="status" id="mem-status"></div>
+  </div>
+</section>
+
+<section class="overlay" id="ov-ttt" hidden>
+  <div class="ov-box">
+    <div class="ov-kopf">
+      <h2>&#11088; Drei Gewinnt</h2>
+      <span class="ov-hinweis">Zur&uuml;ck: STOP, 0 oder B</span>
+    </div>
+    <div class="ttt-gitter" id="ttt-gitter">
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 1"></button>
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 2"></button>
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 3"></button>
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 4"></button>
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 5"></button>
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 6"></button>
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 7"></button>
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 8"></button>
+      <button class="ttt-feld" type="button" tabindex="-1" aria-label="Feld 9"></button>
+    </div>
+    <div class="status" id="ttt-status"></div>
+  </div>
+</section>
+
+<section class="overlay" id="ov-malen" hidden>
+  <div class="ov-box">
+    <div class="ov-kopf">
+      <h2>&#127912; Malen</h2>
+      <span class="ov-hinweis">Zur&uuml;ck: STOP, 0 oder B &middot; Farben: 1-9 oder L1/R1 &middot; Speichern: S oder X &middot; Alles weg: C oder Y</span>
+    </div>
+    <div class="ov-mitte">
+      <canvas id="mal-canvas" width="936" height="540"></canvas>
+    </div>
+    <div class="palette" id="palette"></div>
+    <div class="status" id="mal-status"></div>
+  </div>
+</section>
+
+<section class="overlay" id="ov-witz" hidden>
+  <div class="witz-karte">
+    <div class="witz-icon">&#128516;</div>
+    <div class="witz-text" id="witz-text"></div>
+    <div class="status">OK: N&auml;chster Witz &nbsp;&middot;&nbsp; Zur&uuml;ck: STOP, 0 oder B</div>
+  </div>
+</section>
+
+<section class="overlay" id="ov-galerie" hidden>
+  <div class="ov-box">
+    <div class="ov-kopf">
+      <h2>&#128444;&#65039; Galerie</h2>
+      <span class="ov-hinweis">Zur&uuml;ck: STOP, 0 oder B &middot; OK: Bild gro&szlig;</span>
+    </div>
+    <div id="gal-inhalt"></div>
+    <div class="status" id="gal-status"></div>
+  </div>
+</section>
+
+<div id="notice" role="status"></div>
+<div id="schnee" aria-hidden="true"></div>
+<canvas id="konfetti" aria-hidden="true"></canvas>
+<div id="veil"></div>
+
+<!-- Persönliche Werte (Name, Adressen) – nicht im Repository.
+     Vorlage: config/beispiel/einstellungen.js -->
+<script src="config/einstellungen.js"></script>
+<script>
+"use strict";
+
+/* ================================================== Konfiguration
+   Persönliches (Name, Untertitel, Adressen der Apps) steht in
+   config/einstellungen.js (nicht im Repository). Mehr im README.md. */
+const EIGENE = window.FERNSEHFRANZI_EINSTELLUNGEN || {};
+
+const CONFIG = {
+  // Name des Kindes für die Begrüßung, aus config/einstellungen.js.
+  // Leer ("") ergibt eine Begrüßung ohne Namen.
+  name: typeof EIGENE.name === "string" ? EIGENE.name : "",
+
+  // Zusatz hinter "Home Entertainment" im Kopf, z. B. "Lisas Edition".
+  untertitel: typeof EIGENE.untertitel === "string" ? EIGENE.untertitel : "",
+
+  // Adressen der App-Kacheln (plex, familie, buecher), aus config/einstellungen.js.
+  // Fehlt eine, zeigt die Kachel einen freundlichen Hinweis statt zu öffnen.
+  links: (EIGENE.links && typeof EIGENE.links === "object") ? EIGENE.links : {},
+
+  // Apps (Plex, Familie, Kavita): false = im selben Vollbild-Fenster (sicher
+  // randvoll; EXIT schliesst das Fenster, der Hub startet nach ~5 s neu).
+  // true = als eigenes Popup-Fenster (EXIT kehrt sofort zurueck, aber unter
+  // labwc evtl. mit Fensterrahmen - nur ausprobieren, nicht noetig).
+  appsAlsPopup: false,
+
+  // Der Games-Server auf demselben Pi - braucht die Galerie und
+  // das Speichern aus dem Malen-Modus.
+  server: "http://127.0.0.1:8765",
+
+  // Geburtstage als "MM-TT", aus config/einstellungen.js. Erscheint in der
+  // Ecke, sobald der Tag höchstens 60 Tage entfernt ist.
+  geburtstage: Array.isArray(EIGENE.geburtstage) ? EIGENE.geburtstage : [],
+
+  // Witze für den Witz-Modus. Eigene einfach dazuschreiben.
+  witze: [
+    ["Was macht ein Pirat am Computer?", "Er drückt ständig die Enter-Taste."],
+    ["Warum können Geister so schlecht lügen?", "Weil man sie so leicht durchschaut."],
+    ["Was ist grün und klopft an die Tür?", "Ein Klopfsalat."],
+    ["Was ist ein Keks unter einem Baum?", "Ein schattiges Plätzchen."],
+    ["Was ist braun und schwimmt im Wasser?", "Ein U-Brot."],
+    ["Warum haben Bienen so klebrige Haare?", "Weil sie einen Honigkamm benutzen."],
+    ["Was sagt ein Krokodil, das einen Clown gefressen hat?", "Schmeckt irgendwie komisch."],
+    ["Was macht ein Clown im Büro?", "Faxen."],
+    ["Wie nennt man einen Bumerang, der nicht zurückkommt?", "Stock."],
+    ["Treffen sich zwei Magnete. Sagt der eine:", "\u201EWas soll ich heute bloß anziehen?\u201C"],
+    ["Was sitzt auf einem Baum und winkt?", "Ein Huhu!"],
+    ["Warum gehen Ameisen nicht in die Kirche?", "Weil sie In-Sekten sind."],
+    ["Was sagt der große Stift zum kleinen Stift?", "\u201EWachs mal, Stift!\u201C"],
+    ["Kommt ein Pferd in eine Bar. Fragt der Barkeeper:", "\u201EWarum machst du so ein langes Gesicht?\u201C"],
+    ["Was ist gelb und kann nicht schwimmen?", "Ein Bagger. Er hat nur einen Arm."],
+    ["Was trinkt ein Frosch am liebsten?", "Kroko-Cola."],
+  ],
+};
+
+/* ================================================== Helfer */
+const $ = (id) => document.getElementById(id);
+
+/* Persönliche Werte aus config/einstellungen.js in die Seite übernehmen. */
+function wendeEinstellungenAn() {
+  if (CONFIG.untertitel) {
+    $("untertitel").textContent = "Home Entertainment \u00b7 " + CONFIG.untertitel;
+  }
+  for (const tile of document.querySelectorAll(".tile[data-link]")) {
+    const ziel = CONFIG.links[tile.dataset.link];
+    if (typeof ziel === "string" && /^https?:\/\//.test(ziel)) {
+      tile.href = ziel;
+    } else {
+      tile.dataset.coming = "Diese App ist noch nicht eingerichtet. Bitte Mama oder Papa fragen.";
+    }
+  }
+}
+wendeEinstellungenAn();
+
+function speichere(schluessel, wert) {
+  try { localStorage.setItem(schluessel, String(wert)); } catch (e) { /* Privatmodus */ }
+}
+
+function lese(schluessel, ersatz) {
+  try {
+    const wert = localStorage.getItem(schluessel);
+    return wert === null ? ersatz : wert;
+  } catch (e) { return ersatz; }
+}
+
+let noticeTimer;
+
+function showNotice(message) {
+  const notice = $("notice");
+  notice.textContent = message;
+  notice.style.display = "block";
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => { notice.style.display = "none"; }, 2800);
+}
+
+/* ================================================== Sound (WebAudio)
+   Kleine synthetische Töne - keine Dateien nötig. Mit Taste M
+   abschaltbar (bleibt gespeichert). */
+let audioKontext = null;
+let tonAn = lese("fh-ton", "an") === "an";
+
+function kontext() {
+  if (!audioKontext) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    audioKontext = new AudioCtx();
+  }
+  if (audioKontext.state === "suspended") audioKontext.resume();
+  return audioKontext;
+}
+
+function ton(freq, dauer = .09, typ = "sine", vol = .12, verz = 0) {
+  if (!tonAn) return;
+  try {
+    const a = kontext();
+    if (!a) return;
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.type = typ;
+    o.frequency.value = freq;
+    o.connect(g);
+    g.connect(a.destination);
+    const t0 = a.currentTime + verz;
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + .012);
+    g.gain.exponentialRampToValueAtTime(.0001, t0 + dauer);
+    o.start(t0);
+    o.stop(t0 + dauer + .05);
+  } catch (e) { /* Ton darf nie ein Spiel kaputt machen */ }
+}
+
+const sMove    = () => ton(480, .03, "sine", .05);
+const sOpen    = () => { ton(660, .06, "triangle", .1); ton(880, .07, "triangle", .1, .07); };
+const sOk      = () => ton(880, .07, "triangle", .12);
+const sFlip    = () => ton(560, .05, "sine", .1);
+const sHerz    = (n) => ton(700 + Math.min(n, 20) * 14, .08, "triangle", .12);
+const sSieg    = () => [523, 659, 784, 1047].forEach((f, i) => ton(f, .15, "triangle", .13, i * .09));
+const sFehler  = () => ton(180, .28, "sawtooth", .09);
+const sSpeicher= () => { ton(700, .08, "triangle", .12); ton(950, .1, "triangle", .12, .09); };
+const sFarbe   = () => ton(520, .04, "sine", .07);
+
+function tonUmschalten() {
+  tonAn = !tonAn;
+  speichere("fh-ton", tonAn ? "an" : "aus");
+  showNotice(tonAn ? "Ton an" : "Ton aus");
+  if (tonAn) sOk();
+}
+
+/* ================================================== Konfetti */
+const konfettiCanvas = $("konfetti");
+const konfettiCtx = konfettiCanvas.getContext("2d");
+let konfettiTeilchen = [];
+let konfettiLaeuft = false;
+const KONFETTI_FARBEN = ["#e5484d", "#f76b15", "#ffc53d", "#46a758", "#3eaafc", "#8e6ff0", "#f04fa0"];
+
+function konfettiGroesse() {
+  konfettiCanvas.width = window.innerWidth;
+  konfettiCanvas.height = window.innerHeight;
+}
+
+window.addEventListener("resize", konfettiGroesse);
+konfettiGroesse();
+
+function konfetti(anzahl = 160) {
+  for (let i = 0; i < anzahl; i++) {
+    konfettiTeilchen.push({
+      x: Math.random() * konfettiCanvas.width,
+      y: -20 - Math.random() * konfettiCanvas.height * .3,
+      vx: (Math.random() - .5) * 3.6,
+      vy: 2 + Math.random() * 3.4,
+      groesse: 6 + Math.random() * 7,
+      farbe: KONFETTI_FARBEN[(Math.random() * KONFETTI_FARBEN.length) | 0],
+      dreh: Math.random() * 360,
+      drehtempo: (Math.random() - .5) * 13,
+      rund: Math.random() < .35,
+    });
+  }
+  if (!konfettiLaeuft) {
+    konfettiLaeuft = true;
+    requestAnimationFrame(konfettiTick);
+  }
+}
+
+function konfettiTick() {
+  const w = konfettiCanvas.width, h = konfettiCanvas.height;
+  konfettiCtx.clearRect(0, 0, w, h);
+  konfettiTeilchen = konfettiTeilchen.filter((t) => t.y < h + 30);
+
+  if (!konfettiTeilchen.length) {
+    konfettiLaeuft = false;
+    return;
+  }
+
+  for (const t of konfettiTeilchen) {
+    t.x += t.vx;
+    t.y += t.vy;
+    t.vy += .045;
+    t.dreh += t.drehtempo;
+    konfettiCtx.save();
+    konfettiCtx.translate(t.x, t.y);
+    konfettiCtx.rotate((t.dreh * Math.PI) / 180);
+    konfettiCtx.fillStyle = t.farbe;
+    if (t.rund) {
+      konfettiCtx.beginPath();
+      konfettiCtx.arc(0, 0, t.groesse * .45, 0, 7);
+      konfettiCtx.fill();
+    } else {
+      konfettiCtx.fillRect(-t.groesse / 2, -t.groesse / 2, t.groesse, t.groesse * .62);
+    }
+    konfettiCtx.restore();
+  }
+  requestAnimationFrame(konfettiTick);
+}
+
+/* ================================================== Uhr, Gruß, Termin */
+function grussText(stunde) {
+  if (stunde < 5)  return "Gute Nacht";
+  if (stunde < 11) return "Guten Morgen";
+  if (stunde < 14) return "Hallo";
+  if (stunde < 18) return "Schönen Nachmittag";
+  if (stunde < 22) return "Guten Abend";
+  return "Gute Nacht";
+}
+
+function terminText() {
+  if (!CONFIG.geburtstage.length) return "";
+  const jetzt = new Date();
+  const heute = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate());
+  let bester = null;
+
+  for (const g of CONFIG.geburtstage) {
+    const teile = g.tag.split("-");
+    const geb = new Date(jetzt.getFullYear(), Number(teile[0]) - 1, Number(teile[1]));
+    if (geb < heute) geb.setFullYear(jetzt.getFullYear() + 1);
+    const tage = Math.round((geb - heute) / 86400000);
+    if (bester === null || tage < bester.tage) bester = { name: g.name, tage };
+  }
+
+  if (!bester || bester.tage > 60) return "";
+  if (bester.tage === 0) return "\u{1F382} Heute hat " + bester.name + " Geburtstag! \u{1F389}";
+  if (bester.tage === 1) return "\u{1F382} Morgen hat " + bester.name + " Geburtstag!";
+  return "\u{1F382} Noch " + bester.tage + " Tage bis " + bester.name + "s Geburtstag";
+}
+
+function updateClock() {
+  const now = new Date();
+
+  $("clock").textContent =
+    new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(now);
+
+  $("date").textContent =
+    new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "2-digit", month: "long" }).format(now);
+
+  const gruss = grussText(now.getHours()) + (CONFIG.name ? ", " + CONFIG.name + "!" : "!");
+  $("gruss").textContent = gruss;
+
+  const termin = $("termin");
+  const text = terminText();
+  termin.textContent = text;
+  termin.style.display = text ? "inline-block" : "none";
+}
+
+/* ================================================== Navigation
+   Raeumliche Steuerung: Die Kacheln liegen optisch in einem Raster -
+   Apps 2x2, Spielzimmer 6 nebeneinander (auf schmalen Bildschirmen
+   3x2). Fest verdrahtete Zeilen geraten da daneben: v2.2 behandelte
+   die 4 Apps als EINE Zeile - "rechts" von Games landete so auf
+   Familie (visuell unten links!), "hoch" von Familie ging ins Leere.
+   v2.3 sucht den Nachbarn deshalb geometrisch: Die Pfeiltaste waehlt
+   die Kachel, die in dieser Richtung am naechsten liegt UND seitlich
+   neben der aktuellen steht. Das stimmt bei jedem Layout und waechst
+   mit, wenn spaeter Kacheln dazukommen. */
+const hauptTiles = [...document.querySelectorAll(".tile")];
+const spassTiles = [...document.querySelectorAll(".sz")];
+const ALLE_KACHELN = [...hauptTiles, ...spassTiles];
+const SPASS_IDS = ["snake", "memory", "ttt", "malen", "witz", "galerie"];
+
+let gewaehlt = hauptTiles[0];   // aktuell markierte Kachel
+
+function markiere(el, still) {
+  if (!el) return;
+  const veraendert = el !== gewaehlt;
+  gewaehlt = el;
+  for (const kachel of ALLE_KACHELN) {
+    kachel.classList.toggle("selected", kachel === el);
+  }
+  if (veraendert && !still) sMove();
+}
+
+/* Nachbar-Suche: Der Kandidat muss klar in der Richtung liegen und
+   sich auf der Querachse mit der aktuellen Kachel ueberlappen
+   (Toleranz 8 px). Diagonal versetzte Fernziele fallen damit raus -
+   genau die machten die Pfeile unvorhersehbar. Unter den gueltigen
+   Kandidaten gewinnt der mit den wenigsten Punkten: Abstand
+   geradeaus plus das 2,5-fache des seitlichen Versatzes. */
+function navigiere(richtung) {
+  const von = gewaehlt.getBoundingClientRect();
+  const vx = von.left + von.width / 2;
+  const vy = von.top + von.height / 2;
+  let bester = null;
+  let bestePunkte = Infinity;
+
+  for (const kachel of ALLE_KACHELN) {
+    if (kachel === gewaehlt) continue;
+    const zu = kachel.getBoundingClientRect();
+    const dx = (zu.left + zu.width / 2) - vx;
+    const dy = (zu.top + zu.height / 2) - vy;
+
+    let geradeaus, quer, querPlatz;
+    if (richtung === "rechts") {
+      if (dx <= 4) continue;
+      geradeaus = dx; quer = Math.abs(dy);
+      querPlatz = (von.height + zu.height) / 2 + 8;
+    } else if (richtung === "links") {
+      if (dx >= -4) continue;
+      geradeaus = -dx; quer = Math.abs(dy);
+      querPlatz = (von.height + zu.height) / 2 + 8;
+    } else if (richtung === "runter") {
+      if (dy <= 4) continue;
+      geradeaus = dy; quer = Math.abs(dx);
+      querPlatz = (von.width + zu.width) / 2 + 8;
+    } else {   /* hoch */
+      if (dy >= -4) continue;
+      geradeaus = -dy; quer = Math.abs(dx);
+      querPlatz = (von.width + zu.width) / 2 + 8;
+    }
+
+    if (quer > querPlatz) continue;   // zu stark diagonal versetzt
+
+    const punkte = geradeaus + quer * 2.5;
+    if (punkte < bestePunkte) { bestePunkte = punkte; bester = kachel; }
+  }
+
+  if (bester) markiere(bester);
+  else anschlag(richtung);
+}
+
+/* Rand erreicht: dumpfer Ton + kurzer Stups in die gedrueckte
+   Richtung. Klare Antwort auf "geht hier noch weiter?" - ohne
+   Sprung ins Ungefaehre. */
+const STOSS_WEITE = { rechts: [7, 0], links: [-7, 0], runter: [0, 7], hoch: [0, -7] };
+
+let anschlagTimer = 0;
+
+function anschlag(richtung) {
+  ton(140, .07, "square", .05);
+  const ziel = gewaehlt;
+  const [x, y] = STOSS_WEITE[richtung];
+  ziel.style.setProperty("--stoss-x", x + "px");
+  ziel.style.setProperty("--stoss-y", y + "px");
+  ziel.classList.remove("anschlag");
+  void ziel.offsetWidth;   // Animation sicher neu starten
+  ziel.classList.add("anschlag");
+  /* Klasse nach Ablauf wieder abraeumen - schnelle Wiederholungen
+     starten die Animation dank clearTimeout sauber neu. */
+  clearTimeout(anschlagTimer);
+  anschlagTimer = setTimeout(() => ziel.classList.remove("anschlag"), 320);
+}
+
+/* Ziel in einem eigenen Fenster öffnen.
+   Wichtig: Geometrie (0/0/Breite/Höhe) direkt als window.features
+   übergeben - popup.moveTo()/resizeTo() funktioniert bei Fenstern
+   mit anderer Herkunft (Plex, Kavita ...) nicht zuverlässig. */
+function openTile(tile) {
+  if (tile.dataset.coming) {
+    showNotice(tile.dataset.coming);
+    return;
+  }
+
+  /* GAMES (seit 2.5): Der Server startet RetroPie auf einer eigenen Konsole.
+     Die Startseite bleibt dabei offen und ist nach dem Spielen sofort wieder da. */
+  if (tile.dataset.aktion === "retropie") {
+    retropieStarten();
+    return;
+  }
+
+  if (!CONFIG.appsAlsPopup) {
+    window.location.href = tile.href;
+    return;
+  }
+
+  const features =
+    "popup=yes,left=0,top=0" +
+    ",width=" + screen.width +
+    ",height=" + screen.height;
+
+  const popup = window.open(tile.href, tile.id, features);
+
+  if (popup) {
+    try {
+      popup.moveTo(0, 0);
+      popup.resizeTo(screen.width, screen.height);
+    } catch (error) {
+      /* Cross-Origin-Fenster erlauben moveTo nicht - egal. */
+    }
+  } else {
+    window.location.href = tile.href;
+  }
+}
+
+/* ================================================== Overlay-Verwaltung
+   Jedes Spiel ist ein Objekt mit start(), stopp() und taste(). */
+const SPIELE = {};          // wird weiter unten gefüllt
+let aktivesSpiel = null;
+
+function oeffneSpiel(id) {
+  if (aktivesSpiel || !SPIELE[id]) return;
+  aktivesSpiel = id;
+  $("ov-" + id).hidden = false;
+  document.body.classList.add("offen");
+  sOpen();
+  SPIELE[id].start();
+}
+
+function spielSchliessen() {
+  if (!aktivesSpiel) return;
+  SPIELE[aktivesSpiel].stopp();
+  $("ov-" + aktivesSpiel).hidden = true;
+  aktivesSpiel = null;
+  document.body.classList.remove("offen");
+  ton(420, .06, "sine", .08);
+}
+
+function aktiviere() {
+  if (!gewaehlt) return;
+  if (spassTiles.includes(gewaehlt)) {
+    oeffneSpiel(SPASS_IDS[spassTiles.indexOf(gewaehlt)]);
+  } else {
+    openTile(gewaehlt);
+  }
+}
+
+/* ================================================== Eingabe: eine Schicht für alle Geräte
+   Fernbedienung (CEC -> uinput), Tastatur und Controller laufen hier
+   zusammen: Jede Quelle ruft verarbeiteTaste() mit einem Tastennamen auf.
+
+   Warum so strikt? Die Fernbedienung ist für Chromium nur eine Tastatur.
+   Überlässt man ihr auch nur eine einzige Taste, übernimmt Chromiums
+   natives Verhalten: Der Fokus springt in Tab-Reihenfolge durch die
+   einzelnen Texte, Pfeile scrollen, F7 schaltet den Caret-Modus ein
+   ("durch die Buchstaben springen") - genau das machte die Steuerung
+   in v1 fast unmöglich. Deshalb:
+     1. Handler in der CAPTURE-Phase (kommt vor allem anderen an)
+     2. preventDefault() für jede Taste, die wir benutzen
+     3. keine nativ fokussierbaren Elemente (alle tabindex="-1")
+   Die Kachelauswahl ist reine Sache der Seite (.selected-Klasse). */
+const GENUTZTE_TASTEN = new Set([
+  "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+  "Enter", " ", "Tab", "Escape", "Backspace",
+  "Home", "End", "PageUp", "PageDown",
+  "MediaStop", "MediaPlayPause",
+  "m", "M", "p", "P", "c", "C", "s", "S",
+  "F13", "F14",
+]);
+
+/* Ton-Ausgang umschalten. Seit 2.5 schaltet die Fernbedienung (ROT = HDMI,
+   GRUEN = Klinke) direkt über den Server, überall. Die Startseite zeigt jede
+   Umschaltung an (siehe statusAbfrage). F13/F14 bleiben für Tastaturen. */
+const TON_NAMEN = { hdmi: "Fernseher (HDMI)", klinke: "Klinke (Kopfhörer / Anlage)" };
+let tonAusgangZeit = 0;
+function tonAusgang(ziel) {
+  const jetzt = Date.now();
+  if (jetzt - tonAusgangZeit < 1500) return;   /* Dauerdruck/Wiederholung ignorieren */
+  tonAusgangZeit = jetzt;
+  postJson("/api/audio", { ziel: ziel })
+    .then((daten) => {
+      if (daten.ok) { showNotice("Ton: " + TON_NAMEN[ziel]); sOk(); }
+      else { showNotice(daten.fehler || "Ton-Umschaltung fehlgeschlagen"); sFehler(); }
+    })
+    .catch(() => { showNotice("Ton-Umschaltung: Server nicht erreichbar"); sFehler(); });
+}
+
+function postJson(pfad, daten) {
+  return fetch(CONFIG.server + pfad, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(daten || {}),
+  }).then((antwort) => antwort.json());
+}
+
+/* ================================================== RetroPie und Server-Status
+   RetroPie läuft auf einer eigenen Konsole. Chromium sieht den Controller
+   trotzdem (Gamepad-API) - deshalb ignoriert die Startseite ihn, solange
+   RetroPie läuft, und noch kurz danach (gedrückte Tasten beim Zurückkommen). */
+let retropieLaeuft = false;
+let retropieGesehen = false;   /* Server hat "läuft" schon einmal gemeldet */
+let retropieStartZeit = 0;
+let padSperreBis = 0;
+let tonNummer = null;
+let retropieMarke = null;      /* Startmarke der Unit beim Anfordern (siehe server.py) */
+let letzteMarke = null;        /* zuletzt gemeldete Startmarke */
+
+function retropieStarten() {
+  if (retropieLaeuft) return;
+  retropieLaeuft = true;
+  retropieGesehen = false;
+  retropieStartZeit = Date.now();
+  retropieMarke = letzteMarke;
+  showNotice("RetroPie startet ... Viel Spaß!");
+  postJson("/api/retropie")
+    .then((daten) => {
+      if (!daten.ok) {
+        retropieLaeuft = false;
+        showNotice(daten.meldung || "RetroPie startet gerade nicht.");
+        sFehler();
+      }
+    })
+    .catch(() => {
+      retropieLaeuft = false;
+      showNotice("RetroPie startet gerade nicht: Server nicht erreichbar.");
+      sFehler();
+    });
+}
+
+function statusAbfrage() {
+  fetch(CONFIG.server + "/status")
+    .then((antwort) => antwort.json())
+    .then((s) => {
+      if (s.version) $("version").textContent = "FAMILY HUB \u00b7 V" + s.version;
+      /* Neue Startmarke = die Unit ist seit der Anforderung gelaufen, auch wenn
+         diese Seite das "läuft" selbst nicht gesehen hat. */
+      if (typeof s.retropie_start === "number") {
+        if (retropieLaeuft && retropieMarke !== null && s.retropie_start !== retropieMarke) {
+          retropieGesehen = true;
+        }
+        letzteMarke = s.retropie_start;
+      }
+      if (s.running) {
+        retropieLaeuft = true;
+        retropieGesehen = true;
+      } else if (retropieLaeuft && retropieGesehen) {
+        /* zurück vom Spielen: noch kurz keine Controller-Eingaben */
+        retropieLaeuft = false;
+        padSperreBis = Date.now() + 1500;
+        showNotice("Willkommen zurück!");
+      } else if (retropieLaeuft && Date.now() - retropieStartZeit > 30000) {
+        /* angefordert, aber nie gestartet */
+        retropieLaeuft = false;
+        showNotice("RetroPie ist nicht gestartet. Bitte Mama oder Papa holen.");
+      }
+      if (tonNummer !== null && s.ton_nummer !== tonNummer && s.ton &&
+          Date.now() - tonAusgangZeit > 3000) {
+        showNotice("Ton: " + (TON_NAMEN[s.ton] || s.ton));
+      }
+      tonNummer = s.ton_nummer;
+    })
+    .catch(() => { /* Server startet gerade neu - nächster Versuch */ });
+}
+
+function verarbeiteTaste(k, rueckwaerts) {
+  /* Ton-Ausgang: ueberall moeglich, auch in Spielen */
+  if (k === "F13") { tonAusgang("hdmi"); return; }
+  if (k === "F14") { tonAusgang("klinke"); return; }
+
+  /* Ton-Schalter überall möglich */
+  if (k === "m" || k === "M") {
+    tonUmschalten();
+    return;
+  }
+
+  /* Innerhalb eines Spiels */
+  if (aktivesSpiel) {
+    if (k === "Escape" || k === "Backspace" || k === "0" || k === "MediaStop") {
+      spielSchliessen();
+      return;
+    }
+    SPIELE[aktivesSpiel].taste(k);
+    return;
+  }
+
+  /* Startseite: Tab laeuft durch alle Kacheln in Anzeigereihenfolge,
+     Home/End auf erste/letzte Kachel - nie das native Tab! */
+  if (k === "Tab") {
+    const i = ALLE_KACHELN.indexOf(gewaehlt);
+    const schritt = rueckwaerts ? -1 : 1;
+    markiere(ALLE_KACHELN[(i + schritt + ALLE_KACHELN.length) % ALLE_KACHELN.length]);
+    return;
+  }
+
+  switch (k) {
+    case "ArrowRight": navigiere("rechts"); return;
+    case "ArrowLeft":  navigiere("links");  return;
+    case "ArrowUp":    navigiere("hoch");   return;
+    case "ArrowDown":  navigiere("runter"); return;
+    case "Home": markiere(ALLE_KACHELN[0]); return;
+    case "End":  markiere(ALLE_KACHELN[ALLE_KACHELN.length - 1]); return;
+    case "Enter":
+    case " ": aktiviere(); return;
+  }
+
+  /* Direktwahl: 1-4 Apps, 5-9 und 0 Spielzimmer (Fernbedienung) */
+  if (/^[0-9]$/.test(k)) {
+    const n = Number(k);
+    let ziel = null;
+    if (n >= 1 && n <= 4) ziel = hauptTiles[n - 1];
+    else if (n >= 5 && n <= 9) ziel = spassTiles[n - 5];
+    else if (n === 0) ziel = spassTiles[5];
+    if (ziel) {
+      markiere(ziel, true);
+      aktiviere();
+    }
+  }
+}
+
+document.addEventListener("keydown", (event) => {
+  /* EXIT der Fernbedienung = Alt+F4. Innerhalb eines Spielzimmer-Spiels
+     soll das nur das Spiel schließen, nicht den ganzen Kiosk neu starten. */
+  if (event.altKey && event.key === "F4") {
+    if (aktivesSpiel) {
+      event.preventDefault();
+      spielSchliessen();
+    }
+    return;   /* sonst: Fenster zu - der Supervisor startet den Kiosk neu */
+  }
+
+  /* Strg/Cmd-Kombinationen (z. B. Strg+L, Alt+Pfeil) lassen wir durch */
+  if (event.ctrlKey || event.altKey || event.metaKey) return;
+
+  /* F7 ist Chromiums Caret-Modus ("durch die Buchstaben springen") -
+     auf einer Kachel-Seite niemals erlaubt. Alle benutzten Tasten und
+     Ziffern bekommen preventDefault, damit nichts Natives passiert. */
+  if (event.key === "F7" || GENUTZTE_TASTEN.has(event.key) || /^[0-9]$/.test(event.key)) {
+    event.preventDefault();
+  }
+
+  /* Jeder echte Tastendruck darf Vollbild anfordern (Selbstheilung) */
+  sicherstelleVollbild();
+
+  verarbeiteTaste(event.key, event.shiftKey);
+}, true);
+
+/* ================================================== Vollbild-Selbstheilung
+   --kiosk macht das Chromium-Fenster von sich aus randvoll. Sollte die
+   Startseite je in einem normalen Fenster landen (manueller Start ohne
+   Flags, zurückgebliebenes Popup), fordert der erste Tastendruck
+   Fullscreen an - die Lücke "nach Games kein Vollbild mehr" bleibt so
+   garantiert zu. Ein Tastendruck gilt als Nutzeraktivierung und darf
+   requestFullscreen() aufrufen; im Kiosk-Fenster ist es schon randvoll
+   und es passiert gar nichts. */
+function sicherstelleVollbild() {
+  if (document.fullscreenElement) return;
+  if (window.innerHeight >= screen.height * 0.95) return;   /* Kiosk ist randvoll */
+  const wurzel = document.documentElement;
+  if (!wurzel.requestFullscreen) return;
+  try {
+    const versuch = wurzel.requestFullscreen();
+    if (versuch && versuch.catch) versuch.catch(() => { /* ohne Aktivierung abgelehnt - egal */ });
+  } catch (error) { /* darf niemals stören */ }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) sicherstelleVollbild();
+});
+
+/* ================================================== Controller (Gamepad-API)
+   Der Controller steuert jetzt ALLES - nicht mehr nur RetroPie.
+   Mapping (Standard-Layout, wie Chromium es für Xbox-/PS-/USB-Pads meldet):
+
+     Steuerkreuz + linker Stick   Pfeiltasten (gedrückt halten = wiederholen)
+     A  (unten)                   OK / Enter
+     B  (rechts)                  Zurück (wie STOP)
+     X  (links), Y  (oben)        nur Malen: speichern / alles weg
+     L1 / R1 (Schultertasten)     nur Malen: Farbe zurück / weiter
+     Start / Optionen             Zurück
+
+   Chromium meldet ein Gamepad erst nach der ersten Knopfbewegung - das
+   Pollen unten findet es dann von selbst. Ohne Controller kostet der
+   Ticker praktisch nichts (ein kurzer Durchlauf alle 30 ms). */
+const PAD_TASTEN = {
+  hoch: "ArrowUp", runter: "ArrowDown", links: "ArrowLeft", rechts: "ArrowRight",
+};
+const PAD_KNOEPFE = {
+  0: "Enter",        /* A  = OK */
+  1: "Escape",       /* B  = Zurück */
+  2: "s",            /* X  = speichern (Malen) */
+  3: "c",            /* Y  = alles weg (Malen) */
+  4: "PageUp",       /* L1 = Farbe zurück (Malen) */
+  5: "PageDown",     /* R1 = Farbe weiter (Malen) */
+  9: "Escape",       /* Start = Zurück */
+};
+const PAD_ERST_WIEDERHOLUNG = 400;   /* ms Halten bis die Richtung wiederholt */
+const PAD_WIEDERHOLUNG = 150;        /* ms Abstand im Dauerdruck */
+
+const padAktiv = { hoch: false, runter: false, links: false, rechts: false };
+const padNaechste = {};
+const padKnopfVorher = {};
+
+function padRichtung(name, aktiv) {
+  if (aktiv) {
+    const jetzt = performance.now();
+    if (!padAktiv[name]) {
+      padAktiv[name] = true;
+      verarbeiteTaste(PAD_TASTEN[name]);
+      padNaechste[name] = jetzt + PAD_ERST_WIEDERHOLUNG;
+    } else if (jetzt >= padNaechste[name]) {
+      verarbeiteTaste(PAD_TASTEN[name]);
+      padNaechste[name] = jetzt + PAD_WIEDERHOLUNG;
+    }
+  } else {
+    padAktiv[name] = false;
+  }
+}
+
+function padTick() {
+  if (document.hidden) return;
+  if (retropieLaeuft || Date.now() < padSperreBis) return;
+
+  const pads = (navigator.getGamepads && navigator.getGamepads()) || [];
+  let beschaeftigt = false;
+
+  for (const pad of pads) {
+    if (!pad || !pad.connected) continue;
+    const b = pad.buttons;
+    const gedrueckt = (i) => !!(b[i] && (b[i].pressed || b[i].value > 0.5));
+
+    /* Steuerkreuz ... */
+    let hoch    = gedrueckt(12);
+    let runter  = gedrueckt(13);
+    let links   = gedrueckt(14);
+    let rechts  = gedrueckt(15);
+
+    /* ... plus linker Stick, mit Schwellen/Hysterese gegen Zittern:
+       0.6 zum Einsetzen, 0.35 zum Lösen (Stickdrift verzeiht das). */
+    const achse = pad.axes || [];
+    const lx = achse[0] || 0;
+    const ly = achse[1] || 0;
+    if (ly < 0 && -ly >= (padAktiv.hoch    ? 0.35 : 0.6)) hoch = true;
+    if (ly > 0 &&  ly >= (padAktiv.runter  ? 0.35 : 0.6)) runter = true;
+    if (lx < 0 && -lx >= (padAktiv.links   ? 0.35 : 0.6)) links = true;
+    if (lx > 0 &&  lx >= (padAktiv.rechts  ? 0.35 : 0.6)) rechts = true;
+
+    padRichtung("hoch", hoch);
+    padRichtung("runter", runter);
+    padRichtung("links", links);
+    padRichtung("rechts", rechts);
+
+    /* Knöpfe: nur auf das frische Drücken reagieren (kein Dauerton) */
+    for (const nummer in PAD_KNOEPFE) {
+      const aktiv = gedrueckt(nummer);
+      if (aktiv && !padKnopfVorher[nummer]) verarbeiteTaste(PAD_KNOEPFE[nummer]);
+      padKnopfVorher[nummer] = aktiv;
+    }
+
+    if (hoch || runter || links || rechts ||
+        Object.values(padKnopfVorher).some(Boolean)) {
+      beschaeftigt = true;
+    }
+  }
+
+  /* Controller-Bedienung zählt wie jede andere zur Aktivität
+     (setzt den Bildschirmschoner zurück). */
+  if (beschaeftigt) armIdle();
+}
+
+setInterval(padTick, 30);
+
+window.addEventListener("gamepadconnected", (event) => {
+  const name = String(event.gamepad.id || "Controller");
+  showNotice("Controller verbunden: " + name.slice(0, 48));
+  ton(660, .07, "triangle", .1);
+});
+
+window.addEventListener("gamepaddisconnected", () => {
+  padAktiv.hoch = padAktiv.runter = padAktiv.links = padAktiv.rechts = false;
+  showNotice("Controller getrennt.");
+});
+
+/* Maus/Touch als Bonus (Fernbedienung bleibt der Hauptweg) */
+for (const kachel of ALLE_KACHELN) {
+  kachel.addEventListener("focus", () => markiere(kachel, true));
+  kachel.addEventListener("click", (event) => {
+    event.preventDefault();
+    markiere(kachel, true);
+    aktiviere();
+  });
+}
+
+/* ================================================== Bildschirmschoner */
+const veil = $("veil");
+const idleMs = parseFloat(
+  getComputedStyle(document.documentElement).getPropertyValue("--idle-minutes")
+) * 60000;
+
+let idleTimer;
+
+function armIdle() {
+  veil.classList.remove("on");
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => veil.classList.add("on"), idleMs);
+}
+
+["keydown", "click", "mousemove", "touchstart"].forEach((type) => {
+  document.addEventListener(type, armIdle, { passive: true });
+});
+
+/* ================================================== Winterschnee
+   Von Dezember bis Februar schneit es dezent auf der Startseite.
+   In Spielen wird er ausgeschaltet (Chromium auf dem Pi 3 dankt). */
+function schneeStart() {
+  const monat = new Date().getMonth();
+  if (monat !== 11 && monat !== 0 && monat !== 1) return;
+
+  const flaeche = $("schnee");
+  for (let i = 0; i < 34; i++) {
+    const flocke = document.createElement("i");
+    const groesse = 3 + Math.random() * 5;
+    flocke.style.left = (Math.random() * 100) + "%";
+    flocke.style.width = flocke.style.height = groesse + "px";
+    flocke.style.opacity = (.3 + Math.random() * .45).toFixed(2);
+    flocke.style.animationDuration = (9 + Math.random() * 9).toFixed(1) + "s";
+    flocke.style.animationDelay = (-Math.random() * 18).toFixed(1) + "s";
+    flocke.style.setProperty("--wind", Math.round(Math.random() * 120 - 60) + "px");
+    flaeche.appendChild(flocke);
+  }
+  document.body.classList.add("winter");
+}
+
+/* ================================================== Spiel: Snake
+   Durch die Wände schleichen statt dagegensterben - verzeihender
+   für junge Spielerinnen. Herzchen statt Apfel. */
+const snake = {
+  cols: 22, rows: 13, zell: 40,
+  status: "start",        // start | laeuft | pause | fertig
+  koerper: [], richtung: [1, 0], wartende: [],
+  herz: [10, 6], punkte: 0, tempo: 160, timer: null,
+  ctx: null,
+
+  start() {
+    const canvas = $("snake-canvas");
+    this.ctx = canvas.getContext("2d");
+    this.punkte = 0;
+    this.neu();
+    this.status = "start";
+    this.zeichnen();
+    this.statusZeile();
+  },
+
+  stopp() {
+    clearInterval(this.timer);
+    this.timer = null;
+  },
+
+  neu() {
+    this.koerper = [{ x: 6, y: 6 }, { x: 5, y: 6 }, { x: 4, y: 6 }];
+    this.richtung = [1, 0];
+    this.wartende = [];
+    this.tempo = 160;
+    this.herzSetzen();
+  },
+
+  starten() {
+    this.stopp();
+    this.timer = setInterval(() => this.schritt(), this.tempo);
+  },
+
+  herzSetzen() {
+    let x, y, aufSchlange;
+    do {
+      x = (Math.random() * this.cols) | 0;
+      y = (Math.random() * this.rows) | 0;
+      aufSchlange = this.koerper.some((s) => s.x === x && s.y === y);
+    } while (aufSchlange);
+    this.herz = [x, y];
+  },
+
+  taste(k) {
+    if (k === "Enter" || k === " ") {
+      if (this.status === "start" || this.status === "fertig") {
+        this.punkte = 0;
+        this.neu();
+        this.status = "laeuft";
+        this.starten();
+      } else if (this.status === "laeuft") {
+        this.status = "pause";
+        this.stopp();
+      } else if (this.status === "pause") {
+        this.status = "laeuft";
+        this.starten();
+      }
+      this.zeichnen();
+      this.statusZeile();
+      return;
+    }
+
+    if (k === "p" || k === "P" || k === "MediaPlayPause") {
+      if (this.status === "laeuft") { this.status = "pause"; this.stopp(); }
+      else if (this.status === "pause") { this.status = "laeuft"; this.starten(); }
+      this.zeichnen();
+      return;
+    }
+
+    const richtungen = {
+      ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+    };
+    const r = richtungen[k];
+    if (!r) return;
+
+    const letzte = this.wartende.length ? this.wartende[this.wartende.length - 1] : this.richtung;
+    if (r[0] === -letzte[0] && r[1] === -letzte[1]) return;  // keine Kehrtwende
+    if (r[0] === letzte[0] && r[1] === letzte[1]) return;
+    if (this.wartende.length < 2) this.wartende.push(r);
+  },
+
+  schritt() {
+    if (this.wartende.length) this.richtung = this.wartende.shift();
+
+    const kopf = this.koerper[0];
+    const neu = {
+      x: (kopf.x + this.richtung[0] + this.cols) % this.cols,
+      y: (kopf.y + this.richtung[1] + this.rows) % this.rows,
+    };
+
+    if (this.koerper.some((s) => s.x === neu.x && s.y === neu.y)) {
+      this.ende();
+      return;
+    }
+
+    this.koerper.unshift(neu);
+
+    if (neu.x === this.herz[0] && neu.y === this.herz[1]) {
+      this.punkte++;
+      sHerz(this.punkte);
+      this.herzSetzen();
+      this.tempo = Math.max(85, this.tempo - 3);
+      this.starten();            // Timer mit neuem Tempo
+    } else {
+      this.koerper.pop();
+    }
+
+    this.zeichnen();
+    this.statusZeile();
+  },
+
+  ende() {
+    this.status = "fertig";
+    this.stopp();
+    sFehler();
+    const best = Number(lese("fh-snake-best", 0));
+    if (this.punkte > best) {
+      speichere("fh-snake-best", this.punkte);
+      konfetti(120);
+      sSieg();
+    }
+    this.zeichnen();
+    this.statusZeile();
+  },
+
+  statusZeile() {
+    const best = Number(lese("fh-snake-best", 0));
+    $("snake-status").innerHTML =
+      '<span>Punkte: <span class="stark">' + this.punkte + "</span></span>" +
+      '<span>Rekord: <span class="stark">' + best + "</span></span>" +
+      '<span>Herzchen sammeln - durch die W&uuml;nde geht durch!</span>';
+  },
+
+  zeichnen() {
+    const c = this.ctx, z = this.zell, w = this.cols * z, h = this.rows * z;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = "#10151f";
+    c.fillRect(0, 0, w, h);
+
+    /* dezente Gitterpunkte */
+    c.fillStyle = "rgba(255,255,255,.05)";
+    for (let x = 0; x < this.cols; x++) {
+      for (let y = 0; y < this.rows; y++) {
+        c.fillRect(x * z + z / 2 - 1, y * z + z / 2 - 1, 2, 2);
+      }
+    }
+
+    /* Herzchen - als Vektorform gezeichnet (Emojis im Canvas sind auf
+       manchen Chromium-Versionen nur monochrom, rot ist garantiert) */
+    this.herzZeichnen(c, this.herz[0] * z + z / 2, this.herz[1] * z + z / 2, z * .42);
+
+    /* Schlange: hinten dunkler, vorn hell */
+    this.koerper.forEach((teil, i) => {
+      const anteil = 1 - i / (this.koerper.length + 2);
+      c.fillStyle = i === 0 ? "#7ef0b2" : "rgb(" + Math.round(34 + 40 * anteil) + "," + Math.round(150 + 50 * anteil) + "," + Math.round(96 + 30 * anteil) + ")";
+      this.rund(teil.x * z + 3, teil.y * z + 3, z - 6, z - 6, 11);
+    });
+
+    /* Augen auf dem Kopf */
+    const kopf = this.koerper[0];
+    const kx = kopf.x * z + z / 2, ky = kopf.y * z + z / 2;
+    const [dx, dy] = this.richtung;
+    c.fillStyle = "#0b2018";
+    const a = z * .16, b = z * .14;
+    c.beginPath(); c.arc(kx + dx * a - dy * b, ky + dy * a - dx * b, 3.4, 0, 7); c.fill();
+    c.beginPath(); c.arc(kx + dx * a + dy * b, ky + dy * a + dx * b, 3.4, 0, 7); c.fill();
+
+    /* Karten für Start / Pause / Ende */
+    if (this.status !== "laeuft") {
+      c.fillStyle = "rgba(9,13,20,.78)";
+      c.fillRect(0, 0, w, h);
+      c.textAlign = "center";
+      c.fillStyle = "#ffffff";
+      c.font = "700 40px system-ui, sans-serif";
+
+      if (this.status === "start") {
+        c.fillText("Sammle die Herzchen!", w / 2, h / 2 - 34);
+        c.font = "600 24px system-ui, sans-serif";
+        c.fillStyle = "#9fb4d8";
+        c.fillText("Pfeile lenken - durch die W\u00E4nde geht durch", w / 2, h / 2 + 6);
+        c.fillStyle = "#ffd48a";
+        c.font = "700 26px system-ui, sans-serif";
+        c.fillText("OK: Los geht's!", w / 2, h / 2 + 52);
+      } else if (this.status === "pause") {
+        c.fillText("Pause", w / 2, h / 2 - 14);
+        c.font = "600 24px system-ui, sans-serif";
+        c.fillStyle = "#9fb4d8";
+        c.fillText("OK oder P: Weiter", w / 2, h / 2 + 30);
+      } else {
+        c.fillText("Ups! Punkte: " + this.punkte, w / 2, h / 2 - 34);
+        c.font = "600 24px system-ui, sans-serif";
+        c.fillStyle = "#9fb4d8";
+        const best = Number(lese("fh-snake-best", 0));
+        c.fillText(this.punkte >= best && this.punkte > 0 ? "Neuer Rekord!" : "Rekord: " + best, w / 2, h / 2 + 6);
+        c.fillStyle = "#ffd48a";
+        c.font = "700 26px system-ui, sans-serif";
+        c.fillText("OK: Nochmal!", w / 2, h / 2 + 52);
+      }
+    }
+  },
+
+  herzZeichnen(c, x, y, r) {
+    c.save();
+    c.translate(x, y + r * .25);
+    c.scale(r / 12, r / 12);
+    c.beginPath();
+    c.moveTo(0, 7);
+    c.bezierCurveTo(-16, -5, -9, -19, 0, -9);
+    c.bezierCurveTo(9, -19, 16, -5, 0, 7);
+    c.closePath();
+    c.fillStyle = "#ff3d5e";
+    c.shadowColor = "rgba(255,80,110,.55)";
+    c.shadowBlur = 12;
+    c.fill();
+    c.restore();
+  },
+
+  rund(x, y, b, h, r) {
+    const c = this.ctx;
+    if (c.roundRect) {
+      c.beginPath();
+      c.roundRect(x, y, b, h, r);
+      c.fill();
+    } else {
+      c.fillRect(x, y, b, h);
+    }
+  },
+};
+
+SPIELE.snake = snake;
+
+/* ================================================== Spiel: Memory */
+const memory = {
+  motive: ["\u{1F436}", "\u{1F431}", "\u{1F430}", "\u{1F98A}", "\u{1F43B}", "\u{1F43C}", "\u{1F981}", "\u{1F437}"],
+  karten: [], offen: [], treffer: 0, zuege: 0, cursor: 0, fertig: false,
+  timer: null,
+
+  start() {
+    const gitter = $("mem-gitter");
+    gitter.innerHTML = "";
+    const paar = [...this.motive, ...this.motive];
+    for (let i = paar.length - 1; i > 0; i--) {        // mischen
+      const j = (Math.random() * (i + 1)) | 0;
+      [paar[i], paar[j]] = [paar[j], paar[i]];
+    }
+    this.karten = paar.map((motiv, i) => {
+      const karte = document.createElement("button");
+      karte.type = "button";
+      karte.tabIndex = -1;            /* nativer Fokus bleibt draußen */
+      karte.className = "mem-karte";
+      karte.dataset.motiv = motiv;
+      karte.innerHTML = '<span class="inhalt">' + motiv + '</span><span class="rueck">?</span>';
+      /* Maus/Touch als Bonus: Karte antippen = hinzeigen + aufdecken */
+      karte.addEventListener("click", () => {
+        this.cursor = i;
+        this.aktualisieren();
+        this.aufdecken();
+      });
+      gitter.appendChild(karte);
+      return karte;
+    });
+    this.offen = [];
+    this.treffer = 0;
+    this.zuege = 0;
+    this.cursor = 0;
+    this.fertig = false;
+    this.aktualisieren();
+    this.status();
+  },
+
+  stopp() {
+    clearTimeout(this.timer);
+    this.timer = null;
+  },
+
+  taste(k) {
+    if (this.fertig) {
+      if (k === "Enter" || k === " ") this.start();
+      return;
+    }
+    const n = this.karten.length;
+    switch (k) {
+      case "ArrowRight": this.cursor = (this.cursor + 1) % n; this.aktualisieren(); sMove(); break;
+      case "ArrowLeft":  this.cursor = (this.cursor - 1 + n) % n; this.aktualisieren(); sMove(); break;
+      case "ArrowDown":  this.cursor = (this.cursor + 4) % n; this.aktualisieren(); sMove(); break;
+      case "ArrowUp":    this.cursor = (this.cursor - 4 + n) % n; this.aktualisieren(); sMove(); break;
+      case "Enter":
+      case " ": this.aufdecken(); break;
+    }
+  },
+
+  aufdecken() {
+    if (this.offen.length >= 2) return;
+    const karte = this.karten[this.cursor];
+    if (karte.classList.contains("offen") || karte.classList.contains("treffer")) return;
+
+    karte.classList.add("offen");
+    sFlip();
+    this.offen.push(this.cursor);
+
+    if (this.offen.length === 2) {
+      this.zuege++;
+      this.status();
+      const [a, b] = this.offen;
+      const treffer = this.karten[a].dataset.motiv === this.karten[b].dataset.motiv;
+      this.timer = setTimeout(() => {
+        if (treffer) {
+          this.karten[a].classList.add("treffer");
+          this.karten[b].classList.add("treffer");
+          this.karten[a].classList.remove("offen");
+          this.karten[b].classList.remove("offen");
+          this.treffer++;
+          sOk();
+          if (this.treffer === this.motive.length) this.gewonnen();
+        } else {
+          this.karten[a].classList.remove("offen");
+          this.karten[b].classList.remove("offen");
+          ton(300, .1, "sine", .07);
+        }
+        this.offen = [];
+        this.status();
+      }, treffer ? 420 : 800);
+    }
+  },
+
+  gewonnen() {
+    this.fertig = true;
+    konfetti(190);
+    sSieg();
+    const best = Number(lese("fh-memory-best", 0));
+    if (!best || this.zuege < best) speichere("fh-memory-best", this.zuege);
+    this.status();
+  },
+
+  aktualisieren() {
+    this.karten.forEach((karte, i) => karte.classList.toggle("zeiger", i === this.cursor));
+  },
+
+  status() {
+    const best = Number(lese("fh-memory-best", 0));
+    let text = '<span>Z\u00FCge: <span class="stark">' + this.zuege + "</span></span>" +
+               "<span>Treffer: " + this.treffer + " / 8</span>";
+    if (best) text += '<span>Bestwert: <span class="stark">' + best + " Z\u00FCge</span></span>";
+    if (this.fertig) {
+      text = '<span class="stark">Super! Alle Paare in ' + this.zuege + " Z\u00FCgen!</span><span>OK: Nochmal</span>";
+    }
+    $("mem-status").innerHTML = text;
+  },
+};
+
+SPIELE.memory = memory;
+
+/* ================================================== Spiel: Drei Gewinnt
+   Gegen den Fernseher: Er spielt gut - gewinnen, blocken, Mitte -
+   aber nicht perfide. Für junge Spielerinnen machbar. */
+const ttt = {
+  LINIEN: [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]],
+  DU: "\u2B50", TV: "\u2764\uFE0F",
+  brett: Array(9).fill(""), felder: [], cursor: 4, fertig: false, gesperrt: false,
+  siegLinie: null, timer: null,
+  du: 0, tv: 0,
+
+  start() {
+    this.felder = [...$("ttt-gitter").children];
+    this.felder.forEach((feld, i) => {
+      feld.tabIndex = -1;                 /* nativer Fokus bleibt draußen */
+      feld.onclick = () => {              /* Maus/Touch als Bonus */
+        if (this.fertig) { this.start(); return; }
+        this.cursor = i;
+        this.aktualisieren();
+        this.setzen(i);
+      };
+    });
+    this.brett = Array(9).fill("");
+    this.cursor = 4;
+    this.fertig = false;
+    this.gesperrt = false;
+    this.siegLinie = null;
+    this.du = Number(lese("fh-ttt-du", 0));
+    this.tv = Number(lese("fh-ttt-tv", 0));
+    this.aktualisieren();
+    this.status();
+  },
+
+  stopp() {
+    clearTimeout(this.timer);
+    this.timer = null;
+  },
+
+  taste(k) {
+    if (this.fertig) {
+      if (k === "Enter" || k === " ") { sOk(); this.start(); }
+      return;
+    }
+    if (this.gesperrt) return;
+
+    switch (k) {
+      case "ArrowRight": this.cursor = (this.cursor % 3 === 2) ? this.cursor - 2 : this.cursor + 1; this.aktualisieren(); sMove(); break;
+      case "ArrowLeft":  this.cursor = (this.cursor % 3 === 0) ? this.cursor + 2 : this.cursor - 1; this.aktualisieren(); sMove(); break;
+      case "ArrowDown":  this.cursor = (this.cursor + 6) % 9; this.aktualisieren(); sMove(); break;
+      case "ArrowUp":    this.cursor = (this.cursor + 3) % 9; this.aktualisieren(); sMove(); break;
+      case "Enter":
+      case " ": this.setzen(this.cursor); break;
+    }
+  },
+
+  setzen(i) {
+    if (this.brett[i] || this.fertig || this.gesperrt) return;
+    this.brett[i] = this.DU;
+    sOk();
+    this.aktualisieren();
+
+    const ergebnis = this.pruefen();
+    if (ergebnis) { this.ende(ergebnis); return; }
+    if (!this.brett.includes("")) { this.ende({ unentschieden: true }); return; }
+
+    this.gesperrt = true;
+    this.status();
+    this.timer = setTimeout(() => this.computer(), 650);
+  },
+
+  computer() {
+    const leer = this.brett.map((v, i) => v ? -1 : i).filter((i) => i >= 0);
+    if (!leer.length) return;
+
+    const versuch = (symbol) => leer.find((i) => {
+      this.brett[i] = symbol;
+      const gewinn = this.pruefen();
+      this.brett[i] = "";
+      return gewinn;
+    });
+
+    const feld =
+      versuch(this.TV) ??                              // 1. selbst gewinnen
+      versuch(this.DU) ??                              // 2. dich blocken
+      (this.brett[4] === "" ? 4 : undefined) ??        // 3. die Mitte
+      leer.find((i) => [0, 2, 6, 8].includes(i)) ??    // 4. eine Ecke
+      leer[0];                                         // 5. irgendwo
+
+    this.brett[feld] = this.TV;
+    ton(360, .07, "triangle", .09);
+    this.aktualisieren();
+
+    const ergebnis = this.pruefen();
+    if (ergebnis) { this.ende(ergebnis); return; }
+    if (!this.brett.includes("")) { this.ende({ unentschieden: true }); return; }
+
+    this.gesperrt = false;
+    this.status();
+  },
+
+  pruefen() {
+    for (const linie of this.LINIEN) {
+      const [a, b, c] = linie;
+      if (this.brett[a] && this.brett[a] === this.brett[b] && this.brett[b] === this.brett[c]) {
+        return { spieler: this.brett[a], linie };
+      }
+    }
+    return null;
+  },
+
+  ende(ergebnis) {
+    this.fertig = true;
+    this.gesperrt = false;
+
+    if (ergebnis.unentschieden) {
+      ton(420, .12, "sine", .1);
+      this.status("Unentschieden! OK: Nochmal");
+    } else if (ergebnis.spieler === this.DU) {
+      this.du++;
+      speichere("fh-ttt-du", this.du);
+      this.siegLinie = ergebnis.linie;
+      konfetti(170);
+      sSieg();
+      this.status("Du hast gewonnen!");
+    } else {
+      this.tv++;
+      speichere("fh-ttt-tv", this.tv);
+      this.siegLinie = ergebnis.linie;
+      sFehler();
+      this.status("Der Fernseher hat gewonnen - OK: Revanche!");
+    }
+    this.aktualisieren();
+  },
+
+  aktualisieren() {
+    this.felder.forEach((feld, i) => {
+      feld.textContent = this.brett[i];
+      feld.classList.toggle("zeiger", i === this.cursor && !this.fertig);
+      feld.classList.toggle("sieg", this.siegLinie !== null && this.siegLinie.includes(i));
+    });
+  },
+
+  status(zusatz) {
+    const kern = '<span>Du ' + this.du + " : " + this.tv + " Fernseher</span>";
+    let text;
+    if (this.fertig && zusatz) {
+      text = '<span class="stark">' + zusatz + "</span>" + kern;
+    } else if (this.gesperrt) {
+      text = "<span>Der Fernseher denkt nach ...</span>" + kern;
+    } else {
+      text = '<span>Du bist dran (' + this.DU + ")</span>" + kern;
+    }
+    $("ttt-status").innerHTML = text;
+  },
+};
+
+SPIELE.ttt = ttt;
+
+/* ================================================== Spiel: Malen
+   Pfeile bewegen den Pinsel, OK malt, 1-9 wählt die Farbe,
+   9 ist der Radiergummi. Mit S landet das Kunstwerk als PNG im
+   Ordner zeichnungen/ und erscheint in der Galerie (Taste 0). */
+const malen = {
+  cols: 26, rows: 15, zell: 36,
+  FARBEN: [
+    { c: "#e5484d", n: "Rot" },
+    { c: "#f76b15", n: "Orange" },
+    { c: "#ffc53d", n: "Gelb" },
+    { c: "#46a758", n: "Grün" },
+    { c: "#2bb7d3", n: "Türkis" },
+    { c: "#3e6ff0", n: "Blau" },
+    { c: "#9a55e8", n: "Lila" },
+    { c: "#f04fa0", n: "Pink" },
+    { c: "#10151f", n: "Radierer" },
+  ],
+  daten: [], cursor: [0, 0], farbe: 0, ctx: null,
+
+  start() {
+    this.ctx = $("mal-canvas").getContext("2d");
+    this.daten = Array.from({ length: this.rows }, () => Array(this.cols).fill(null));
+    this.cursor = [0, 0];
+    this.farbe = 0;
+    this.palette();
+    this.zeichnen();
+    this.status();
+  },
+
+  stopp() {},
+
+  palette() {
+    const halter = $("palette");
+    halter.innerHTML = "";
+    this.FARBEN.forEach((farbe, i) => {
+      const knopf = document.createElement("button");
+      knopf.type = "button";
+      knopf.tabIndex = -1;            /* nativer Fokus bleibt draußen */
+      knopf.className = "farbbutton" + (i === this.farbe ? " aktiv" : "");
+      knopf.style.background = farbe.c;
+      knopf.textContent = String(i + 1);
+      knopf.title = farbe.n;
+      knopf.addEventListener("click", () => this.farbeWaehlen(i));
+      halter.appendChild(knopf);
+    });
+  },
+
+  farbeWaehlen(i) {
+    this.farbe = i;
+    this.palette();
+    sFarbe();
+    this.status();
+  },
+
+  taste(k) {
+    const [x, y] = this.cursor;
+    switch (k) {
+      case "ArrowRight": this.cursor = [Math.min(this.cols - 1, x + 1), y]; this.zeichnen(); sMove(); break;
+      case "ArrowLeft":  this.cursor = [Math.max(0, x - 1), y]; this.zeichnen(); sMove(); break;
+      case "ArrowDown":  this.cursor = [x, Math.min(this.rows - 1, y + 1)]; this.zeichnen(); sMove(); break;
+      case "ArrowUp":    this.cursor = [x, Math.max(0, y - 1)]; this.zeichnen(); sMove(); break;
+      case "Enter":
+      case " ": this.pinseln(); break;
+      case "PageUp":    /* Controller: L1 = vorherige Farbe */
+      case "PageDown":  /* Controller: R1 = nächste Farbe */
+        {
+          const schritt = k === "PageUp" ? -1 : 1;
+          this.farbeWaehlen((this.farbe + schritt + this.FARBEN.length) % this.FARBEN.length);
+        }
+        break;
+      case "c":
+      case "C":
+        this.daten = Array.from({ length: this.rows }, () => Array(this.cols).fill(null));
+        this.zeichnen();
+        showNotice("Alles weg - frische Leinwand!");
+        break;
+      case "s":
+      case "S": this.speichern(); break;
+      default:
+        if (/^[1-9]$/.test(k)) this.farbeWaehlen(Number(k) - 1);
+    }
+  },
+
+  pinseln() {
+    const [x, y] = this.cursor;
+    this.daten[y][x] = this.farbe === 8 ? null : this.FARBEN[this.farbe].c;
+    ton(340, .03, "square", .05);
+    this.zeichnen();
+  },
+
+  zeichnen() {
+    const c = this.ctx, z = this.zell;
+    const w = this.cols * z, h = this.rows * z;
+    c.fillStyle = "#10151f";
+    c.fillRect(0, 0, w, h);
+
+    c.fillStyle = "rgba(255,255,255,.05)";
+    for (let x = 0; x < this.cols; x++) {
+      for (let y = 0; y < this.rows; y++) {
+        c.fillRect(x * z + z / 2 - 1, y * z + z / 2 - 1, 2, 2);
+      }
+    }
+
+    for (let y = 0; y < this.rows; y++) {
+      for (let x = 0; x < this.cols; x++) {
+        const farbe = this.daten[y][x];
+        if (!farbe) continue;
+        c.fillStyle = farbe;
+        if (c.roundRect) {
+          c.beginPath();
+          c.roundRect(x * z + 1, y * z + 1, z - 2, z - 2, 7);
+          c.fill();
+        } else {
+          c.fillRect(x * z + 1, y * z + 1, z - 2, z - 2);
+        }
+      }
+    }
+
+    const [cx, cy] = this.cursor;
+    c.strokeStyle = "#ffffff";
+    c.lineWidth = 3;
+    c.strokeRect(cx * z + 1.5, cy * z + 1.5, z - 3, z - 3);
+  },
+
+  speichern() {
+    let bild;
+    try {
+      bild = $("mal-canvas").toDataURL("image/png");
+    } catch (e) {
+      showNotice("Speichern klappt gerade nicht.");
+      return;
+    }
+    sSpeicher();
+    showNotice("Speichere ...");
+    fetch(CONFIG.server + "/api/zeichnung", {
+      method: "POST",
+      body: JSON.stringify({ bild }),
+    })
+      .then((antwort) => antwort.json())
+      .then((ergebnis) => {
+        if (ergebnis.ok) {
+          konfetti(90);
+          showNotice("Gespeichert! Dein Bild ist jetzt in der Galerie (Taste 0).");
+        } else {
+          throw new Error(ergebnis.fehler || "fehler");
+        }
+      })
+      .catch(() => {
+        sFehler();
+        showNotice("Speichern klappt gerade nicht. L\u00E4uft der FamilyHub-Server?");
+      });
+  },
+
+  status() {
+    $("mal-status").innerHTML =
+      '<span>Farbe: <span class="stark">' + this.FARBEN[this.farbe].n + "</span></span>" +
+      "<span>Pfeile: Pinsel bewegen &middot; OK: malen &middot; 1-9/L1/R1: Farbe &middot; S/X: Speichern &middot; C/Y: alles weg</span>";
+  },
+};
+
+SPIELE.malen = malen;
+
+/* ================================================== Spiel: Witz des Tages */
+const witz = {
+  index: 0,
+
+  start() {
+    const heute = new Date();
+    const jahrestag = Math.floor((heute - new Date(heute.getFullYear(), 0, 0)) / 86400000);
+    this.index = (heute.getFullYear() * 1000 + jahrestag) % CONFIG.witze.length;
+    this.zeigen();
+  },
+
+  stopp() {},
+
+  taste(k) {
+    if (k === "Enter" || k === " ") {
+      this.index = (this.index + 1) % CONFIG.witze.length;
+      sOk();
+      this.zeigen();
+    }
+  },
+
+  zeigen() {
+    const [frage, antwort] = CONFIG.witze[this.index];
+    $("witz-text").innerHTML =
+      '<span class="witz-frage">' + frage + "</span>" +
+      '<span class="witz-antwort">' + antwort + "</span>";
+  },
+};
+
+SPIELE.witz = witz;
+
+/* ================================================== Spiel: Galerie
+   Zeigt alles aus dem Malen-Modus - neu zuerst. */
+const galerie = {
+  liste: [], cursor: 0, gross: null,
+
+  start() {
+    const inhalt = $("gal-inhalt");
+    inhalt.innerHTML = '<div class="gal-leer">Galerie wird geladen ...</div>';
+    $("gal-status").textContent = "";
+    this.gross = null;
+    this.cursor = 0;
+    this.liste = [];
+
+    fetch(CONFIG.server + "/api/zeichnungen")
+      .then((antwort) => antwort.json())
+      .then((daten) => {
+        this.liste = daten.zeichnungen || [];
+        this.aufbauen();
+      })
+      .catch(() => {
+        $("gal-inhalt").innerHTML =
+          '<div class="gal-leer">Die Galerie braucht den FamilyHub-Server.<br>' +
+          "Pr\u00FCfe auf dem Pi: <b>sudo systemctl status familyhub-server</b></div>";
+      });
+  },
+
+  stopp() {},
+
+  aufbauen() {
+    const inhalt = $("gal-inhalt");
+    if (!this.liste.length) {
+      inhalt.innerHTML =
+        '<div class="gal-leer">Noch keine Zeichnungen!<br>' +
+        "Dr\u00FCcke <b>8</b> und male etwas - danach erscheint es hier.</div>";
+      return;
+    }
+
+    inhalt.innerHTML = "";
+    const gitter = document.createElement("div");
+    gitter.className = "gal-gitter";
+    this.liste.slice(0, 12).forEach((eintrag, index) => {
+      const knopf = document.createElement("button");
+      knopf.type = "button";
+      knopf.tabIndex = -1;                 /* nativer Fokus bleibt draußen */
+      knopf.className = "gal-item";
+      const bild = document.createElement("img");
+      bild.src = CONFIG.server + eintrag.url;
+      bild.alt = "Zeichnung " + eintrag.datei;
+      knopf.appendChild(bild);
+      /* Maus/Touch als Bonus: Bild antippen = groß zeigen */
+      knopf.addEventListener("click", () => {
+        this.cursor = index;
+        this.aktualisieren();
+        this.zeigenGross();
+      });
+      gitter.appendChild(knopf);
+    });
+    inhalt.appendChild(gitter);
+
+    this.cursor = 0;
+    this.aktualisieren();
+    $("gal-status").textContent =
+      this.liste.length + " Zeichnung" + (this.liste.length === 1 ? "" : "en") +
+      " \u00B7 Pfeile: Bl\u00E4ttern \u00B7 OK: Bild gro\u00DF";
+  },
+
+  taste(k) {
+    if (!this.liste.length) return;
+    const anzahl = Math.min(this.liste.length, 12);
+
+    if (this.gross !== null) {
+      if (k === "Enter" || k === " ") {
+        this.gross = null;
+        $("gal-inhalt").hidden = false;
+        this.aufbauen();
+      }
+      return;
+    }
+
+    switch (k) {
+      case "ArrowRight": this.cursor = (this.cursor + 1) % anzahl; this.aktualisieren(); sMove(); break;
+      case "ArrowLeft":  this.cursor = (this.cursor - 1 + anzahl) % anzahl; this.aktualisieren(); sMove(); break;
+      case "ArrowDown":  this.cursor = Math.min(anzahl - 1, this.cursor + 4); this.aktualisieren(); sMove(); break;
+      case "ArrowUp":    this.cursor = Math.max(0, this.cursor - 4); this.aktualisieren(); sMove(); break;
+      case "Enter":
+      case " ": this.zeigenGross(); break;
+    }
+  },
+
+  zeigenGross() {
+    const eintrag = this.liste[this.cursor];
+    if (!eintrag) return;
+    this.gross = this.cursor;
+    const inhalt = $("gal-inhalt");
+    inhalt.innerHTML =
+      '<div class="gal-gross"><img src="' + CONFIG.server + eintrag.url + '" alt="Zeichnung"></div>';
+    $("gal-status").textContent = "OK: Zur\u00FCck zur \u00DCbersicht";
+    sOk();
+  },
+
+  aktualisieren() {
+    const felder = document.querySelectorAll(".gal-item");
+    felder.forEach((feld, i) => feld.classList.toggle("zeiger", i === this.cursor));
+    const aktuell = felder[this.cursor];
+    if (aktuell && aktuell.scrollIntoView) aktuell.scrollIntoView({ block: "nearest" });
+  },
+};
+
+SPIELE.galerie = galerie;
+
+/* ================================================== Los geht's */
+markiere(hauptTiles[0], true);
+updateClock();
+statusAbfrage();
+setInterval(() => { if (!document.hidden) statusAbfrage(); }, 2000);
+setInterval(updateClock, 30000);
+armIdle();
+schneeStart();
+</script>
+
+</body>
+</html>

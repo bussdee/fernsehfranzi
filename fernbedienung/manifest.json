@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "FernsehFranzi Fernbedienung",
+  "version": "1.0",
+  "description": "Fernbedienung in Plex (Pfeile navigieren) und flüssiges YouTube auf dem Pi 3 (H.264).",
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "include_globs": [
+        "http://*:32400/web/*",
+        "https://*:32400/web/*",
+        "https://app.plex.tv/*"
+      ],
+      "js": [
+        "plex.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://*.youtube.com/*",
+        "https://*.youtube-nocookie.com/*"
+      ],
+      "js": [
+        "youtube.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ]
+}

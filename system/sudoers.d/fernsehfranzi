@@ -1,0 +1,11 @@
+# FernsehFranzi 3.0 - der Kiosk-Benutzer darf genau diese Befehle als root (sonst nichts).
+# 4.1: bt-helfer (Bluetooth für die Eltern-Seite; prüft Aktion und Geräte-Adresse selbst).
+# @BENUTZER@ ersetzt install/install.sh. Prüfung: visudo -c -f <datei>
+@BENUTZER@ ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block fernsehfranzi-retropie.service, \
+    /usr/bin/systemctl stop --no-block fernsehfranzi-retropie.service, \
+    /usr/bin/systemctl start --no-block fernsehfranzi-spiel.service, \
+    /usr/bin/systemctl stop --no-block fernsehfranzi-spiel.service, \
+    /usr/bin/systemctl start --no-block fernsehfranzi-scraper.service, \
+    /usr/bin/systemctl reboot, /usr/bin/systemctl poweroff, \
+    /usr/local/lib/fernsehfranzi/richtlinie, \
+    /usr/local/lib/fernsehfranzi/bt-helfer

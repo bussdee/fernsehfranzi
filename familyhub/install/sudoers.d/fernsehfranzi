@@ -1,0 +1,3 @@
+# FernsehFranzi (seit 2.5): Der Hub-Server darf RetroPie starten und beenden - sonst nichts.
+# Installiert nach /etc/sudoers.d/fernsehfranzi (0440), geprueft mit visudo -c.
+family ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block fernsehfranzi-retropie.service, /usr/bin/systemctl stop --no-block fernsehfranzi-retropie.service

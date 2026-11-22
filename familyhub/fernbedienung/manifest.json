@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "FernsehFranzi Fernbedienung",
+  "version": "1.0",
+  "description": "Pfeiltasten der TV-Fernbedienung bewegen in Plex den Fokus, statt Lautstärke oder Spulen auszulösen.",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "include_globs": ["http://*:32400/web/*", "https://*:32400/web/*", "https://app.plex.tv/*"],
+      "js": ["plex.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

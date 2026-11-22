@@ -1,0 +1,175 @@
+/* FernsehFranzi 3.3 - Eltern-Seite am Handy/PC (eltern.html). Farben aus start.css (:root). */
+body { overflow: auto; user-select: text; background: var(--bg); font-size: 16px; }
+#eltern { max-width: 760px; margin: 0 auto; padding: 0 16px calc(88px + env(safe-area-inset-bottom)); }
+input, select, textarea, button { font: inherit; }
+input, select, textarea { background: #0e1522; color: var(--text); border: 1px solid var(--linie); border-radius: 10px;
+  padding: 10px 12px; min-height: 44px; box-sizing: border-box; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); outline-offset: 1px; }
+input.eh-falsch { border-color: var(--schlecht); background: #2a1418; }
+textarea { width: 100%; }
+details > summary { cursor: pointer; }
+
+/* Kopf und Leiste */
+.eh-kopf { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 0; margin: 0; background: linear-gradient(var(--bg) 75%, transparent); }
+.eh-chip { background: var(--flaeche-2); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 14px; }
+.eh-chip.rot { background: #5a2229; }
+.eh-leiste { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; justify-content: center;
+  background: #0f1520; border-top: 1px solid var(--linie); padding-bottom: env(safe-area-inset-bottom); }
+.eh-leiste a { flex: 1; max-width: 150px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 0 10px; color: var(--leise); text-decoration: none; font-size: 22px; }
+.eh-leiste a small { font-size: 12px; font-weight: 600; }
+.eh-leiste a.an { color: var(--text); }
+.eh-leiste a.an small { color: var(--akzent); }
+
+/* Karten */
+.eh-inhalt { display: flex; flex-direction: column; gap: 14px; height: auto; max-width: none; padding: 0; margin: 0; }  /* main aus start.css zurücksetzen */
+.eh-karte { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 18px; padding: 16px; }
+.eh-karte.eng { padding: 4px 16px; }
+.eh-karte h3 { margin: 0 0 10px; font-size: 13px; color: #9fb4d8; letter-spacing: .08em; text-transform: uppercase; }
+.eh-karte h4 { margin: 4px 0 6px; font-size: 15px; }
+.eh-hilfe { color: var(--leise); font-size: 14px; margin: 6px 0; line-height: 1.4; }
+.eh-gross { font-size: 44px; font-weight: 800; line-height: 1.1; }
+.eh-gross.klein { font-size: 26px; }
+
+/* Zeilen und Felder */
+.eh-zeile { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px;
+  border-top: 1px solid var(--linie); padding: 4px 0; }
+.eh-karte > .eh-zeile:first-of-type, .eh-spalte .eh-zeile:first-of-type { border-top: 0; }
+.eh-rechts { display: flex; align-items: center; gap: 8px; flex: none; }
+.eh-rechts small { color: var(--leise); }
+.eh-feld { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.eh-feld > span { color: var(--leise); font-size: 14px; }
+.eh-breit { width: 100%; flex: 1; min-width: 0; }
+.eh-breit.fett { font-weight: 700; }
+.eh-zahl { width: 84px; text-align: right; }
+.eh-uhr { width: 112px; }
+.eh-zwei { display: grid; grid-template-columns: 1fr; gap: 6px 20px; }
+@media (min-width: 620px) { .eh-zwei { grid-template-columns: 1fr 1fr; } }
+
+/* Knöpfe */
+.eh-knopf { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 16px;
+  border-radius: 12px; border: 1px solid var(--linie); background: var(--flaeche-2); color: var(--text); font-weight: 700;
+  cursor: pointer; text-decoration: none; }
+.eh-knopf:disabled { opacity: .5; }
+.eh-knopf.haupt { background: #2f5bd3; border-color: #2f5bd3; }
+.eh-knopf.gefahr { background: #5a2229; border-color: #7a2c35; }
+.eh-knopf.leise { background: transparent; }
+.eh-knopf.gefahr.leise { background: transparent; color: #ff9a9a; }
+.eh-knopf.breit { width: 100%; margin-top: 10px; }
+.eh-knopf.rund { width: 44px; padding: 0; border-radius: 50%; flex: none; }
+.eh-knopf.chip { min-height: 38px; padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: 14px; }
+.eh-reihe { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.eh-reihe.eng { flex-wrap: nowrap; align-items: center; margin-top: 0; }
+.eh-reihe .eh-knopf:not(.rund) { flex: 1 1 auto; }
+.eh-reihe.eng .eh-knopf { flex: none; }
+.eh-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* Schalter, Segmente, Wochentage */
+.eh-schalter { appearance: none; width: 52px; height: 30px; min-height: 0; padding: 0; border-radius: 999px; position: relative;
+  background: #39445a; border: 0; cursor: pointer; flex: none; transition: background .15s; }
+.eh-schalter::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; transition: transform .15s; }
+.eh-schalter:checked { background: var(--gut); }
+.eh-schalter:checked::after { transform: translateX(22px); }
+.eh-segment { display: inline-flex; background: #0e1522; border: 1px solid var(--linie); border-radius: 12px; padding: 3px; gap: 3px; flex-wrap: wrap; }
+.eh-segment button { border: 0; background: transparent; color: var(--leise); border-radius: 9px; padding: 8px 12px; min-height: 38px;
+  font-weight: 700; cursor: pointer; }
+.eh-segment button.an { background: var(--flaeche-2); color: var(--text); box-shadow: 0 0 0 1px var(--akzent) inset; }
+.eh-tage { display: flex; gap: 6px; flex-wrap: wrap; }
+.eh-tage button { width: 42px; height: 38px; border-radius: 10px; border: 1px solid var(--linie); background: transparent;
+  color: var(--leise); font-weight: 700; cursor: pointer; }
+.eh-tage button.an { background: #2f5bd3; border-color: #2f5bd3; color: #fff; }
+
+/* Listen (Ferien, Erinnerungen, Songs, Domains) */
+.eh-liste { display: flex; flex-direction: column; }
+.eh-eintrag { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--linie); }
+.eh-liste .eh-eintrag:first-child, .eh-karte > .eh-eintrag:first-of-type { border-top: 0; }
+.eh-eintrag.spalte { flex-direction: column; align-items: stretch; }
+.eh-eintrag input[type=date] { flex: 1; min-width: 0; }
+.eh-app-name { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.eh-app-name small { color: var(--leise); font-size: 13px; overflow-wrap: anywhere; }
+
+/* Apps */
+.eh-app > summary { display: flex; align-items: center; gap: 12px; min-height: 64px; list-style: none; }
+.eh-app > summary::-webkit-details-marker { display: none; }
+.eh-app[open] > summary { border-bottom: 1px solid var(--linie); margin-bottom: 6px; }
+.eh-app { padding-bottom: 6px; }
+.eh-neu > summary { font-weight: 700; color: var(--akzent); }
+.eh-neu[open] > summary { margin-bottom: 8px; }
+.eh-neu > input { width: 100%; margin: 6px 0; }
+.eh-hilfe-box { background: #0e1522; border-radius: 12px; padding: 10px 14px; margin: 6px 0; font-size: 14px; }
+.eh-hilfe-box ol { margin: 8px 0; padding-left: 20px; line-height: 1.5; }
+
+/* Balken (Woche, Bass) */
+.eh-balken { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; height: 140px; align-items: end; margin-top: 8px; }
+.eh-balken > div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.eh-balken i { display: block; width: 100%; max-width: 34px; min-height: 3px; background: var(--akzent); border-radius: 6px 6px 2px 2px; }
+.eh-balken small { color: var(--leise); font-size: 12px; }
+.eh-balken b { font-size: 12px; }
+
+/* Bilder, Sticker */
+.eh-bilder { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.eh-bilder figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.eh-bilder img { width: 100%; border-radius: 10px; background: #fff; aspect-ratio: 16 / 9; object-fit: contain; }
+.eh-bilder img.neu { outline: 4px solid var(--warn); }
+.eh-sticker { font-size: 34px; line-height: 1.4; }
+
+/* Anmelden, Rückmeldung */
+.eh-anmelden { display: flex; flex-direction: column; gap: 14px; align-items: center; padding-top: 12vh; text-align: center; }
+.eh-anmelden h1 { margin: 0; }
+.eh-anmelden a { color: var(--akzent); margin-top: 16px; }
+.eh-logo { font-size: 56px; }
+.eh-pin { font-size: 28px; width: 220px; text-align: center; letter-spacing: .3em; }
+.eh-fehlertext { color: var(--schlecht); min-height: 1.3em; }
+.eh-meldung { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translate(-50%, 16px); opacity: 0;
+  z-index: 9; background: #1f3b2c; color: #fff; padding: 10px 18px; border-radius: 12px; font-weight: 700;
+  transition: opacity .2s, transform .2s; pointer-events: none; max-width: calc(100vw - 32px); }
+.eh-meldung.zeigen { opacity: 1; transform: translate(-50%, 0); }
+.eh-meldung.fehler { background: #5a2229; }
+
+/* 3.4 */
+.eh-gut { color: var(--gut); font-weight: 700; flex: none; }
+.eh-warn { color: var(--warn); font-weight: 700; flex: none; }
+.eh-chips-breit button { width: auto; padding: 0 12px; }
+.eh-tage button:disabled { opacity: .7; cursor: default; }
+.eh-sperre { gap: 8px; }
+
+.eh-code { font-family: "DejaVu Sans Mono", monospace; font-size: 20px; letter-spacing: 2px; }
+.eh-yt-bild { width: 72px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; flex: none; }
+.eh-sticker-symbol { width: 64px; text-align: center; font-size: 24px; }
+
+/* 4.0 Statistik */
+.st-kacheln { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.st-kacheln > div { background: #0e1522; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; }
+.st-kacheln b { font-size: 22px; }
+.st-kacheln small { color: var(--leise); }
+.st-zeile { padding: 8px 0; border-top: 1px solid var(--linie); }
+.st-zeile:first-of-type { border-top: 0; }
+.st-name { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.st-name small { color: var(--leise); text-align: right; }
+.st-balken { position: relative; height: 12px; background: #0e1522; border-radius: 6px; margin-top: 6px; overflow: hidden; }
+.st-balken i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; opacity: .55; }
+.st-balken i.aktiv { background: #fff; opacity: .35; height: 4px; top: auto; }
+.st-uhr { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; height: 120px; align-items: end; }
+.st-uhr > div { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+.st-uhr i { display: block; width: 100%; min-height: 2px; background: var(--akzent); border-radius: 3px 3px 0 0; }
+.st-uhr small { font-size: 10px; color: var(--leise); height: 14px; }
+.st-tage { grid-template-columns: repeat(auto-fit, minmax(8px, 1fr)); }
+.st-datum { text-align: center; }
+.st-strahl { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; height: 48px; margin-top: 12px; }
+.st-strahl > div { display: flex; flex-direction: column-reverse; background: #0e1522; border-radius: 4px; overflow: hidden; }
+.st-strahl i { display: block; min-height: 1px; }
+.st-strahl i.leer { background: transparent; }
+.st-achse { display: flex; justify-content: space-between; color: var(--leise); }
+.st-stunde { width: 56px; flex: none; }
+
+/* 4.1: Bildschirmfoto */
+.eh-foto-box { display: grid; gap: 8px; margin: 10px 0; }
+.eh-foto { width: 100%; border-radius: 12px; border: 1px solid var(--linie, #ccc); background: #000; }
+
+/* 4.2: eingeklappte lange Listen */
+.eh-mehr { margin-top: 6px; }
+.eh-mehr > summary { cursor: pointer; color: #3b6fd8; font-weight: 600; padding: 8px 0; list-style: none; }
+.eh-mehr > summary::before { content: "▸ "; }
+.eh-mehr[open] > summary::before { content: "▾ "; }

@@ -1,0 +1,27 @@
+{
+  "DownloadRestrictions": 3,
+  "AllowFileSelectionDialogs": false,
+  "PrintingEnabled": false,
+  "IncognitoModeAvailability": 1,
+  "BrowserGuestModeEnabled": false,
+  "BrowserAddPersonEnabled": false,
+  "PasswordManagerEnabled": false,
+  "AutofillAddressEnabled": false,
+  "AutofillCreditCardEnabled": false,
+  "TranslateEnabled": false,
+  "ForceGoogleSafeSearch": true,
+  "ForceYouTubeRestrict": 2,
+  "HomepageLocation": "http://127.0.0.1:8765/",
+  "HomepageIsNewTabPage": false,
+  "RestoreOnStartup": 4,
+  "RestoreOnStartupURLs": [
+    "http://127.0.0.1:8765/"
+  ],
+  "DefaultNotificationsSetting": 2,
+  "DefaultGeolocationSetting": 2,
+  "DefaultPopupsSetting": 2,
+  "AudioCaptureAllowedUrls": [
+    "http://127.0.0.1:8765"
+  ],
+  "VideoCaptureAllowed": false
+}

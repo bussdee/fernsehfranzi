@@ -1,0 +1,20 @@
+# FernsehFranzi 3.0 - Eingabe: Fernbedienung (CEC) und Controller -> virtuelle Tastatur.
+# root: cec-client braucht das CEC-Gerät, die Tastatur /dev/uinput.
+[Unit]
+Description=FernsehFranzi - Eingabe (Fernbedienung und Controller)
+After=fernsehfranzi-server.service
+Wants=fernsehfranzi-server.service
+
+[Service]
+Type=simple
+Environment=FERNSEHFRANZI_HOME=@HOME@
+Environment=FERNSEHFRANZI_DATEN=@HOME@/fernsehfranzi-daten
+Environment=PYTHONDONTWRITEBYTECODE=1
+# HDMI/Fernseher brauchen nach dem Start einen Moment
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/bin/python3 @HOME@/fernsehfranzi/eingabe/eingabe.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

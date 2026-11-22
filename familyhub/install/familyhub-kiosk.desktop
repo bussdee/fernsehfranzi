@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=FernsehFranzi Family Hub
+Comment=Chromium-Kiosk mit automatischem Neustart (Supervisor)
+Exec=/home/family/familyhub/kiosk.sh
+Terminal=false
+X-GNOME-Autostart-enabled=true

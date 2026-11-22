@@ -1,0 +1,23 @@
+# FernsehFranzi 3.0 - Server (Startseite, Kiosk-API, Zeitkonto, Elternbereich). Läuft als Kiosk-Benutzer.
+# @BENUTZER@ und @HOME@ ersetzt install/install.sh.
+[Unit]
+Description=FernsehFranzi - Server (Startseite, Zeitkonto, Elternbereich)
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@BENUTZER@
+WorkingDirectory=@HOME@/fernsehfranzi/server
+Environment=FERNSEHFRANZI_DATEN=@HOME@/fernsehfranzi-daten
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -m fernsehfranzi
+Restart=always
+RestartSec=3
+# sudo (RetroPie, Richtlinie, Neustart) braucht neue Rechte - deshalb kein NoNewPrivileges.
+ProtectHome=read-only
+ReadWritePaths=@HOME@/fernsehfranzi-daten
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

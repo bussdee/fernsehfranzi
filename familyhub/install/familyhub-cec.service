@@ -1,0 +1,16 @@
+[Unit]
+Description=FernsehFranzi Family Hub - CEC-Fernbedienung (TV-Fernbedienung als Tastatur)
+After=graphical.target
+Wants=graphical.target
+
+[Service]
+# root: cec-client braucht /dev/vcio, die uinput-Bruecke /dev/uinput.
+Type=simple
+# HDMI/Fernseher brauchen nach dem Boot einen Moment (frueher: sleep 5 im Autostart)
+ExecStartPre=/bin/sleep 8
+ExecStart=/usr/bin/python3 /home/family/familyhub/cec_keys.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target

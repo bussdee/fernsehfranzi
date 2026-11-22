@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="ff-token" content="__FF_TOKEN__">
+<title>FernsehFranzi</title>
+<link rel="stylesheet" href="/css/start.css">
+<script type="module" src="/js/start.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <div class="eyebrow" id="untertitel">Home Entertainment</div>
+      <h1>FernsehFranzi</h1>
+      <div id="gruss">Hallo!</div>
+    </div>
+    <div class="kopf-rechts">
+      <div class="uhr-zeile"><span id="glocke" hidden></span><span id="uhr">--:--</span></div>
+      <div id="datum"></div>
+      <div id="restzeit" hidden></div>
+    </div>
+  </header>
+
+  <!-- 3.5: Bereiche wie bei einer Spielkonsole - oben die Leiste, darunter groß die gewählte Kachel, dann je Bereich eine Reihe -->
+  <nav id="bereiche" aria-label="Bereiche"></nav>
+  <div id="held"><div id="held-name"></div><div id="held-info"></div></div>
+  <div id="reihen-fenster"><div id="reihen"></div></div>
+
+  <footer>
+    <span id="hilfe">← → Wählen · ↑ ↓ Bereich · OK Öffnen · EXIT Zur Startseite · ROT/GRÜN Ton · BLAU Eltern</span>
+    <span id="version">FERNSEHFRANZI</span>
+  </footer>
+</main>
+
+<div id="hinweis" role="status" aria-live="polite"></div>
+
+<section id="sperre" hidden>
+  <div class="gross">🌙</div>
+  <div class="text" id="sperre-text">Der Fernseher macht jetzt Pause.</div>
+  <div class="klein">Mama oder Papa können ihn wieder freigeben.</div>
+</section>
+
+<div id="overlay-wurzel"></div>
+</body>
+</html>

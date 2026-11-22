@@ -1,0 +1,25 @@
+# Private Notizen, Gerätedaten, Sicherungen, Deploy-Protokolle
+/.local/
+
+# Private Konfiguration (Vorlagen liegen in config/beispiel/)
+/config/*
+!/config/beispiel/
+
+# Laufzeitdaten und Logs
+/daten/
+/logs/
+*.log
+zeichnungen/
+.kiosk-profile/
+
+# Werkzeuge
+__pycache__/
+*.pyc
+/.venv/
+node_modules/
+/test-results/
+/playwright-report/
+
+# Pakete und Archive
+*.zip
+/dist/

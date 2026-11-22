@@ -1,0 +1,34 @@
+# FernsehFranzi 3.1 - ein bestimmtes Spiel direkt starten („Zuletzt gespielt“), wie die RetroPie-Unit auf tty8.
+#
+# EmulationStation und RetroArch zeichnen direkt ueber KMS und brauchen ein
+# echtes Terminal. Deshalb laufen sie hier auf tty8 mit eigener Login-Sitzung
+# (Geraeterechte, Ton ueber PipeWire) - ohne X11/Wayland, ohne Display-Variablen.
+# Der Desktop mit der Startseite bleibt auf seiner Konsole und ist nach dem
+# Beenden sofort wieder da (Wechsel per chvt, siehe fernsehfranzi-vt.sh).
+# tty8 liegt hinter den automatisch belegten Konsolen 1-6: Dort startet logind
+# keinen Login-Bildschirm dazwischen.
+# Gestartet wird nur vom Hub-Server (sudo-Regel sudoers.d/fernsehfranzi).
+[Unit]
+Description=FernsehFranzi - Spiel direkt starten (tty8)
+After=systemd-user-sessions.service
+
+[Service]
+Type=simple
+User=@BENUTZER@
+PAMName=login
+WorkingDirectory=~
+TTYPath=/dev/tty8
+StandardInput=tty-force
+StandardOutput=tty
+StandardError=journal
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Environment=TERM=linux
+UnsetEnvironment=DISPLAY WAYLAND_DISPLAY SDL_VIDEODRIVER
+ExecStartPre=+/usr/local/lib/fernsehfranzi/vt.sh hin 8
+Environment=FERNSEHFRANZI_DATEN=@HOME@/fernsehfranzi-daten
+ExecStart=/usr/local/lib/fernsehfranzi/spiel-start
+ExecStopPost=+/usr/local/lib/fernsehfranzi/vt.sh zurueck
+TimeoutStopSec=15
+Restart=no

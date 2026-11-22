@@ -1,0 +1,400 @@
+/* FernsehFranzi 3.0 - Startseite, Elternbereich, Spielzimmer.
+   Leicht für den Pi 3: nur transform/opacity animiert, kein blur,
+   keine Schatten in Bewegung, Systemschrift, keine Dauer-Animationen. */
+/* Emojis liefert die Startseite selbst mit (Ausschnitt aus Noto Color Emoji, OFL 1.1):
+   Der Fernseh-Pi hat keine Emoji-Schrift - sonst fehlen Memory-Bilder, ⭕ und alle Symbole.
+   Sie steht im Schriftstapel ganz vorn, gilt aber nur für Emoji-Zeichen (unicode-range): Sonst gewinnt
+   eine normale Schrift, die ein Emoji nur als leeres Kästchen „kennt“ (im Test mit DejaVu gesehen). */
+@font-face {
+  font-family: "FF Emoji"; src: url("/fonts/emoji.ttf") format("truetype"); font-display: block;
+  unicode-range: U+1F000-1FAFF, U+2600-27BF, U+2B00-2BFF, U+200D, U+FE0F;
+}
+
+:root {
+  --bg: #090d14;
+  --flaeche: #151c28;
+  --flaeche-2: #1d2636;
+  --text: #f4f6fb;
+  --leise: #9ba8bb;
+  --linie: rgba(255, 255, 255, .12);
+  --fokus: #ffffff;
+  --gut: #4ccf8f;
+  --warn: #ffc95a;
+  --schlecht: #ff6b6b;
+  --akzent: #7fa8ff;
+}
+
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; }
+body {
+  background: radial-gradient(ellipse at 15% 0%, #16233d 0, transparent 45%), var(--bg);
+  color: var(--text);
+  font-family: "FF Emoji", "Noto Sans", "DejaVu Sans", system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+main {
+  height: 100%;
+  max-width: 1600px;
+  margin: auto;
+  padding: 4vh 6vw 2.5vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------ Kopf */
+header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3vh; }
+.eyebrow { color: #91a9d2; font-size: clamp(10px, 1vw, 14px); font-weight: 700; letter-spacing: .28em; text-transform: uppercase; }
+h1 { margin: .4rem 0 0; font-size: clamp(30px, 4.2vw, 56px); line-height: 1; font-weight: 700; letter-spacing: -.05em; }
+#gruss { color: #9fb4d8; font-size: clamp(13px, 1.5vw, 20px); font-weight: 600; margin-top: 8px; }
+.kopf-rechts { text-align: right; }
+#uhr { font-size: clamp(22px, 2.8vw, 40px); font-weight: 600; font-variant-numeric: tabular-nums; }
+#datum { color: var(--leise); font-size: clamp(12px, 1.2vw, 16px); margin-top: 4px; }
+#restzeit {
+  display: inline-block; margin-top: 10px; padding: 6px 16px; border-radius: 999px;
+  background: rgba(76, 207, 143, .14); border: 1px solid rgba(76, 207, 143, .45); color: #9df0c4;
+  font-size: clamp(13px, 1.3vw, 18px); font-weight: 700;
+}
+#restzeit.knapp { background: rgba(255, 201, 90, .14); border-color: rgba(255, 201, 90, .5); color: #ffe0a0; }
+#restzeit.aus { background: rgba(255, 107, 107, .14); border-color: rgba(255, 107, 107, .5); color: #ffb3b3; }
+
+/* ------------------------------------------------------------ Kacheln */
+.reihe-titel { color: #9fb4d8; font-size: clamp(12px, 1.2vw, 16px); font-weight: 750; letter-spacing: .22em; text-transform: uppercase; margin: 0 0 1.2vh; }
+.apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 1.4vw; }
+.spiele { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1vw; margin-top: 1vh; }
+.kachel {
+  position: relative; overflow: hidden; border: 3px solid var(--linie); border-radius: 22px;
+  background: var(--flaeche); text-align: left; cursor: pointer; outline: none;
+  transition: transform .14s ease, border-color .14s ease;
+}
+.apps .kachel { min-height: clamp(130px, 22vh, 230px); padding: clamp(16px, 2vw, 28px); display: flex; flex-direction: column; justify-content: space-between; }
+.spiele .kachel { height: clamp(90px, 14vh, 130px); padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.kachel .bg { position: absolute; inset: 0; z-index: 0; opacity: .9; }
+.kachel > *:not(.bg) { position: relative; z-index: 1; }
+.kachel.gewaehlt { border-color: var(--fokus); transform: scale(1.04); }
+.kachel.gesperrt .bg { opacity: .2; filter: grayscale(1); }
+.kachel.gesperrt .symbol, .kachel.gesperrt .name { opacity: .35; filter: grayscale(1); }
+.kachel .sperr-symbol { position: absolute; right: 7%; bottom: 8%; font-size: clamp(22px, 2.6vw, 40px); line-height: 1; }
+#apps .kachel.gesperrt .name { padding-right: 1.4em; }
+#spiele .kachel .sperr-symbol { font-size: clamp(16px, 1.7vw, 26px); right: 6%; bottom: 6%; }
+.kachel.gesperrt.gewaehlt { border-color: rgba(255, 255, 255, .55); }
+.kachel .symbol { font-size: clamp(30px, 3.6vw, 52px); line-height: 1; }
+.spiele .kachel .symbol { font-size: clamp(24px, 3.2vh, 38px); }
+.kachel .name { font-size: clamp(15px, 1.6vw, 28px); font-weight: 750; overflow-wrap: break-word; hyphens: auto; }
+.spiele .kachel .name { font-size: clamp(13px, 1.3vw, 18px); }
+.kachel .grund { font-size: clamp(11px, 1.05vw, 15px); color: #ffd7a0; font-weight: 650; }
+.kachel .taste { position: absolute; top: 9px; right: 12px; color: rgba(255, 255, 255, .6); font-size: 12px; font-weight: 700; z-index: 1; }
+.kachel .frei-hinweis { font-size: 11px; color: rgba(255, 255, 255, .7); font-weight: 650; }
+.anschlag { animation: anschlag .22s ease; }
+@keyframes anschlag { 35% { translate: var(--stoss-x, 0) var(--stoss-y, 0); } }
+
+footer { display: flex; justify-content: space-between; color: #78869a; font-size: clamp(11px, 1vw, 14px); margin-top: auto; padding-top: 2vh; }
+#version { letter-spacing: .18em; font-weight: 700; }
+
+/* ------------------------------------------------------------ Hinweis, Sperre */
+#hinweis {
+  position: fixed; left: 50%; bottom: 7vh; transform: translate(-50%, 20px); opacity: 0;
+  background: #1f2a3d; border: 2px solid var(--linie); border-radius: 18px; padding: 16px 28px;
+  font-size: clamp(16px, 1.8vw, 26px); font-weight: 700; transition: opacity .2s ease, transform .2s ease; z-index: 50;
+  max-width: 80vw; text-align: center;
+}
+#hinweis.zeigen { opacity: 1; transform: translate(-50%, 0); }
+#sperre { position: fixed; inset: 0; background: #070a10; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh; text-align: center; }
+#sperre .gross { font-size: clamp(40px, 6vw, 90px); }
+#sperre .text { font-size: clamp(22px, 3vw, 44px); font-weight: 700; max-width: 80vw; }
+#sperre .klein { color: var(--leise); font-size: clamp(13px, 1.3vw, 18px); }
+
+/* ------------------------------------------------------------ Overlays (Spiele, Eltern) */
+.overlay { position: fixed; inset: 0; z-index: 30; background: #0b1019; display: flex; flex-direction: column; padding: 3vh 4vw; }
+.overlay-kopf { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2vh; }
+.overlay-kopf h2 { margin: 0; font-size: clamp(22px, 2.6vw, 38px); }
+.overlay-kopf .hilfe { color: var(--leise); font-size: clamp(12px, 1.15vw, 16px); }
+.overlay-inhalt { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.knopfreihe { display: flex; flex-wrap: wrap; gap: 1vw; justify-content: center; }
+.knopf {
+  border: 3px solid var(--linie); border-radius: 16px; background: var(--flaeche-2);
+  padding: 14px 24px; font-size: clamp(15px, 1.5vw, 22px); font-weight: 700; cursor: pointer; outline: none;
+  transition: transform .12s ease, border-color .12s ease;
+}
+.knopf.gewaehlt, .knopf:focus-visible { border-color: var(--fokus); transform: scale(1.05); }
+.knopf.an { background: #234d3a; }
+.knopf.gefahr { background: #4a2328; }
+canvas.spielfeld { background: #0e1522; border-radius: 16px; max-width: 100%; max-height: 100%; }
+.punkte { font-size: clamp(16px, 1.8vw, 26px); font-weight: 750; }
+
+/* Memory */
+.memory-feld { display: grid; gap: 1vw; }
+.karte { width: clamp(70px, 9vw, 140px); aspect-ratio: 1; border-radius: 16px; border: 3px solid var(--linie); background: #2a3550; display: flex; align-items: center; justify-content: center; font-size: clamp(32px, 4.5vw, 70px); transition: transform .15s ease; }
+.karte.gewaehlt { border-color: var(--fokus); transform: scale(1.06); }
+.karte.offen, .karte.gefunden { background: #f4f6fb; }
+.karte.gefunden { opacity: .45; }
+.karte:not(.offen):not(.gefunden) > span { visibility: hidden; }
+
+/* Drei Gewinnt */
+.drei-feld { display: grid; grid-template-columns: repeat(3, clamp(90px, 13vh, 150px)); gap: 12px; }
+.drei-feld .zelle { aspect-ratio: 1; border-radius: 18px; border: 3px solid var(--linie); background: var(--flaeche-2); display: flex; align-items: center; justify-content: center; font-size: clamp(44px, 8vh, 90px); }
+.drei-feld .zelle.gewaehlt { border-color: var(--fokus); }
+.drei-feld .zelle.sieg { background: #234d3a; }
+
+/* Farben-Echo */
+.echo-feld { display: grid; grid-template-columns: repeat(3, clamp(90px, 15vh, 170px)); grid-template-rows: repeat(3, clamp(90px, 15vh, 170px)); gap: 10px; }
+.echo-feld .farbe { border-radius: 26px; opacity: .45; transition: opacity .08s linear, transform .08s linear; display: flex; align-items: center; justify-content: center; font-size: clamp(22px, 3vh, 36px); font-weight: 800; color: rgba(0, 0, 0, .55); }
+.echo-feld .farbe.leuchtet { opacity: 1; transform: scale(1.06); }
+.echo-feld .rot { background: #ff5a5a; grid-area: 2 / 1; }
+.echo-feld .gruen { background: #4ccf6f; grid-area: 1 / 2; }
+.echo-feld .gelb { background: #ffd23f; grid-area: 2 / 3; }
+.echo-feld .blau { background: #4f8dff; grid-area: 3 / 2; }
+.echo-feld .mitte { grid-area: 2 / 2; display: flex; align-items: center; justify-content: center; font-size: clamp(18px, 2.4vh, 30px); font-weight: 800; text-align: center; }
+
+/* Malen */
+.malen { display: flex; gap: 2vw; align-items: center; height: 100%; }
+.malen .werkzeuge { display: flex; flex-direction: column; gap: 10px; min-width: 200px; }
+.malen .farbfeld { width: 44px; height: 44px; border-radius: 12px; border: 3px solid transparent; display: inline-block; margin: 3px; }
+.malen .farbfeld.aktiv { border-color: #fff; }
+.galerie-bild { max-width: 80vw; max-height: 70vh; border-radius: 16px; background: #fff; }
+
+/* Witz */
+.witz { font-size: clamp(24px, 3vw, 46px); font-weight: 700; max-width: 75vw; text-align: center; line-height: 1.35; }
+.witz .pointe { color: #ffd48a; margin-top: 4vh; }
+
+/* ------------------------------------------------------------ Bildschirmschoner (3.1) */
+#schoner { position: fixed; inset: 0; z-index: 60; background: #000; display: flex; align-items: center; justify-content: center; }
+#schoner img { max-width: 80vw; max-height: 80vh; border-radius: 18px; background: #fff; }
+#schoner .schoner-uhr { position: absolute; right: 5vw; bottom: 5vh; font-size: clamp(30px, 4vw, 60px); color: #9ba8bb; font-weight: 700; }
+
+/* ------------------------------------------------------------ Elternbereich */
+.pinfeld { display: flex; gap: 14px; justify-content: center; margin: 3vh 0; }
+.pinfeld span { width: 52px; height: 64px; border-radius: 14px; border: 3px solid var(--linie); background: var(--flaeche-2); display: flex; align-items: center; justify-content: center; font-size: 34px; }
+.eltern-raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2vw; width: 100%; max-width: 1300px; }
+.karte-eltern { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 18px; padding: 18px 22px; }
+.karte-eltern h3 { margin: 0 0 12px; font-size: 18px; color: #9fb4d8; letter-spacing: .08em; text-transform: uppercase; }
+.gross-zahl { font-size: 40px; font-weight: 800; }
+.leise { color: var(--leise); }
+.meldung-fehler { color: var(--schlecht); font-weight: 700; min-height: 1.4em; text-align: center; }
+/* Eltern-Seite (3.2): Sprungleiste, Bereiche, Bestätigung */
+.eltern-leiste { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center;
+  background: #0b1019ee; padding: 12px 4px; border-bottom: 1px solid var(--linie); margin-bottom: 10px; }
+.eltern-leiste a { color: var(--akzent); text-decoration: none; font-weight: 700; }
+.eltern-leiste .knopf { margin-left: auto; padding: 6px 14px; font-size: 14px; }
+.eltern-bereich { scroll-margin-top: 70px; margin: 18px 0 30px; }
+.eltern-bereich > h2 { color: #9fb4d8; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 10px; }
+.eltern-meldung { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; z-index: 9;
+  background: #234d3a; border-radius: 12px; padding: 10px 20px; font-weight: 700; transition: opacity .2s, transform .2s; max-width: 90vw; }
+.eltern-meldung.zeigen { opacity: 1; transform: translate(-50%, 0); }
+.eltern-meldung.fehler { background: #4a2328; }
+.karte-eltern .knopf:disabled { opacity: .5; }
+details summary { cursor: pointer; font-weight: 700; color: var(--akzent); }
+
+/* ------------------------------------------------------------ Hörbücher (3.3) */
+.hoerbuch .hb-ort { color: var(--leise); font-size: clamp(13px, 1.3vw, 18px); margin-top: 4px; }
+.hb-flaeche { flex: 1; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 3vw; min-height: 0; }
+.hb-liste { overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 4px; }
+.hb-eintrag { padding: 14px 20px; border-radius: 14px; background: var(--flaeche); border: 3px solid transparent;
+  font-size: clamp(16px, 1.7vw, 26px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; cursor: pointer; }
+.hb-eintrag.gewaehlt { border-color: var(--fokus); background: var(--flaeche-2); }
+.hb-eintrag.laeuft { color: var(--gut); }
+.hb-spieler { align-self: center; text-align: center; background: var(--flaeche); border-radius: 24px; padding: 4vh 2vw; }
+.hb-symbol { font-size: clamp(48px, 6vw, 96px); }
+.hb-titel { font-size: clamp(20px, 2.3vw, 36px); font-weight: 700; margin-top: 2vh; }
+.hb-ordner { color: var(--leise); font-size: clamp(14px, 1.4vw, 20px); margin-top: 6px; min-height: 1.2em; }
+.hb-balken { height: 10px; background: var(--flaeche-2); border-radius: 5px; margin: 3vh 0 1vh; overflow: hidden; }
+.hb-balken span { display: block; height: 100%; width: 0; background: var(--akzent); }
+.hb-zeit, .hb-schlaf { color: var(--leise); font-size: clamp(14px, 1.4vw, 20px); min-height: 1.3em; }
+.hb-schlaf { color: var(--warn); margin-top: 1vh; }
+.hb-wahl { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .7); display: flex; align-items: center; justify-content: center; }
+.hb-wahl[hidden], .hb-schwarz[hidden] { display: none; }
+.hb-wahl-karte { background: #151c28; border-radius: 24px; padding: 4vh 3vw; text-align: center; max-width: 80vw; }
+.hb-wahl-karte h3 { font-size: clamp(22px, 2.6vw, 38px); margin: 0 0 3vh; }
+.hb-wahl .knopfreihe { flex-wrap: wrap; justify-content: center; }
+.hb-schwarz { position: fixed; inset: 0; z-index: 50; background: #000; cursor: none; }
+
+/* ------------------------------------------------------------ 3.4: Nachtruhe, Meldungen, Einschlafbild */
+.hb-himmel { display: block; width: 100%; height: 100%; }
+.nacht-frage { align-items: center; justify-content: center; gap: 3vh; text-align: center; background: #05070f; }
+.nacht-frage h2 { font-size: clamp(28px, 3.4vw, 52px); margin: 0; }
+.nacht-mond { font-size: clamp(60px, 8vw, 120px); }
+.nacht-zahl { font-size: clamp(90px, 14vw, 220px); font-weight: 800; color: #b9c4ff; line-height: 1; }
+#nacht-schwarz { position: fixed; inset: 0; z-index: 60; background: #000; cursor: none; }
+#meldungen { position: fixed; inset: 0; z-index: 55; background: rgba(0, 0, 0, .72); display: flex; align-items: center; justify-content: center; }
+.meldungen-karte { background: #1c2740; border: 3px solid #ffc95a; border-radius: 28px; padding: 4vh 4vw; max-width: 75vw;
+  display: flex; flex-direction: column; gap: 2vh; align-items: center; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+.meldungen-symbol { font-size: clamp(50px, 6vw, 90px); }
+.meldung-zeile { font-size: clamp(22px, 2.6vw, 40px); line-height: 1.3; }
+.meldung-uhr { display: inline-block; color: var(--warn); font-weight: 700; margin-right: .6em; }
+
+/* ------------------------------------------------------------ 3.5: Gutschein */
+.gutschein { text-align: center; }
+.gutschein-feld span { width: 70px; height: 86px; font-size: 46px; font-weight: 800; }
+.gutschein-tasten { display: grid; grid-template-columns: repeat(3, 120px); gap: 12px; justify-content: center; margin-top: 2vh; }
+.gutschein-meldung { min-height: 1.5em; font-size: clamp(20px, 2.2vw, 32px); font-weight: 700; margin: 1vh 0; }
+.gutschein-meldung.gut { color: var(--gut); }
+.gutschein-meldung.schlecht { color: var(--schlecht); }
+.wackeln { animation: wackeln .4s; }
+@keyframes wackeln { 20%, 60% { transform: translateX(-12px); } 40%, 80% { transform: translateX(12px); } }
+
+/* ------------------------------------------------------------ 3.5: Wecker */
+.wecker-liste { width: min(900px, 90vw); display: flex; flex-direction: column; gap: 12px; }
+.wecker-zeile { display: flex; align-items: center; gap: 3vw; padding: 2vh 2.5vw; border-radius: 20px; background: var(--flaeche);
+  border: 3px solid transparent; }
+.wecker-zeile.gewaehlt { border-color: var(--fokus); background: var(--flaeche-2); }
+.wecker-zeile.aus { opacity: .55; }
+.wecker-zeile.neu { justify-content: center; font-size: clamp(20px, 2vw, 30px); font-weight: 700; color: var(--akzent); }
+.wecker-zeit { font-size: clamp(40px, 5vw, 76px); font-weight: 800; font-variant-numeric: tabular-nums; }
+.wecker-info { flex: 1; font-size: clamp(18px, 1.8vw, 26px); }
+.wecker-info small { color: var(--leise); }
+.wecker-schalter { padding: 8px 18px; border-radius: 999px; background: #39445a; font-weight: 700; }
+.wecker-schalter.an { background: var(--gut); color: #06210f; }
+.wecker-bearbeiten { display: flex; flex-direction: column; align-items: center; gap: 2.4vh; }
+.wecker-gross { display: flex; align-items: center; font-size: clamp(70px, 10vw, 150px); font-weight: 800; font-variant-numeric: tabular-nums; }
+.wecker-feld { border: 3px solid transparent; border-radius: 18px; padding: .5vh 1.2vw; font-size: clamp(18px, 2vw, 30px); }
+.wecker-gross .wecker-feld { font-size: inherit; padding: 0 .3em; }
+.wecker-feld.gewaehlt { border-color: var(--fokus); background: var(--flaeche-2); }
+.wecker-tage { display: flex; gap: 10px; }
+.wecker-tage span { padding: 8px 14px; border-radius: 12px; border: 2px solid var(--linie); color: var(--leise); font-weight: 700; }
+.wecker-tage span.an { background: #2f5bd3; border-color: #2f5bd3; color: #fff; }
+.wecker-tage span.zeiger { outline: 3px solid var(--warn); outline-offset: 2px; }
+.wecker-bearbeiten .hb-balken { width: 300px; margin: 8px auto 0; }
+.wecker-klingelt { align-items: center; justify-content: center; gap: 3vh; text-align: center;
+  background: radial-gradient(ellipse at 50% 30%, #4a3a1a 0, #0b1019 70%); }
+.wecker-sonne { font-size: clamp(70px, 9vw, 140px); animation: puls 2s ease-in-out infinite; }
+.wecker-uhr { font-size: clamp(110px, 16vw, 250px); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.wecker-klingelt h2 { margin: 0; font-size: clamp(30px, 3.6vw, 56px); }
+@keyframes puls { 50% { transform: scale(1.12); } }
+
+/* ------------------------------------------------------------ 3.5: YouTube-Bereich */
+.yt-inhalt { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.yt-kategorien { display: flex; gap: 2vw; overflow: hidden; padding: 2vh 1vw; max-width: 100%; }
+.yt-kategorie, .yt-video { flex: none; border: 4px solid transparent; border-radius: 22px; background: var(--flaeche); padding: 1vh 1vw 1.4vh; }
+.yt-kategorie { width: 22vw; }
+.yt-kategorie.gewaehlt, .yt-video.gewaehlt { border-color: var(--fokus); background: var(--flaeche-2); transform: scale(1.03); }
+.yt-vorschau { aspect-ratio: 16 / 9; border-radius: 14px; background: #1a1f2b center / cover no-repeat; position: relative; }
+.yt-liste { position: absolute; right: 8px; bottom: 8px; background: rgba(0, 0, 0, .75); padding: 4px 10px; border-radius: 8px; font-weight: 700; }
+.yt-name { font-size: clamp(16px, 1.7vw, 26px); font-weight: 700; margin-top: 1vh; overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.yt-kategorie small { color: var(--leise); }
+.yt-raster { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.6vw; width: 100%; align-self: start; overflow: hidden; max-height: 100%; }
+.yt-buehne { position: fixed; inset: 0; z-index: 40; background: #000; }
+.yt-buehne iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
+.yt-buehne.ende iframe { visibility: hidden; }
+.yt-deckel { position: absolute; inset: 0; background: #05070c; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 2vh; text-align: center; padding: 0 10vw; }
+.yt-deckel[hidden] { display: none; }
+.yt-deckel-symbol { font-size: clamp(60px, 8vw, 120px); }
+.yt-deckel-text { font-size: clamp(22px, 2.6vw, 40px); font-weight: 700; }
+
+/* ------------------------------------------------------------ 3.5: Musik-Akademie */
+.akkord-ansicht, .klavier-ansicht, .sing-ansicht, .such-ansicht { display: flex; flex-direction: column; align-items: center; gap: 2vh; text-align: center; width: 100%; }
+.akkord-name { font-size: clamp(50px, 7vw, 110px); font-weight: 800; line-height: 1; }
+.griffbild-box svg { height: 34vh; width: auto; }
+.akkord-leiste { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.akkord-leiste span { padding: 6px 12px; border-radius: 10px; background: var(--flaeche); font-weight: 700; color: var(--leise); }
+.akkord-leiste span.an { background: #2f5bd3; color: #fff; }
+.akkord-paar { display: flex; align-items: center; gap: 4vw; }
+.akkord-paar .griffbild-box svg { height: 28vh; }
+.akkord-pfeil { font-size: clamp(40px, 5vw, 80px); color: var(--akzent); }
+.klaviatur { position: relative; display: flex; width: min(1200px, 90vw); height: 32vh; }
+.taste-weiss { flex: 1; background: #f1f3f8; border: 2px solid #0b1019; border-radius: 0 0 10px 10px; display: flex; align-items: flex-end; justify-content: center; color: #555; padding-bottom: 6px; }
+.taste-weiss.an { background: #7fa8ff; }
+.taste-weiss.gewaehlt { background: #ffc95a; }
+.taste-schwarz { position: absolute; top: 0; width: calc(var(--weiss) * .6); height: 60%; background: #1b1f28; border-radius: 0 0 8px 8px; z-index: 2; }
+.taste-schwarz.an { background: #3d63d6; }
+.taste-schwarz.gewaehlt { background: #e0a020; }
+.sing-saeule { position: relative; width: 120px; height: 46vh; border-radius: 60px; background: var(--flaeche); border: 3px solid var(--linie); }
+.sing-ziel { position: absolute; left: -20px; right: -20px; top: calc(50% - 4px); height: 8px; background: var(--gut); border-radius: 4px; }
+.sing-ich { position: absolute; left: calc(50% - 14px); width: 28px; height: 28px; border-radius: 50%; background: var(--warn); bottom: calc(50% - 14px); transition: bottom .12s; opacity: .2; }
+.sing-ich.nah { background: var(--gut); box-shadow: 0 0 20px var(--gut); }
+.such-feld { font-size: clamp(26px, 3vw, 44px); font-weight: 700; min-width: 60vw; padding: 1.4vh 2vw; border-radius: 16px; background: var(--flaeche-2); border: 3px solid var(--akzent); }
+.such-feld.leer { color: var(--leise); }
+.such-tastatur { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.such-reihe { display: flex; gap: 8px; }
+.such-reihe span { min-width: 54px; padding: 12px 0; text-align: center; border-radius: 12px; background: var(--flaeche); font-size: clamp(18px, 1.8vw, 26px); font-weight: 700; border: 3px solid transparent; }
+.such-reihe span.breit { min-width: 300px; }
+.such-reihe span.gewaehlt { border-color: var(--fokus); background: var(--flaeche-2); }
+
+/* ------------------------------------------------------------ 3.5: Startseite im Konsolen-Stil */
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; transition: background .5s ease;
+  background: radial-gradient(ellipse at 75% 20%, color-mix(in srgb, var(--held-farbe, #2a3550) 45%, transparent) 0, transparent 60%); }
+header { margin-bottom: 1.6vh; }
+#bereiche { display: flex; gap: 1vw; margin-bottom: 2vh; }
+#bereiche .bereich { display: flex; align-items: center; gap: .5em; border: 0; background: transparent; color: var(--leise);
+  font-size: clamp(14px, 1.45vw, 22px); font-weight: 750; padding: .45em 1em; border-radius: 999px; cursor: pointer; }
+#bereiche .bereich.an { background: rgba(255, 255, 255, .14); color: var(--text); }
+#held { min-height: 11vh; margin-bottom: 1.5vh; }
+#held-name { font-size: clamp(30px, 4.2vw, 64px); font-weight: 800; letter-spacing: -.02em; line-height: 1.05; }
+#held-info { color: #c3cee2; font-size: clamp(14px, 1.5vw, 22px); margin-top: .6vh; }
+#reihen-fenster { flex: 1; min-height: 0; overflow: hidden; }
+#reihen { position: relative; transition: transform .28s ease; }
+.reihe { margin-bottom: 2.2vh; opacity: .55; transition: opacity .2s ease; }
+.reihe.aktiv { opacity: 1; }
+.reihe .reihe-titel { margin: 0 0 1vh; }
+.reihe-kacheln { position: relative; display: flex; gap: 1.2vw; transition: transform .25s ease; padding: 6px 4px; }
+.reihe .kachel { flex: none; width: clamp(110px, 9.5vw, 170px); height: clamp(80px, 12vh, 120px); padding: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.reihe .kachel .symbol { font-size: clamp(22px, 3vh, 36px); }
+.reihe .kachel .name { font-size: clamp(12px, 1.15vw, 17px); }
+.reihe.aktiv .kachel { width: clamp(170px, 15vw, 270px); height: clamp(150px, 27vh, 270px); padding: clamp(14px, 1.6vw, 24px);
+  align-items: flex-start; justify-content: space-between; text-align: left; }
+.reihe.aktiv .kachel .symbol { font-size: clamp(36px, 4.4vw, 70px); }
+.reihe.aktiv .kachel .name { font-size: clamp(16px, 1.6vw, 26px); }
+.reihe .kachel .sperr-symbol { font-size: clamp(16px, 1.7vw, 26px); right: 6%; bottom: 6%; }
+.reihe.aktiv .kachel .sperr-symbol { font-size: clamp(24px, 2.6vw, 40px); right: 7%; bottom: 8%; }
+.reihe.aktiv .kachel.gesperrt .name { padding-right: 1.4em; }
+.reihe .kachel .taste { display: none; }
+.reihe.aktiv .kachel .taste { display: block; }
+
+/* ------------------------------------------------------------ 3.5: Nachrichten */
+.uhr-zeile { display: flex; align-items: center; justify-content: flex-end; gap: 14px; }
+#glocke { background: #ffc95a; color: #2a1d00; font-weight: 800; border-radius: 999px; padding: 4px 12px;
+  font-size: clamp(14px, 1.4vw, 20px); animation: puls 2s ease-in-out infinite; }
+.kachel.hat-neue { border-color: #ffc95a; }
+.nachrichten-liste { width: min(1100px, 90vw); display: flex; flex-direction: column; gap: 1.4vh; }
+.nachricht { background: var(--flaeche); border-radius: 18px; padding: 1.6vh 2vw; border-left: 8px solid var(--linie); }
+.nachricht.neu { border-left-color: #ffc95a; background: var(--flaeche-2); }
+.nachricht-kopf { display: flex; justify-content: space-between; color: var(--leise); font-size: clamp(14px, 1.3vw, 20px); }
+.nachricht-text { font-size: clamp(20px, 2.2vw, 34px); font-weight: 700; margin-top: .6vh; }
+
+/* 4.0: Sonnenaufgang */
+.overlay.sonne { background: #000; transition: background 2s linear; cursor: none; }
+
+/* 4.0: Startseite gestalten - Hintergründe und Lieblinge */
+body[data-thema="ozean"] { background: radial-gradient(ellipse at 20% 0%, #0d4a6b 0, transparent 55%), #04121c; }
+body[data-thema="wald"] { background: radial-gradient(ellipse at 20% 0%, #1f5a2c 0, transparent 55%), #06130a; }
+body[data-thema="sonne"] { background: radial-gradient(ellipse at 20% 0%, #8a3a12 0, transparent 55%), radial-gradient(ellipse at 90% 100%, #4a1236 0, transparent 50%), #140808; }
+body[data-thema="bonbon"] { background: radial-gradient(ellipse at 20% 0%, #7a2a72 0, transparent 55%), radial-gradient(ellipse at 90% 100%, #1f4a8a 0, transparent 50%), #140a18; }
+body[data-thema="nacht"] { background: #030408; }
+.kachel .liebling { position: absolute; left: 8px; top: 6px; font-size: 14px; }
+.gestalten { width: min(900px, 90vw); display: flex; flex-direction: column; gap: 10px; }
+.gestalten-zeile { display: flex; justify-content: space-between; align-items: center; padding: 1.4vh 2vw; border-radius: 16px;
+  background: var(--flaeche); border: 3px solid transparent; font-size: clamp(18px, 2vw, 28px); font-weight: 700; }
+.gestalten-zeile.gewaehlt { border-color: var(--fokus); background: var(--flaeche-2); }
+.gestalten-zeile.fav b { color: var(--warn); }
+.gestalten-zeile.thema { background: #1f2a44; }
+
+/* 4.0: Cover im Hörbuch-Player */
+.hb-eintrag { display: flex; align-items: center; gap: 14px; }
+.hb-cover { width: clamp(40px, 4vw, 64px); height: clamp(40px, 4vw, 64px); object-fit: cover; border-radius: 8px; flex: none; background: #000; }
+.hb-cover-gross { width: clamp(180px, 22vw, 340px); aspect-ratio: 1; object-fit: cover; border-radius: 18px; box-shadow: 0 12px 40px rgba(0, 0, 0, .5); }
+.rec-pegel { width: min(700px, 70vw); height: 22px; border-radius: 11px; background: var(--flaeche); overflow: hidden; }
+.rec-pegel i { display: block; height: 100%; width: 0; background: var(--gut); transition: width .1s; }
+.rec-pegel.laut i { background: var(--schlecht); }
+.nachricht.gewaehlt { outline: 3px solid var(--fokus); }
+/* 4.1: eigenen Text tippen */
+.nachricht.tippen { border-left-color: var(--fokus); min-height: 18vh; white-space: pre-wrap; overflow-wrap: anywhere; }
+.schreibmarke { animation: schreibmarke 1s steps(1) infinite; color: var(--fokus); }
+@keyframes schreibmarke { 50% { opacity: 0; } }
+.nachricht.schreiben { border-left-color: var(--akzent); }
+
+/* 4.0: Video-Player */
+.vid-liste { width: min(1100px, 90vw); margin: 0 auto; }
+.vid-buehne { position: fixed; inset: 0; z-index: 45; background: #000; }
+.vid-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.vid-leiste { position: absolute; left: 0; right: 0; bottom: 0; padding: 3vh 5vw; background: linear-gradient(transparent, rgba(0, 0, 0, .85));
+  opacity: 0; transition: opacity .3s; }
+.vid-leiste.zeigen { opacity: 1; }
+.vid-titel { font-size: clamp(22px, 2.6vw, 40px); font-weight: 800; }
+.vid-info { color: #d0d8e8; font-size: clamp(14px, 1.4vw, 22px); }
+.memory-bild { width: 90%; height: 90%; object-fit: contain; border-radius: 10px; background: #fff; }
+.karte > span:has(.memory-bild) { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }

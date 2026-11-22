@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- FernsehFranzi 4.1 - labwc im Kiosk (ersetzt für den Kiosk-Benutzer /etc/xdg/labwc/rc.xml).
+     Keine Tastenkürzel der Arbeitsfläche: Mit einer echten Tastatur öffneten sonst Strg+Alt+T und Super+Enter ein
+     Terminal, Strg+Alt+Entf das Ausschalt-Menü, Strg+Alt+L die Bildschirmsperre, Alt+Leertaste das Fenstermenü.
+     Genau ein harmloses Kürzel steht hier, weil labwc ohne jedes Kürzel seine eingebauten Vorgaben lädt.
+     Lautstärke regelt eingabe.py (mit der Höchstgrenze der Eltern). Eingespielt von install/install.sh. -->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <keyboard>
+    <numlock>off</numlock>
+    <keybind key="C-A-S-F12">
+      <action name="Reconfigure" />
+    </keybind>
+  </keyboard>
+  <mouse>
+    <default />
+    <context name="Title">
+      <mousebind button="Right" action="Click"></mousebind>
+    </context>
+    <context name="WindowMenu">
+      <mousebind button="Left" action="Click"></mousebind>
+      <mousebind button="Right" action="Click"></mousebind>
+    </context>
+    <context name="Root">
+      <mousebind button="Left" action="Press"></mousebind>
+      <mousebind button="Right" action="Press"></mousebind>
+      <mousebind button="Middle" action="Press"></mousebind>
+    </context>
+  </mouse>
+  <snapping>
+    <range>0</range>
+    <topMaximize>no</topMaximize>
+  </snapping>
+</openbox_config>

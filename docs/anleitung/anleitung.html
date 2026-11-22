@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>FernsehFranzi – Anleitung</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm; }
+  body { font-family: "Noto Sans", "DejaVu Sans", sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1d2433; }
+  h1 { font-size: 26pt; margin: 0 0 4mm; color: #1b2a4a; }
+  h2 { font-size: 15pt; color: #1b2a4a; border-bottom: 2px solid #c9d4ea; padding-bottom: 1.5mm; margin: 9mm 0 3mm; break-after: avoid; }
+  h3 { font-size: 11.5pt; color: #2a3f6b; margin: 5mm 0 1.5mm; break-after: avoid; }
+  p, li { margin: 1.2mm 0; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 3mm; break-inside: avoid; }
+  th, td { border: 1px solid #c9d4ea; padding: 1.6mm 2.2mm; text-align: left; vertical-align: top; }
+  th { background: #eef2fa; }
+  .titel { text-align: center; padding-top: 50mm; break-after: page; }
+  .titel .gross { font-size: 64pt; }
+  .titel p { font-size: 13pt; color: #4a5672; }
+  .kasten { background: #f3f6fc; border-left: 4px solid #5b7fd1; padding: 2.5mm 4mm; margin: 3mm 0; break-inside: avoid; }
+  .achtung { background: #fff6e8; border-left-color: #e3a13a; }
+  .schritte li { margin: 1.5mm 0; }
+  .teil { break-before: page; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #eef2fa; padding: 0 1mm; border-radius: 2px; }
+  pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #eef2fa; padding: 2.5mm 3mm; white-space: pre-wrap; break-inside: avoid; }
+  .taste { display: inline-block; border: 1px solid #8a97b5; border-radius: 3px; padding: 0 1.5mm; font-weight: 700; font-size: 9pt; background: #fff; }
+  .inhalt li { margin: .6mm 0; }
+</style>
+</head>
+<body>
+
+<div class="titel">
+  <div class="gross">📺</div>
+  <h1>FernsehFranzi</h1>
+  <p>Anleitung für die Familie<br>und Technik-Teil für den Betrieb</p>
+  <p style="font-size:10pt;margin-top:30mm">Version 4.2 · Diese Anleitung liegt auch auf der Eltern-Seite („Anleitung“).</p>
+</div>
+
+<h2>Inhalt</h2>
+<ol class="inhalt">
+  <li><b>Teil A – Für die Familie</b>: Bedienen · Startseite · Spiele, Lernen, Bass · Spielzeit · Elternbereich am Fernseher ·
+      Eltern-Seite am Handy · Häufige Aufgaben · Wenn etwas nicht klappt</li>
+  <li><b>Teil B – Technik</b>: Aufbau · Konten und Rechte · Befehle · Ausliefern und Zurückrollen · PIN vergessen · Logs</li>
+</ol>
+
+<!-- ================================================================== Teil A -->
+<h2>A1 · Was ist FernsehFranzi?</h2>
+<p>Ein kleiner Computer (Raspberry Pi) am Fernseher. Er zeigt eine kindgerechte Startseite mit Plex, Spielen, Büchern,
+Lernseiten, einem Spielzimmer und der Bass-Ecke. Die Spielzeit wird gezählt, Lernen kann Spielzeit verdienen, und wir
+Eltern stellen alles über den <b>Elternbereich</b> (am Fernseher) oder die <b>Eltern-Seite</b> (am Handy) ein.</p>
+
+<h2>A2 · Bedienen</h2>
+<table>
+  <tr><th>Was</th><th>TV-Fernbedienung</th><th>Controller</th></tr>
+  <tr><td>Auswählen</td><td>Pfeiltasten</td><td>Steuerkreuz oder linker Stick</td></tr>
+  <tr><td>Öffnen / Bestätigen</td><td><span class="taste">OK</span></td><td><span class="taste">A</span></td></tr>
+  <tr><td>Eine Ebene zurück (in Plex, im Spiel)</td><td><span class="taste">STOP</span></td><td><span class="taste">B</span></td></tr>
+  <tr><td><b>Zur Startseite</b> – von überall</td><td><span class="taste">EXIT</span> (in RetroPie: lange halten)</td><td><span class="taste">Xbox-Taste</span> (Mitte)</td></tr>
+  <tr><td>Abspielen / Pause, Spulen</td><td><span class="taste">PLAY</span> <span class="taste">PAUSE</span> <span class="taste">◀◀</span> <span class="taste">▶▶</span></td><td><span class="taste">Start</span>, <span class="taste">LB</span>/<span class="taste">RB</span></td></tr>
+  <tr><td>Ton über Fernseher / über Klinke</td><td><span class="taste">ROT</span> / <span class="taste">GRÜN</span></td><td>–</td></tr>
+  <tr><td><b>Lauter / leiser</b></td><td><span class="taste">GELB</span>, dann <span class="taste">↑</span> / <span class="taste">↓</span> (4 Sekunden lang)</td><td><span class="taste">Back</span> halten + <span class="taste">↑</span> / <span class="taste">↓</span></td></tr>
+  <tr><td><b>Elternbereich</b> (PIN)</td><td><span class="taste">BLAU</span></td><td><span class="taste">Back</span> + <span class="taste">Start</span> lange halten</td></tr>
+  <tr><td>Kachel direkt öffnen</td><td>Ziffern <span class="taste">1</span>–<span class="taste">0</span></td><td>–</td></tr>
+</table>
+<div class="kasten">Die Lautstärketasten der TV-Fernbedienung regeln nur den Fernseher selbst – nicht den Ton über die Klinke
+(Anlage, Kopfhörer). Dafür gibt es <span class="taste">GELB</span> + Pfeile. Die Höchstlautstärke stellen die Eltern ein
+(Eltern-Seite → Regeln → Lautstärke).</div>
+<div class="kasten">Die Pfeiltasten navigieren <b>immer</b> – auch in Plex, wenn Musik oder ein Film läuft. Für den Player gibt es die
+eigenen Tasten PLAY, PAUSE und Spulen.</div>
+<p><b>Retro-Spiele (RetroPie):</b> Spiel beenden mit <span class="taste">Xbox-Taste</span> + <span class="taste">Start</span>
+oder <span class="taste">STOP</span>/<span class="taste">EXIT</span> auf der Fernbedienung. Ein zweites EXIT führt zur Startseite.</p>
+
+<h2>A3 · Die Startseite (seit 3.5 im Konsolen-Stil)</h2>
+<ul>
+  <li><b>Oben</b> eine Leiste mit den Bereichen: 🏠 Start · 🎮 Spiele · 🎓 Lernen · 🎼 Musik · 🎬 Filme &amp; YouTube · 🕹️ Retro.
+      Darunter groß der Name der gewählten Kachel, dann je Bereich eine Reihe – die gewählte groß, die anderen klein.</li>
+  <li><span class="taste">←</span> <span class="taste">→</span> in der Reihe, <span class="taste">↑</span> <span class="taste">↓</span>
+      zum nächsten Bereich, Ziffern öffnen direkt in der gewählten Reihe.</li>
+  <li><b>Start:</b> Gute Nacht, Familie, Gutschein, Wecker. <b>Retro:</b> Games und die zuletzt gespielten Retro-Spiele.
+      Welche App in welchen Bereich kommt, lässt sich auf der Eltern-Seite ändern (Apps → App → „Bereich“).</li>
+  <li><b>Oben rechts</b>: Uhrzeit und die <b>Restzeit</b>. Gesperrte Kacheln sind grau mit Symbol (A5).</li>
+  <li>Nach 5 Minuten ohne Taste zeigt der Fernseher die eigenen Bilder als <b>Bildschirmschoner</b>.</li>
+</ul>
+
+<h2>A3e · Neu in 4.2</h2>
+<ul>
+  <li><b>🖼️ Bilder für Retro-Spiele</b> (Eltern-Seite → Mehr → „Retro-Spiele: Bilder“): Nach dem Hochladen neuer ROMs
+      „Bilder für neue Spiele holen“ drücken – RetroPie darf dabei nicht laufen. Die Bilder erscheinen beim nächsten Start der
+      Spieleliste. Läuft außerdem jede Nacht um 4 Uhr. Quelle sind die freien Bilder des libretro-Projekts; Spiele ohne
+      passendes Bild stehen in der Liste darunter.</li>
+  <li><b>Retro-Spiele mit mehr Speicher</b>: Während eines Spiels ist der Browser ganz aus. Nach dem Spiel braucht die
+      Startseite deshalb ein paar Sekunden, bis sie wieder da ist.</li>
+  <li><b>Lange Listen</b> auf der Eltern-Seite zeigen nur die neuesten Einträge – „… weitere anzeigen“ klappt den Rest auf.</li>
+</ul>
+
+<h2>A3d · Neu in 4.1</h2>
+<ul>
+  <li><b>⌨️ Bluetooth-Tastatur</b> (iPazzPort): Die Sondertasten sind belegt – siehe Tabelle unten. Die Pfeiltasten bleiben
+      immer Navigation.</li>
+  <li><b>✏️ Eigene Nachrichten</b>: In der Kachel „Nachrichten“ kann das Kind mit der Tastatur selbst schreiben
+      (Enter = senden, STOP = abbrechen, höchstens 300 Zeichen). Ausschalten: Mehr → Telegram → „Eigene Texte erlauben“.</li>
+  <li><b>YouTube</b>: Untertitel sind von Anfang an aus, <span class="taste">U</span> auf der Tastatur schaltet sie ein und aus.
+      Playlisten spielen Video für Video (seit 4.0.1). Im Pause-Bild steht die gerade gelieferte Qualität (z. B. 720p).</li>
+  <li><b>📷 Was läuft gerade?</b> (Eltern-Seite → Start → Fernseher): ein Bild vom Fernseher. Am Fernseher erscheint dann kurz
+      „📷 Mama oder Papa haben kurz geschaut“. Von Retro-Spielen gibt es kein Bild.</li>
+  <li><b>Bluetooth</b> (Eltern-Seite → Mehr → Bluetooth): Geräte suchen, koppeln, trennen, entfernen – ohne SSH. Das Kind kann
+      am Fernseher nichts koppeln.</li>
+  <li><b>Sicherung</b> (Eltern-Seite → Mehr → Sicherung): alles als ZIP herunterladen und wieder einspielen. Ohne PIN und ohne
+      Telegram-Token. Vor dem Einspielen sichert der Pi den alten Stand selbst (die letzten drei bleiben).</li>
+  <li><b>Retro-Spiele flüssiger</b>: Solange RetroPie läuft, pausiert die Startseite und gibt Speicher frei; N64 hat
+      sparsamere Einstellungen. N64 bleibt am Pi 3 trotzdem die Grenze (Zelda Ocarina ruckelt etwas, SNES-/GBA-Zeldas laufen flüssig).</li>
+  <li><b>Sicherer Kiosk</b>: Mit einer echten Tastatur ließ sich vorher über Tastenkürzel (Strg+Alt+T, Windows+Enter) ein
+      Terminal öffnen. Diese Kürzel sind jetzt alle aus.</li>
+</ul>
+<table>
+  <tr><th>Taste (iPazzPort)</th><th>Was sie tut</th></tr>
+  <tr><td>Home ⌂</td><td>Zur Startseite (im Retro-Spiel: Spiel beenden, zweimal = Startseite)</td></tr>
+  <tr><td>Zurück ↶</td><td>wie STOP (eine Ebene zurück)</td></tr>
+  <tr><td>Lupe (Suche)</td><td>Nachrichten öffnen (dort auch selbst schreiben)</td></tr>
+  <tr><td>Menü ☰</td><td>Elternbereich (PIN)</td></tr>
+  <tr><td>Lauter / Leiser / Stumm</td><td>Lautstärke – auch im Retro-Spiel, höchstens bis zur Grenze der Eltern</td></tr>
+  <tr><td>⏯ ⏮ ⏭ ⏹</td><td>Abspielen/Pause, voriger/nächster Titel bzw. Video, Stopp</td></tr>
+  <tr><td>U</td><td>im YouTube-Player: Untertitel an/aus</td></tr>
+  <tr><td>Touchpad</td><td>Maus (Klicks in Plex und auf Webseiten; der YouTube-Player bleibt dicht)</td></tr>
+</table>
+
+<h2>A3c · Neu in 4.0</h2>
+<ul>
+  <li><b>📊 Statistik</b> (Eltern-Seite, eigener Reiter): was wann wie lange lief – Heute, 7 oder 30 Tage, meistgenutzte Apps,
+      Tageszeit, jeder Tag und ein Tag im Detail als Zeitstrahl.</li>
+  <li><b>🌅 Sonnenaufgang</b>: je Wecker 5–30 Minuten vorher geht der Fernseher an und wird langsam hell (Regeln → Wecker oder am Fernseher).</li>
+  <li><b>🎨 Gestalten</b>: Das Kind wählt seine Lieblinge (⭐ vorne in „Start“) und den Hintergrund.</li>
+  <li><b>👾 Sternen-Abwehr</b> unter „Zu zweit“ – gemeinsam oder allein.</li>
+  <li><b>Hörbücher mit Covern</b>: Liegt im Ordner ein Bild (am besten cover.jpg), erscheint es in der Liste und groß beim Hören.</li>
+  <li><b>🎙️ Aufnehmen</b> in der Musik-Akademie: sich selbst aufnehmen und anhören (bleibt nur am Fernseher).</li>
+  <li><b>Telegram</b> (Mehr → Telegram): Bot bei @BotFather anlegen, Token eintragen, einschalten; jeder schreibt dem Bot einmal
+      „Hallo“ und wird mit „Erlauben“ freigegeben. Eure Nachrichten erscheinen am Fernseher, das Kind antwortet in der
+      Kachel „Nachrichten“ mit den vorbereiteten Antworten.</li>
+  <li><b>Plex mit Kinderprofil</b>: Apps → Plex → Profilname eintragen (Profil ohne PIN).</li>
+  <li><b>🎬 Eigener Video-Player</b>: Apps → „Neue App“ → „Video-Ordner“ mit FileBrowser-Freigabelink. Am Pi 3 laufen
+      H.264-Videos (.mp4) bis 720p am besten.</li>
+</ul>
+
+<h2>A3b · Gutscheine, Wecker, YouTube (seit 3.5)</h2>
+<ul>
+  <li><b>🎟️ Gutschein:</b> Auf der Eltern-Seite (Mehr → Gutscheine) Codes erstellen und drucken. Das Kind tippt den 6-stelligen Code
+      in der Kachel „Gutschein“ ein. <b>Normal</b> = so viele Minuten mehr Spielzeit (nur außerhalb der Sperrzeiten),
+      <b>besonders</b> = so viele Minuten geht alles, auch nachts, und nichts zählt. Jeder Code gilt einmal; nach 5 falschen
+      Codes 10 Minuten Pause.</li>
+  <li><b>⏰ Wecker:</b> Das Kind stellt Weckzeit, Tage, Ton und Lautstärke in der Kachel „Wecker“ selbst ein. Zur Weckzeit geht
+      der Fernseher an, der Ton wird langsam lauter; <span class="taste">OK</span> = 5 Minuten schlummern,
+      <span class="taste">STOP</span> = aus. Eltern-Seite (Regeln → Wecker): erlaubt ja/nein, frühestens, höchste Lautstärke,
+      Weckton-Ordner (FileBrowser-Freigabelink wie bei Gute Nacht) und dieselben Wecker bearbeiten.</li>
+  <li><b>🔔 Nachrichten:</b> Die Kachel zeigt neue und alte Nachrichten und Erinnerungen; oben rechts eine Glocke mit der Zahl der neuen.</li>
+  <li><b>Eigene Inhalte:</b> Eltern-Seite → Mehr: eigene Witze und Quizfragen (kommen zu den eingebauten dazu) und eigene Sticker,
+      die ihr von Hand vergebt (z. B. fürs Zimmeraufräumen).</li>
+  <li><b>▶️ YouTube:</b> Eltern-Seite → Apps → „YouTube-Bereich“: Kategorie wählen, Link zu einem Video oder einer Playlist
+      einfügen. Am Fernseher läuft nur das Video, ohne YouTube-Seite: keine Vorschläge, keine Suche, kein Kanal. Tasten:
+      PLAY/PAUSE, Spulen 10 s, ← → voriges/nächstes Video, STOP zurück. Zeit wie jede App (Apps → YouTube).</li>
+</ul>
+
+<h2>A3a · Gute Nacht – Hörbücher zum Einschlafen</h2>
+<p>Die Kachel <b>Gute Nacht</b> spielt MP3s aus einem Ordner im Heimnetz (FileBrowser auf dem Server). Unterordner sind
+einzelne Hörbücher, die Dateien darin die Wiedergabeliste. Gute Nacht ist eine normale App: kostet keine Zeit und geht
+<b>immer</b> – abends, nachts und beim Mittagsschlaf.</p>
+<ul>
+  <li>Beim Öffnen steht <b>„▶ Weiterhören“</b> mit der Stelle vom letzten Mal ganz oben, und der Fernseher fragt sofort:
+      <i>„Wie lange möchtest du hören?“</i> (5 Minuten bis zur Grenze, die wir einstellen). <span class="taste">STOP</span>
+      in der Frage = stattdessen ein anderes Hörbuch aussuchen (<span class="taste">↑</span> <span class="taste">↓</span>,
+      <span class="taste">OK</span>, <span class="taste">←</span> einen Ordner zurück).</li>
+  <li><b>Bei jedem PLAY</b> kommt die Frage nach der Zeit wieder.</li>
+  <li>Nach <b>30 Sekunden</b> zeigt der Fernseher einen sehr dunklen Sternenhimmel mit Mond (ab und zu eine Sternschnuppe
+      oder ein Vogel) – zum Einschlafen. Eine Taste holt den Player zurück.</li>
+  <li>Ist die Zeit um, wird das Hörbuch leiser, hält an, merkt sich die Stelle, und der <b>Fernseher geht aus</b>.</li>
+  <li>Solange Gute Nacht läuft oder der Sternenhimmel zu sehen ist: <b>keine Töne</b> – kein Gong, kein Countdown,
+      Nachrichten warten bis morgen.</li>
+  <li><span class="taste">PAUSE</span> hält an, <span class="taste">⏪</span> <span class="taste">⏩</span> springen 30 Sekunden,
+      <span class="taste">STOP</span> schließt.</li>
+</ul>
+
+<h2>A4 · Spiele, Lernen, Bass</h2>
+<table>
+  <tr><th>Bereich</th><th>Was ist das?</th></tr>
+  <tr><td>Zu zweit</td><td>Ballduell, Snake-Duell, Quiz-Duell. Spieler 2 spielt mit dem zweiten Controller.</td></tr>
+  <tr><td>Lernspiele</td><td>Einmaleins (Reihe wählbar), Uhr lesen (analoge Uhr), Englisch (Bilder, Farben, Zahlen). Zählt als Lernen.</td></tr>
+  <tr><td>Musik-Akademie</td><td>Instrumente <b>Bass</b>, <b>Gitarre</b> (Akkorde, Wechsel-Trainer), <b>Keyboard</b> (Klaviatur, Nachspielen mit Mikro), <b>Singen</b> (Ton treffen), <b>Song-Suche</b> auf ultimate-guitar.com. Bass: Stimmen (Referenztöne), Stimmgerät (mit USB-Mikrofon), Metronom, Tempo-Trainer, Rhythmus-Spiel,
+      Griffbrett-Trainer (auch <b>mit dem echten Bass</b>: das Mikrofon erkennt den gespielten Ton), <b>Nachspielen</b>
+      (der Fernseher spielt einen Ton, sie spielt ihn auf dem Bass nach), Gehörbildung, Tabs lesen, <b>Meine Songs</b> (Erklärvideo, Tabs, Backing Track), Plex-Bibliotheken
+      „Bass-Unterricht“ und „Backing Tracks“, Übungs-Tagebuch mit Serie. Zählt als Lernen.</td></tr>
+  <tr><td>Sticker-Album</td><td>21 Sticker für Erfolge in Spielen, Malen, Bass, Lernen und Bewegungspausen.</td></tr>
+</table>
+
+<h2>A5 · Zeit: Timer und Sperrzeiten (seit 3.4)</h2>
+<ul>
+  <li><b>Jede App ist entweder „frei“ oder hat einen „Timer“.</b> Freie Apps kosten keine Zeit. Apps mit Timer ziehen vom
+      <b>allgemeinen Timer</b> ab (z. B. 90 Minuten am Schultag, 150 am Wochenende). Einzelne Apps können zusätzlich
+      <b>„höchstens X Minuten“</b> haben – z. B. Games 45 Minuten, die aber vom allgemeinen Timer mit abgehen.</li>
+  <li><b>Sperrzeiten</b> (z. B. „Nacht“ 19:00–08:00, „Schule“ 08:00–14:00 an Schultagen, nicht in den Ferien): In einer
+      Sperrzeit ist <b>jede</b> App gesperrt – auch freie –, außer sie ist dort ausdrücklich erlaubt. Gute Nacht und Familie sind
+      immer erlaubt. Beispiel Plex: frei (kein Timer), in „Schule“ erlaubt, in „Nacht“ gesperrt.</li>
+  <li>10, 5 und 1 Minute vor Beginn einer Sperrzeit kommt ein Hinweis, dann wird eine gesperrte App beendet (ein Retro-Spiel
+      speichert vorher).</li>
+  <li><b>Beginn der Nachtruhe</b> (Sperrzeit mit Schalter „Nachtruhe“): Ist „Gute Nacht automatisch“ an, öffnet sich Gute
+      Nacht und fragt nach der Zeit. Wählt niemand, kommt nach 5, 15 und 25 Minuten ein kleiner Alarm, nach 30 Minuten ein
+      Countdown, dann geht der Fernseher aus. Ist es aus, erscheint ein 15-Sekunden-Countdown mit drei Knöpfen:
+      <b>Fernseher aus</b>, <b>Fernseher an</b> (Startseite, nur erlaubte Apps) oder <b>Gute Nacht</b>; ohne Wahl: aus.</li>
+  <li>Gesperrte Kacheln sind <b>grau mit einem Symbol</b>: ⏳ Zeit aufgebraucht · 🌙 Nachtruhe · 🏫 Schule · 🚫 andere Sperrzeit ·
+      🔒 von uns gesperrt · 🕐 Uhr stellt sich noch · ⚙️ noch nicht eingerichtet. Den Grund sagt der Hinweis beim Anwählen.</li>
+  <li>Ohne Tastendruck (3 Minuten) zählt nichts. Im Internet geht es nach 10 Minuten ohne Taste zurück zur Startseite.</li>
+  <li>Bei Timer-Ende: Warnungen bei 10, 5 und 1 Minute, 2 Minuten Kulanz, das Retro-Spiel speichert, dann Startseite.
+      Wählbar: Fernseher geht dann aus.</li>
+</ul>
+<h3>Nachrichten und Erinnerungen</h3>
+<ul>
+  <li>Sie bleiben groß stehen, bis jemand am Fernseher <span class="taste">OK</span> drückt, und kommen alle 5 Minuten mit
+      Gong wieder – auch in Plex und im Retro-Spiel. Auf der Eltern-Seite (Heute) steht „gesehen um …“ oder „noch nicht gesehen“.</li>
+</ul>
+<h3>Lernen verdient Spielzeit und der Lern-Check (wenn eingeschaltet)</h3>
+<ul>
+  <li>Beispiel: je 20 Minuten Lernen +10 Minuten Spielzeit, höchstens 30 Minuten am Tag.</li>
+  <li>Es zählen nur <b>aktive</b> Minuten (mehrere Tastendrücke pro Minute). Nur öffnen und liegen lassen bringt nichts.</li>
+  <li>Alle 10 Minuten fragt der Fernseher: <i>„Bist du noch beim Lernen? Drück nacheinander ← ↑ →“</i> (immer eine andere
+      Folge, 90 Sekunden Zeit). Erst dann wird die Zeit gutgeschrieben – sonst verfällt sie.</li>
+  <li>Auf der Eltern-Seite stehen bestätigte, offene und verfallene Lernminuten.</li>
+</ul>
+
+<h2>A6 · Elternbereich am Fernseher</h2>
+<ol class="schritte">
+  <li><span class="taste">BLAU</span> drücken (Controller: Back + Start lange halten).</li>
+  <li>PIN eingeben – mit den Ziffern der Fernbedienung, dann <span class="taste">OK</span>.
+      (Ganz am Anfang wird hier die PIN festgelegt und einmal wiederholt.)</li>
+  <li>Die Knöpfe stehen in Reihen: <b>Zeit</b> (+15, +30, heute ohne Limit, sperren) · <b>Fernseher</b> (Ton, Gute Nacht,
+      Fernseher aus) · <b>Einstellungen</b> (Eltern-Seite ein/aus, PIN ändern, Linux-Desktop) · <b>Gerät</b> (Neustart, Ausschalten).
+      ← → innerhalb einer Reihe, ↑ ↓ zwischen den Reihen.</li>
+  <li><span class="taste">STOP</span> schließt den Elternbereich.</li>
+</ol>
+<div class="kasten achtung">Nach 5 falschen PINs ist der Elternbereich eine Minute gesperrt, danach wächst die Sperre. Die PIN
+nie dem Kind zeigen.</div>
+
+<h2>A7 · Eltern-Seite am Handy</h2>
+<ol class="schritte">
+  <li>Einmalig am Fernseher: Elternbereich → Reihe „Einstellungen“ → <b>„Eltern-Seite einschalten“</b>.</li>
+  <li>Der Elternbereich zeigt dann oben die <b>Adresse fürs Handy</b> (zwei Varianten: mit Gerätename und mit Zahlen-Adresse).
+      Am Handy im selben WLAN in den Browser eintippen – klappt die erste nicht, die zweite nehmen.</li>
+  <li>Mit derselben PIN anmelden. Tipp: als Lesezeichen oder auf den Startbildschirm legen.</li>
+</ol>
+<p>Unten ist eine Leiste wie in einer App: <b>Heute</b> (Restzeit, +15/+30, sperren, Nachricht, Ton, Fernseher aus, Woche) ·
+<b>Regeln</b> (allgemeiner Timer, Sperrzeiten, Gute Nacht, Ferien, Erinnerungen, Bewegungspause, Lernbonus, Lautstärke) · <b>Apps</b> (Kacheln antippen zum Bearbeiten, neue App oder Hörbuch-Ordner anlegen) · <b>Musik</b> (Songs,
+Plex-Bibliotheken, Tagebuch) · <b>Mehr</b> (Internetseiten, Whitelist, Bilder, Sticker, Neustart, Anleitungen).</p>
+<p><b>Es gibt keine Speichern-Knöpfe:</b> Jede Änderung wird kurz nach der Eingabe gespeichert, unten erscheint
+„Gespeichert ✔“. Stimmt ein Wert nicht (z. B. 5000 Minuten), wird das Feld rot und unten steht, warum.
+Nach 15 Minuten ohne Aktion meldet sich die Seite ab. Sie ist nur im Heimnetz erreichbar, nicht von unterwegs.</p>
+
+<h2>A8 · Häufige Aufgaben</h2>
+<table>
+  <tr><th style="width:32%">Ich möchte …</th><th>So geht's</th></tr>
+  <tr><td>mehr Spielzeit geben</td><td>Fernseher: Elternbereich → +15 / +30 / heute ohne Limit. Handy: Heute → +15 min …</td></tr>
+  <tr><td>eine Nachricht schicken („Essen ist fertig!“)</td><td>Handy: Heute → Nachricht → Text oder Schnellknopf. Erscheint überall, mit einem Gong.</td></tr>
+  <tr><td>den Fernseher sofort sperren</td><td>Elternbereich → „Fernseher jetzt sperren“ (Handy: „Jetzt sperren“, kurzer Text). Freigeben genauso.</td></tr>
+  <tr><td>Spielzeit / Ferien einstellen</td><td>Handy: Regeln → Allgemeiner Timer (Schultag / Wochenende &amp; Ferien). Ferien: „+ Ferien eintragen“, Datum von/bis wählen.</td></tr>
+  <tr><td>Nachtruhe / Sperrzeiten einstellen</td><td>Handy: Regeln → Sperrzeiten: Name, von–bis, Wochentage, „nicht in den Ferien“,
+      „Nachtruhe“. „+ Sperrzeit“ für weitere (z. B. Essen 12:00–13:00). Welche App wo trotzdem geht: Apps → App → „Erlaubt in Sperrzeiten“.</td></tr>
+  <tr><td>Gute Nacht automatisch zur Nachtruhe</td><td>Handy: Regeln → Gute Nacht → „Zur Nachtruhe automatisch öffnen“; dort auch der längste Sleep-Timer.</td></tr>
+  <tr><td>Erinnerungen („Zähneputzen!“)</td><td>Handy: Regeln → „+ Erinnerung“: Uhrzeit, Text, Wochentage antippen.</td></tr>
+  <tr><td>Hörbücher für Gute Nacht einrichten</td><td>Im FileBrowser den Hörbuch-Ordner markieren → „Teilen“ → unbefristet, ohne Passwort → Link kopieren.
+      Handy: Apps → „Gute Nacht“ → Freigabelink einfügen.</td></tr>
+  <tr><td>Gute Nacht jetzt starten</td><td>Handy: Heute → „🌙 Gute Nacht starten“ (oder Elternbereich am Fernseher). Der Fernseher fragt nach der Zeit und hört weiter.</td></tr>
+  <tr><td>Plex tagsüber frei, nachts aus</td><td>Handy: Apps → Plex → Zeitart „frei“, Erlaubt in Sperrzeiten: nur „Schule“ antippen (nicht „Nacht“).</td></tr>
+  <tr><td>Gutscheine drucken</td><td>Handy: Mehr → Gutscheine: Art, Minuten, Anzahl → „Gutscheine erstellen“ → „🖨️ Offene drucken“.</td></tr>
+  <tr><td>Videos für YouTube speichern</td><td>Handy: Apps → YouTube-Bereich: Kategorie wählen (oder neu), Link einfügen → Hinzufügen.</td></tr>
+  <tr><td>Wecker einrichten</td><td>Handy: Regeln → Wecker: frühestens, höchste Lautstärke, Weckton-Ordner (FileBrowser-Freigabelink). Den Rest macht das Kind am Fernseher.</td></tr>
+  <tr><td>Bass-Song hinzufügen</td><td>Handy: Musik → „+ Song“: Titel, Erklärvideo, Tabs/Noten, Backing Track (Felder dürfen leer sein).
+      YouTube-Links öffnen als reiner Player.</td></tr>
+  <tr><td>Bass-Unterricht / Backing Tracks aus Plex</td><td>In Plex zwei Playlists (oder Bibliotheken) anlegen: „Bass-Unterricht“ (Videos) und
+      „Backing Tracks“ (Musik). Jeweils öffnen, Adresse kopieren → Handy: Musik → Plex-Bibliotheken.</td></tr>
+  <tr><td>eine neue App / Lernseite anlegen</td><td>Handy: Apps → „➕ Neue App anlegen“: Art, Name, Adresse, Symbol, „Lernangebot“ → Anlegen.
+      Zeitart (frei / Timer, ggf. höchstens X min) und Sperrzeiten danach in der App einstellen.</td></tr>
+  <tr><td>eine Seite lädt nicht richtig (Bilder fehlen, Video schwarz)</td><td>Handy: Mehr → „Internetseiten“: blockierte Einträge stehen oben → „Erlauben“.
+      Danach die Seite am Fernseher neu öffnen.</td></tr>
+  <tr><td>Ton über Fernseher oder Anlage/Kopfhörer</td><td><span class="taste">ROT</span> = Fernseher, <span class="taste">GRÜN</span> = Klinke. Ein kurzer Zweiklang bestätigt.
+      Die Wahl bleibt, auch nach dem Neustart. Ohne Wahl: Fernseher (HDMI).</td></tr>
+  <tr><td>die Bilder des Kindes ansehen</td><td>Handy: Mehr → Bilder. Neue Bilder sind markiert.</td></tr>
+</table>
+<h3>Plex-Adresse kopieren (für Playlists und Bibliotheken)</h3>
+<ol class="schritte">
+  <li>Am PC Plex im Browser öffnen (dieselbe Plex-Adresse wie auf dem Fernseher).</li>
+  <li>Die Playlist oder Bibliothek anklicken, bis sie angezeigt wird.</li>
+  <li>Die komplette Adresse aus der Adresszeile kopieren (sie enthält <code>/web/index.html#!/…</code>) und auf der Eltern-Seite einfügen.</li>
+</ol>
+
+<h2>A9 · Wenn etwas nicht klappt</h2>
+<table>
+  <tr><th style="width:32%">Problem</th><th>Lösung</th></tr>
+  <tr><td>Fernbedienung reagiert nicht</td><td>Am Fernseher den richtigen HDMI-Eingang wählen. Sonst: Elternbereich → Neustart
+      (ist der nicht erreichbar: Gerät per Befehl neu starten, Teil B).</td></tr>
+  <tr><td>Aus Plex kommt man nicht zurück</td><td><span class="taste">EXIT</span> drücken (Controller: Xbox-Taste).</td></tr>
+  <tr><td>Video in der Bass-Ecke: „nicht verfügbar“</td><td>Der Kanal erlaubt das Abspielen außerhalb von YouTube nicht. Einen anderen Link für den Song eintragen.</td></tr>
+  <tr><td>Video oder Seite bleibt schwarz</td><td>Handy: Mehr → blockierte Seiten erlauben (A8).</td></tr>
+  <tr><td>Kein Ton oder zu leise</td><td><span class="taste">ROT</span> oder <span class="taste">GRÜN</span> drücken (passend zum Lautsprecher), dann
+      <span class="taste">GELB</span> + <span class="taste">↑</span>. Hilft das nicht: Höchstlautstärke auf der Eltern-Seite prüfen.</td></tr>
+  <tr><td>YouTube-Video ruckelt</td><td>Der Pi 3 bekommt von YouTube automatisch ein leichteres Format (H.264, höchstens 720p).
+      Ruckelt es trotzdem, ist das Video selbst sehr aufwendig – lieber in Plex ablegen.</td></tr>
+  <tr><td>Schwarzer Bildschirm nach dem Einschalten</td><td>1–2 Minuten warten. Hilft das nicht: neu starten (Elternbereich → Neustart). Bleibt es schwarz: Teil B.</td></tr>
+  <tr><td>PIN vergessen</td><td>Teil B, „PIN vergessen“ (braucht den PC).</td></tr>
+</table>
+<div class="kasten achtung"><b>Bitte nicht einfach den Stecker ziehen.</b> Ausschalten oder Neustart über den Elternbereich
+(Reihe „Gerät“). Sonst können gerade geschriebene Einstellungen verloren gehen.</div>
+
+<!-- ================================================================== Teil B -->
+<div class="teil"></div>
+<h2>B1 · Aufbau</h2>
+<table>
+  <tr><th>Teil</th><th>Was</th><th>Läuft als</th></tr>
+  <tr><td><code>fernsehfranzi-server</code></td><td>Startseite (nur am Gerät, 127.0.0.1:8765), Zeitkonto, Elternbereich, Eltern-Seite im Heimnetz (Port 8766, nur wenn eingeschaltet)</td><td>Kiosk-Benutzer</td></tr>
+  <tr><td><code>fernsehfranzi-eingabe</code></td><td>TV-Fernbedienung (CEC) und Controller → Tasten, „Zur Startseite“, Fernseher aus</td><td>root</td></tr>
+  <tr><td><code>kiosk.py</code></td><td>Chromium im Kiosk über die DevTools-Pipe; Seiten, Hinweise, Desktop-Apps; meldet geladene/blockierte Domains</td><td>Kiosk-Benutzer (labwc-Autostart)</td></tr>
+  <tr><td><code>fernsehfranzi-retropie</code> / <code>-spiel</code></td><td>EmulationStation bzw. ein bestimmtes Spiel auf Konsole tty8</td><td>Kiosk-Benutzer</td></tr>
+</table>
+<p>Code: <code>~/fernsehfranzi</code> · Daten (Einstellungen, Zeitkonto, PIN-Hash, Zeichnungen, Logs): <code>~/fernsehfranzi-daten</code>
+(überlebt jedes Update) · Version 2.5 liegt als Rückweg noch in <code>~/familyhub</code>.</p>
+
+<h2>B2 · Konten und Rechte</h2>
+<ul>
+  <li><b>Kiosk-Benutzer</b> (Autologin): darf als root nur die Befehle aus <code>/etc/sudoers.d/fernsehfranzi</code>
+      (RetroPie/Spiel starten und stoppen, Neustart, Ausschalten, Whitelist-Richtlinie setzen, seit 4.1 der Bluetooth-Helfer
+      <code>/usr/local/lib/fernsehfranzi/bt-helfer</code>, der nur suchen/koppeln/verbinden/trennen/entfernen mit geprüfter Adresse kann;
+      seit 4.2 <code>systemctl start fernsehfranzi-scraper.service</code> für die Spielbilder).</li>
+  <li><b>Seit 4.1 im Kiosk:</b> <code>~/.config/labwc/rc.xml</code> ohne Tastenkürzel und <code>menu.xml</code> mit leeren Menüs
+      (sonst Terminal per Strg+Alt+T); <code>/etc/udev/hwdb.d/90-fernsehfranzi-tastatur.hwdb</code> legt die Sondertasten der
+      iPazzPort um; <code>/etc/NetworkManager/conf.d/90-fernsehfranzi-wlan.conf</code> schaltet das WLAN-Energiesparen aus.
+      Alles sichert install.sh vorher, <code>make v3-rollback</code> nimmt es zurück.</li>
+  <li><b>Admin-Konto</b> (eingerichtet mit <code>make admin-einrichten</code>): sudo <b>mit Passwort</b>. Alle Deploys, Installationen
+      und Notfälle laufen darüber; das Passwort wird bei jedem Deploy eingetippt. Name und Gerät stehen in
+      <code>config/pi.mk</code> als <code>ADMIN_HOST</code>.</li>
+  <li>Vorher hatte der Kiosk-Benutzer volles sudo ohne Passwort (<code>/etc/sudoers.d/010_pi-nopasswd</code>). Die Datei ist gesichert in
+      <code>/var/backups/fernsehfranzi/sudo-vorher/</code>; <code>make admin-zurueck</code> stellt den alten Zustand her.</li>
+</ul>
+
+<h2>B3 · Befehle (am PC, im Projektordner)</h2>
+<table>
+  <tr><th>Befehl</th><th>Wirkung</th></tr>
+  <tr><td><code>make check</code> · <code>make test</code></td><td>Alle Prüfungen und Tests (inkl. Spiele in einem Browser ohne Emoji-Schrift, wie am Gerät)</td></tr>
+  <tr><td><code>make v3-plan</code></td><td>Trockenlauf: was übertragen würde (ändert nichts)</td></tr>
+  <tr><td><code>make v3-deploy</code></td><td>Ausliefern: zwei Rückfragen, Sicherung, Übertragen, <code>install/install.sh</code> als root, Nachprüfung, Protokoll in <code>.local/</code></td></tr>
+  <tr><td><code>make v3-pruefen</code></td><td>Nachprüfung nach dem Neustart (ändert nichts)</td></tr>
+  <tr><td><code>make v3-rollback SICHERUNG=/var/backups/fernsehfranzi/v3-…</code></td><td>Zurück auf den Stand vor einem Deploy (die genaue Zeile druckt <code>make v3-deploy</code> am Ende)</td></tr>
+  <tr><td><code>make admin-plan</code> · <code>make admin-einrichten</code> · <code>make admin-zurueck</code></td><td>Admin-Konto anlegen und volles sudo des Kiosk-Benutzers entfernen bzw. zurückgeben (je Schritt zwei Rückfragen)</td></tr>
+  <tr><td><code>make retro-plan</code> · <code>make retro-erweitern</code></td><td>C64 (lr-vice) und Amiga (Amiberry) in RetroPie nachinstallieren</td></tr>
+  <tr><td><code>make anleitung</code></td><td>Diese Anleitung als PDF neu erzeugen (<code>docs/anleitung/anleitung.html</code> → <code>web/anleitung.pdf</code>)</td></tr>
+</table>
+
+<h2>B4 · Ausliefern – Ablauf</h2>
+<ol class="schritte">
+  <li><code>make v3-deploy</code> – zwei Rückfragen mit „ja“ beantworten, beim Systemschritt das Admin-Passwort eingeben.</li>
+  <li>Sauber neu starten: <code>ssh -t ADMIN@GERÄT sudo systemctl reboot</code> (nicht Strom ziehen – am 21.11.2026 gingen so
+      frisch geschriebene Dateien verloren; <code>install.sh</code> repariert solche Reste inzwischen und schreibt mit <code>sync</code>).</li>
+  <li><code>make v3-pruefen</code> und am Fernseher kurz durchklicken.</li>
+  <li>Bei Problemen nicht herumprobieren: <code>make v3-rollback SICHERUNG=…</code>.</li>
+</ol>
+
+<h2>B4a · Retro-Spiele: Kiosk-Modus</h2>
+<ul>
+  <li><b>RetroArch</b> (<code>kiosk_mode_enable</code>): im Spielmenü (Xbox + X) nur Weiterspielen, Speichern, Laden, Beenden – keine Einstellungen.</li>
+  <li><b>EmulationStation</b> (<code>UIMode = Kiosk</code>): kein Neustart/Herunterfahren und keine Einstellungen im Menü.
+      Zur Startseite: EXIT auf der Fernbedienung oder Xbox-Taste in der Spieleliste.</li>
+  <li>Entsperren für Eltern (z. B. für den <b>Scraper</b> nach neuen Spielen, oder um Spiele zu sortieren): in der
+      Konsolen- oder Spieleliste von EmulationStation den <b>Entsperr-Code</b> eingeben (Steuerkreuz u/d/l/r und A/B).
+      Danach ist das volle Menü da (<span class="taste">Start</span> → Scraper …). Der Code wird bei der Installation
+      zufällig gesetzt und steht im Protokoll <code>.local/INSTALL-…log</code> auf dem PC.
+      Seit 3.2.2 gilt das Entsperren nur, bis RetroPie beendet wird – beim nächsten Start ist der Kiosk-Modus wieder da.</li>
+  <li><b>C64</b> (lr-vice): Controller = Joystick an Anschluss 2, A = Feuer, Y = Leertaste, RT = RETURN, LT = RUN/STOP,
+      Back = Bildschirmtastatur. Spiele starten von selbst; Kassetten werden im Schnelllauf geladen
+      (<code>make retro-einrichten</code>). Ein paar Spiele wollen den Joystick an Anschluss 1 – das lässt sich bisher nur mit
+      einer Tastatur umschalten (rechte Strg-Taste).</li>
+  <li><b>Amiga</b> (Amiberry): Disketten-Spiele (<code>.adf</code>, auch mehrere in einer ZIP-Datei) brauchen die Kickstart-ROMs
+      in <code>~/RetroPie/BIOS/amiga</code> als <code>kick13.rom</code>, <code>kick20.rom</code>, <code>kick31.rom</code> –
+      <code>make retro-einrichten</code> legt sie aus den vorhandenen Dateien an. <b>CD32-Spiele</b> (ZIP mit
+      <code>.bin</code>/<code>.cue</code>/<code>.img</code>) brauchen zusätzlich die CD32-ROMs (Kickstart + Extended, z. B. aus
+      Amiga Forever) und müssen entpackt im Ordner liegen (die <code>.cue</code>-Datei wird gestartet).</li>
+  <li>Die Kinder-Anleitung (Eltern-Seite → „Kinder-Anleitung“) erklärt Speichern, Laden, Speicherplätze und Beenden.</li>
+</ul>
+
+<h2>B5 · PIN vergessen</h2>
+<pre>ssh -t ADMIN@GERÄT
+sudo rm /home/KIOSK/fernsehfranzi-daten/pin.json
+sudo systemctl restart fernsehfranzi-server</pre>
+<p>Danach am Fernseher <span class="taste">BLAU</span>: eine neue PIN wird festgelegt (geht nur am Fernseher, nicht am Handy).</p>
+
+<h2>B6 · Logs und Fehlersuche</h2>
+<table>
+  <tr><th>Was</th><th>Wo</th></tr>
+  <tr><td>Server (Zeitkonto, Eltern, Meldungen)</td><td><code>~/fernsehfranzi-daten/logs/server.log</code></td></tr>
+  <tr><td>Kiosk / Chromium</td><td><code>~/fernsehfranzi-daten/logs/kiosk.log</code></td></tr>
+  <tr><td>Fernbedienung und Controller (jeder EXIT-Druck)</td><td><code>journalctl -u fernsehfranzi-eingabe -b</code></td></tr>
+  <tr><td>RetroPie</td><td><code>journalctl -u fernsehfranzi-retropie -b</code>, <code>/dev/shm/runcommand.log</code></td></tr>
+  <tr><td>Zustand allgemein</td><td><code>curl -s http://127.0.0.1:8765/api/status</code> (am Gerät)</td></tr>
+</table>
+<p>Weitere Details: <code>docs/ENTWICKLUNG.md</code> (Aufbau, Grundsätze, Schnittstellen, Tests, Ausliefern) und
+<code>CHANGELOG.md</code> (was sich wann geändert hat).</p>
+<div class="kasten">Hinweis Emojis: Das Gerät hat keine Emoji-Schrift. Die Startseite bringt ihre eigene mit
+(<code>web/fonts/emoji.ttf</code>, Ausschnitt aus Noto Color Emoji). Nach neuen Emojis im Code
+<code>.venv/bin/python werkzeuge/emoji_schrift.py</code> ausführen – <code>make test</code> erinnert daran.</div>
+
+</body>
+</html>

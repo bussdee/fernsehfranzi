@@ -1,0 +1,11 @@
+# FernsehFranzi 4.1 - Sondertasten der Bluetooth-Tastatur iPazzPort (04E8:7021) umlegen.
+# Chromium würde „Zurück“, „Home“ und die Menütaste sonst selbst ausführen (Verlauf zurück, leere Startseite,
+# Rechtsklick-Menü). So kommen sie als harmlose Tasten an, die FernsehFranzi selbst auswertet:
+#   Zurück  -> Escape (wie STOP)   Home -> F20 (Startseite, eingabe.py)
+#   Suche   -> F21 (Nachrichten)   Menü -> F22 (Elternbereich, eingabe.py)
+# Eingespielt von install/install.sh (systemd-hwdb update + udevadm trigger).
+evdev:input:b0005v04E8p7021*
+ KEYBOARD_KEY_c0224=esc
+ KEYBOARD_KEY_c0223=f20
+ KEYBOARD_KEY_c0221=f21
+ KEYBOARD_KEY_70065=f22

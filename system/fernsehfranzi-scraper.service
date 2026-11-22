@@ -1,0 +1,20 @@
+# FernsehFranzi 4.2 - Bilder für Retro-Spiele holen (server/fernsehfranzi/scraper.py). Läuft als Kiosk-Benutzer,
+# einmal und dann fertig. Gestartet vom Server (Eltern-Seite oder nachts) über die enge sudo-Regel.
+# Eigene Unit, weil der Server ~/.emulationstation nicht beschreiben darf (ProtectHome=read-only).
+# @BENUTZER@ und @HOME@ ersetzt install/install.sh.
+[Unit]
+Description=FernsehFranzi - Bilder für Retro-Spiele holen
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=@BENUTZER@
+WorkingDirectory=@HOME@/fernsehfranzi/server
+Environment=FERNSEHFRANZI_DATEN=@HOME@/fernsehfranzi-daten
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -m fernsehfranzi.scraper
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=45min
+NoNewPrivileges=yes

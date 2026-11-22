@@ -1,0 +1,32 @@
+#!/usr/bin/python3 -I
+"""FernsehFranzi 3.1 - ein Spiel aus „Zuletzt gespielt“ starten (läuft als Kiosk-Benutzer auf tty8).
+
+Liest system und rom aus spiel-start.json (vom Server), prüft streng, dass die Datei unter
+~/RetroPie/roms/<system>/ liegt, und startet sie über runcommand wie EmulationStation.
+"""
+import json
+import os
+import re
+import sys
+
+DATEN = os.environ.get("FERNSEHFRANZI_DATEN") or os.path.expanduser("~/fernsehfranzi-daten")
+ROMS = os.path.realpath(os.path.expanduser("~/RetroPie/roms"))
+RUNCOMMAND = "/opt/retropie/supplementary/runcommand/runcommand.sh"
+
+
+def main():
+    with open(os.path.join(DATEN, "spiel-start.json"), encoding="utf-8") as f:
+        wunsch = json.load(f)
+    system, rom = str(wunsch.get("system", "")), str(wunsch.get("rom", ""))
+    if not re.fullmatch(r"[a-z0-9_+-]{1,32}", system):
+        print("Ungültiges System: %r" % system, file=sys.stderr)
+        return 2
+    pfad = os.path.realpath(os.path.join(ROMS, system, rom))
+    if not pfad.startswith(os.path.join(ROMS, system) + os.sep) or not os.path.isfile(pfad):
+        print("Ungültige Spieldatei: %r" % rom, file=sys.stderr)
+        return 2
+    os.execv(RUNCOMMAND, [RUNCOMMAND, "0", "_SYS_", system, pfad])
+
+
+if __name__ == "__main__":
+    sys.exit(main())
