@@ -26,7 +26,7 @@ JSON       := $(shell git ls-files --cached --others --exclude-standard -- '*.js
 TMP        := $(shell mktemp -d -u /tmp/fernsehfranzi-check.XXXXXX)
 
 .PHONY: help venv check test deploy-plan deploy rollback pi-probe pi-check-vor pi-check-nach _pi_host \
-        v3-lokal v3-plan v3-deploy v3-pruefen v3-rollback retro-plan retro-erweitern retro-einrichten-plan retro-einrichten amiga-bibliothek-plan amiga-bibliothek admin-plan admin-einrichten admin-zurueck anleitung bildschirmfotos
+        v3-lokal v3-plan v3-deploy v3-pruefen v3-wartung-aus v3-rollback retro-plan retro-erweitern retro-einrichten-plan retro-einrichten amiga-bibliothek-plan amiga-bibliothek admin-plan admin-einrichten admin-zurueck anleitung bildschirmfotos
 
 help:
 	@echo ""
@@ -48,7 +48,8 @@ help:
 	@echo "  make v3-lokal       Server 3.0 lokal starten: http://127.0.0.1:8765/ (Daten in /tmp)"
 	@echo "  make v3-plan        Trockenlauf der Umstellung (ändert nichts)"
 	@echo "  make v3-deploy      Umstellen – fragt ZWEIMAL, danach Gerät einmal neu starten"
-	@echo "  make v3-pruefen     Nach dem Neustart: Nachprüfung (ändert nichts)"
+	@echo "  make v3-pruefen     Nach dem Neustart: Nachprüfung; grün = Wartungsmodus aus"
+	@echo "  make v3-wartung-aus Wartungsmodus am Fernseher von Hand beenden"
 	@echo "  make v3-rollback SICHERUNG=/var/backups/fernsehfranzi/v3-…  – zurück auf 2.5, fragt ZWEIMAL"
 	@echo "  make retro-plan     Was für C64/Amiga in RetroPie fehlt (ändert nichts)"
 	@echo "  make retro-erweitern  C64 + Amiga nachinstallieren – fragt ZWEIMAL"
@@ -138,7 +139,15 @@ v3-deploy: _pi_host check test
 
 v3-pruefen: _pi_host
 	@python3 werkzeuge/pi_check.py nach --host "$(PI_HOST)" --pfad "$(V3_PATH)" --version "$(VERSION)" \
-	  --neustart-erlaubt --abgeloest familyhub-server.service --abgeloest familyhub-cec.service
+	  --neustart-erlaubt --abgeloest familyhub-server.service --abgeloest familyhub-cec.service \
+	  || { echo "🛠️  Wartungsmodus bleibt an (endet spätestens nach 45 min oder mit: make v3-wartung-aus)."; exit 1; }
+	@$(MAKE) --no-print-directory v3-wartung-aus
+
+# 5.3: Wartungsmodus beenden - löscht nur die Datei wartung.json im Datenordner des Fernseh-Pi
+v3-wartung-aus: _pi_host
+	@ssh -o BatchMode=yes -o ConnectTimeout=10 "$(PI_HOST)" 'rm -f "$$HOME/fernsehfranzi-daten/wartung.json"' \
+	  && echo "✅ Wartungsmodus aus – der Fernseher ist wieder frei." \
+	  || { echo "⚠️  Wartungsmodus ließ sich nicht abschalten (endet spätestens nach 45 min von selbst)."; exit 1; }
 
 v3-rollback: _pi_host
 	@bash werkzeuge/deploy_v3.sh zurueck "$(SICHERUNG)"

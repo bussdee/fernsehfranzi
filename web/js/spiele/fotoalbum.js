@@ -49,6 +49,7 @@ export default {
       ...(z.fa.ordner ? [{ text: "📁 Fotos", quelle: "ordner" }] : []),
       { text: "📷 Mein Album", quelle: "album" }, { text: "🎨 Meine Bilder", quelle: "zeichnungen" },
       { text: z.fa.bildschirmschoner ? "🖥️ Bildschirmschoner: AN" : "🖥️ Bildschirmschoner: aus", schoner: true },
+      { text: "▶ Diashow jetzt", diashow: true },              /* 6.0: Bildschirmschoner sofort starten */
     ];
 
     function zeige() {
@@ -122,6 +123,7 @@ export default {
         if (t === "Enter" || t === " ") {
           if (z.wahl < 0) {
             const k = kopfKnoepfe()[z.kopfWahl];
+            if (k.diashow) { api.diashow?.(); ton("ok"); return true; }
             if (k.schoner) {
               api.sende("/api/fotoalbum", { bildschirmschoner: !z.fa.bildschirmschoner }).then((fa) => {
                 z.fa = fa; api.hinweis(fa.bildschirmschoner ? (fa.auswahl.length ? "Deine Bilder sind jetzt der Bildschirmschoner." : "An – such dir noch Bilder aus (⭐).") : "Bildschirmschoner: wieder deine Zeichnungen."); zeige();

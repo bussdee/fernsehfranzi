@@ -31,7 +31,7 @@ Fernseher und auf dem Handy. Bedient wird alles mit der normalen TV-Fernbedienun
 | 🎮 **Spielzimmer** | Eigene kleine Spiele: Snake, Memory (auch mit selbst gemalten Bildern), Drei gewinnt, Farben-Echo, Malen, Spiele zu zweit, Sticker-Album. |
 | 🎸 **Musik & Lernen** | Musik-Akademie, Bass-Ecke mit Mikrofon (Stimmgerät, Nachspielen, Tagebuch), Lernspiele. Lernzeit kann Spielzeit verdienen. |
 | ⏱️ **Zeitkonto** | Bildschirmzeit und Gaming-Zeit für Schultage und Wochenende, Limits je App, Sperrzeiten, Ferien des Bundeslandes per Knopf, Gutschein-Codes zum Ausdrucken. |
-| 🎨 **Designs und Ansichten** | Helle und dunkle Farben, drei Aufteilungen der Startseite (Konsole, Seitenleiste, Karussell), abends automatisch dunkel. |
+| 🎨 **Farben** | Zehn klare Farben (dunkel und hell), abends wird hell automatisch dunkel; Startseite „Zuhause“ mit Lieblingen, „Weiter“ und Bereichen. |
 | 🌤️ **Wetter** | Wetter und Regenzeiten oben auf der Startseite und als eigene Seite: „Wann können wir raus?“ (Open-Meteo, ohne Konto). |
 | 🏫 **Schule** | Stundenplan, Hausaufgaben, Termine und Klassennachrichten aus der Klassenkiste, nur lesen, mit Meldung bei Neuem und Morgen-Check. |
 | 📖 **Geschichten & News** | Geschichten, Bücher und Rätsel der Kinderwelten (Familienfabrik) zum Selberlesen, Kinder-News nur aus freigeschalteten Quellen. |
@@ -46,12 +46,12 @@ Fernseher und auf dem Handy. Bedient wird alles mit der normalen TV-Fernbedienun
 
 ![Snake, Drei gewinnt, Malen und Memory](docs/bilder/spielzimmer.png)
 
-### Farben und Ansichten
+### Farben
 
-Das Kind wählt die Farben (hell oder dunkel) und die Aufteilung der Startseite: Konsole, Seitenleiste oder Karussell.
-Die Eltern legen fest, was es gibt, und ab wann abends automatisch Dunkel kommt.
+Das Kind wählt die Farbe – dunkel oder hell – und bis zu sechs Lieblinge. Die Eltern legen fest, welche Farben es gibt
+und ab wann abends automatisch dunkel wird.
 
-![Helle Farben, Ansicht Seitenleiste und Ansicht Karussell](docs/bilder/designs.png)
+![Drei Farben der Startseite](docs/bilder/designs.png)
 
 ### Wetter, Schule und Geschichten
 
@@ -69,21 +69,21 @@ gespielt wird, und gespeichert wird nichts über die Mitspieler.
 
 ![Am Handy: Buzzer, Quiz, Schalter und Handbuch](docs/bilder/handyspiele-handy.png)
 
-### Bereiche statt Menüs
+### Zuhause und Bereiche
 
-Mit ↑ ↓ wechselt man den Bereich, mit ← → die Kachel, OK startet. EXIT auf der Fernbedienung führt von überall zurück
-zur Startseite.
+„Zuhause“ zeigt die Lieblinge, „Weiter, wo du warst“ und die Bereiche; OK öffnet einen Bereich als Raster, STOP führt
+zurück. EXIT auf der Fernbedienung führt von überall zurück zur Startseite.
 
 ![Der Bereich Spiele](docs/bilder/startseite-spiele.png)
 
 ### Eltern-Seite am Handy
 
-Im Heimnetz mit PIN, aufgebaut wie eine App: unten 🏠 Heute, ⚙️ Menü und 📊 Statistik, im Menü alle Einstellungen nach
-Themen sortiert. Zeit gutschreiben oder sperren, eine Nachricht an den Fernseher schicken, Regeln und Apps
+Im Heimnetz mit PIN, aufgebaut wie eine App: unten die Reiter 🏠 Heute, ⏰ Zeit, 🧩 Inhalte, 💬 Familie und 🔧 Gerät,
+jeder Bereich klappt mit einem Tipp auf. Zeit gutschreiben oder sperren, eine Nachricht an den Fernseher schicken, Regeln und Apps
 einstellen, die Statistik ansehen, ein Bild vom Fernseher abrufen (am Fernseher erscheint dann ein 📷), Bluetooth-Geräte
 koppeln, eine Sicherung herunterladen. Dasselbe gibt es als Elternbereich direkt am Fernseher (BLAU auf der Fernbedienung).
 
-![Eltern-Seite: Heute, Menü, Statistik](docs/bilder/eltern-seite.png)
+![Eltern-Seite: Heute, Zeit und Inhalte](docs/bilder/eltern-seite.png)
 
 ## Bedienung
 
@@ -151,6 +151,7 @@ make bildschirmfotos   # die Bilder in docs/bilder neu erzeugen
 ## Lizenz
 
 [MIT](LICENSE). Die Emoji-Schrift in `web/fonts/` ist ein Ausschnitt aus Noto Color Emoji (SIL Open Font License 1.1,
-siehe [Lizenztext](web/fonts/LIZENZ-Noto-Color-Emoji.txt)). Spielbilder lädt der Scraper zur Laufzeit aus den freien
+siehe [Lizenztext](web/fonts/LIZENZ-Noto-Color-Emoji.txt)). Die 3D-Bilder in `web/icons/` stammen aus
+[Fluent Emoji](https://github.com/microsoft/fluentui-emoji) von Microsoft (MIT, [Lizenztext](web/icons/LIZENZ-fluentui-emoji.txt)). Spielbilder lädt der Scraper zur Laufzeit aus den freien
 [libretro-thumbnails](https://github.com/libretro-thumbnails); sie sind nicht Teil dieses Repositorys. ROMs,
 Kickstart-Dateien und Filme liegen nicht bei.

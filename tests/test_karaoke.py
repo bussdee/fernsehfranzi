@@ -136,6 +136,7 @@ class Karaoke(unittest.TestCase):
             fehler = []
             seite.on("pageerror", lambda e: fehler.append(str(e)))
             seite.goto("http://127.0.0.1:8765/")
+            seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-karaoke')")
             seite.click(".kachel[data-id=spiel-karaoke]")
             seite.wait_for_selector(".ka-eintrag.gewaehlt")
             self.assertIn("Alle meine Entchen", seite.inner_text(".ka-liste"))

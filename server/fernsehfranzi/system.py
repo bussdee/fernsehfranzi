@@ -10,6 +10,7 @@ import re
 import socket
 import struct
 import subprocess
+import threading
 import tempfile
 import time
 import wave
@@ -179,14 +180,29 @@ class System:
             self._run(["pactl", "set-sink-volume", name, "50%"], sitzung=True)
         return True, name
 
-    def gong(self):
-        """Hinweiston für Nachrichten, Erinnerungen und Zeitwarnungen - auf dem aktuellen Ausgang, überall hörbar."""
+    def gong(self, klang=None):
+        """Hinweiston für Nachrichten, Erinnerungen und Zeitwarnungen - auf dem aktuellen Ausgang, überall hörbar.
+        5.2: klang = ein Klang aus dem Archiv (klaenge.py), "stumm" = kein Ton, None = Gong."""
+        from . import klaenge
+        if klang == klaenge.STUMM:
+            return
         try:
-            subprocess.Popen(["pw-play", ton_datei("gong", ((784, 0.35), (988, 0.35), (1175, 0.7)))],
+            subprocess.Popen(["pw-play", klaenge.datei(klang or klaenge.STANDARD)],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              env=dict(os.environ, **sitzungs_umgebung()))
         except OSError as fehler:
             log.warning("Gong: %s", fehler)
+
+    def gong_datei(self, pfad, hoechstens_s=10):
+        """6.0: eigener Klang (Datei aus dem Klang-Ordner) - nach hoechstens_s Sekunden ist Schluss."""
+        try:
+            prozess = subprocess.Popen(["pw-play", pfad], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                       env=dict(os.environ, **sitzungs_umgebung()))
+            timer = threading.Timer(hoechstens_s, lambda: prozess.poll() is None and prozess.kill())
+            timer.daemon = True
+            timer.start()
+        except OSError as fehler:
+            log.warning("Eigener Klang: %s", fehler)
 
     def lautstaerke_setzen(self, prozent):
         """Lautstärke des aktuellen Ausgangs fest setzen (Wecker). Rückgabe: vorheriger Wert oder None."""

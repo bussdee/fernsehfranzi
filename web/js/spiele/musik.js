@@ -2,9 +2,10 @@
  * Die Bass-Übungen bleiben in bass.js; dieses Modul bekommt von dort den Rahmen (k):
  *   k.inhalt, k.hilfe, k.modus(m), k.aufraeumen(fn), k.zurueck(), k.api, k.erfolg(art, wert)
  * Pfeile bleiben Navigation; OK spielt/wählt; STOP geht eine Ebene zurück. */
-import { el } from "../gemeinsam.js";
+import { el, franzi } from "../gemeinsam.js";
 import { ton, konfetti } from "./kern.js";
 import { ctx, zupfe, tonhoehe, naechsterTon, mikroHoeren, tonPasst } from "./bass.js";
+import { stimmSpur, centZu, NAH_CENT } from "./stimme.js";
 
 const TOENE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "H"];
 const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
@@ -44,7 +45,8 @@ async function mikroStrom(beiHz) {
 }
 
 function keinMikro(k) {
-  k.inhalt.replaceChildren(el("div", { class: "witz", text: "Kein Mikrofon gefunden – dafür braucht der Fernseh-Pi das USB-Mikrofon." }));
+  k.inhalt.replaceChildren(el("div", { class: "seite-leer" }, franzi("staunen", "franzi-leer"),
+    el("div", { text: "Kein Mikrofon gefunden – dafür braucht der Fernseher das USB-Mikrofon." })));
   k.modus({ unter: true, taste: () => false });
 }
 
@@ -238,41 +240,55 @@ export function singen(k) {
 }
 
 async function tonTreffen(k, leiter = false) {
+  /* 6.0: Die eigene Stimme läuft als Linie über den Bildschirm, das grüne Band ist der Zielton.
+     Wer den Ton eine knappe Sekunde hält, füllt den Ring und bekommt einen Stern. */
   const LEITER = [60, 62, 64, 65, 67, 69, 71, 72];
+  const HALTEN_MS = 900;
   let ziel = 0, schritt = 0, getroffenSeit = 0, richtig = 0;
-  const name = el("div", { class: "akkord-name" });
-  const saeule = el("div", { class: "sing-saeule" }, el("div", { class: "sing-ziel" }), el("div", { class: "sing-ich" }));
+  const name = el("div", { class: "akkord-name sing-ton" });
+  const spur = stimmSpur({ breite: 760, hoehe: 320 });
+  const saeule = el("div", { class: "sing-saeule" }, spur.knoten);
+  const sterne = el("div", { class: "sing-sterne" });
   const info = el("div", { class: "punkte" });
-  k.inhalt.replaceChildren(el("div", { class: "sing-ansicht" }, name, saeule, info));
+  k.inhalt.replaceChildren(el("div", { class: "sing-ansicht" }, el("div", { class: "sing-kopf" }, name, sterne), saeule, info));
   k.hilfe.textContent = "Sing den Ton nach · OK nochmal hören · → neuer Ton · STOP zurück";
+  const sterneZeigen = () => {
+    if (leiter) sterne.replaceChildren(...LEITER.map((_, i) => el("span", { class: i < schritt % LEITER.length ? "an" : "", text: "⭐" })));
+    else sterne.textContent = richtig ? `⭐ ${richtig}` : "";
+  };
   const neu = () => {
     ziel = leiter ? LEITER[schritt % LEITER.length] : 57 + Math.floor(Math.random() * 13);   /* A3 bis A4: gut zu singen */
     name.textContent = tonName(ziel);
-    info.textContent = leiter ? `Ton ${schritt % LEITER.length + 1} von ${LEITER.length}` : `Getroffen: ${richtig}`;
+    name.classList.remove("geschafft");
+    info.textContent = leiter ? `Ton ${schritt % LEITER.length + 1} von ${LEITER.length} – erst zuhören, dann singen` : "Erst zuhören, dann singen";
     getroffenSeit = 0;
+    spur.leeren();
+    sterneZeigen();
     spiele(hz(ziel), 1.6, 0.2, "sine");
   };
   const stopp = await mikroStrom((f) => {
-    const ich = saeule.querySelector(".sing-ich");
-    if (!f || !ziel) { ich.style.opacity = "0.2"; getroffenSeit = 0; return; }
-    /* Abstand in Cent zum Ziel - Oktave egal (Kinderstimme singt oft eine Oktave höher) */
-    let cent = 1200 * Math.log2(f / hz(ziel));
-    cent = ((cent % 1200) + 1800) % 1200 - 600;
-    const pos = Math.max(-300, Math.min(300, cent));
-    ich.style.opacity = "1";
-    ich.style.bottom = `calc(50% + ${pos / 6}% - 14px)`;
-    const nah = Math.abs(cent) <= 40;
-    ich.classList.toggle("nah", nah);
-    info.textContent = nah ? "Super – halten!" : cent > 0 ? "⬇ etwas tiefer" : "⬆ etwas höher";
-    if (nah) {
+    if (!ziel) return;
+    if (!f) { spur.zeige(null); spur.halten(0); getroffenSeit = 0; return; }
+    const cent = centZu(f, hz(ziel));
+    spur.zeige(cent);
+    if (Math.abs(cent) <= NAH_CENT) {
       getroffenSeit = getroffenSeit || Date.now();
-      if (Date.now() - getroffenSeit > 900) {
+      const anteil = (Date.now() - getroffenSeit) / HALTEN_MS;
+      spur.halten(anteil);
+      info.textContent = "Super – halten!";
+      if (anteil >= 1) {
         richtig++; schritt++; ton("ok"); k.erfolg("gehoer", 1);
         ziel = 0;
-        if (leiter && schritt % LEITER.length === 0) { konfetti(document.body); ton("sieg"); }
-        setTimeout(neu, 900);
+        name.classList.add("geschafft");
+        info.textContent = "⭐ Getroffen!";
+        sterneZeigen();
+        if (leiter && schritt % LEITER.length === 0) { konfetti(document.body); ton("sieg"); info.textContent = "🏆 Die ganze Tonleiter!"; }
+        setTimeout(neu, 1200);
       }
-    } else getroffenSeit = 0;
+    } else {
+      getroffenSeit = 0; spur.halten(0);
+      info.textContent = cent > 0 ? "⬇ etwas tiefer" : "⬆ etwas höher";
+    }
   });
   if (!stopp) return keinMikro(k);
   k.aufraeumen(stopp);

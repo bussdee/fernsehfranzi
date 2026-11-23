@@ -29,7 +29,7 @@ import urllib.error
 import urllib.request
 from datetime import timedelta
 
-from . import daten as daten_mod, zeitkonto
+from . import daten as daten_mod, klaenge, zeitkonto
 
 log = logging.getLogger("fernsehfranzi.telegram")
 
@@ -41,7 +41,8 @@ EIGENER_TEXT_MAX = 300
 VERSTECKT = "••••••••"                       # so zeigt die Eltern-Seite einen gesetzten Token
 SENDEN_ABSTAND_S = 10
 SENDEN_PRO_TAG = 40
-KONTAKT_FELDER = {"id", "name", "symbol", "eltern", "darf_schreiben", "eigene_texte", "nur_freizeit", "medien", "meldungen"}
+KONTAKT_FELDER = {"id", "name", "symbol", "eltern", "darf_schreiben", "eigene_texte", "nur_freizeit", "medien", "meldungen",
+                  "klang"}    # 5.2: eigener Klang je Kontakt
 KONTAKT_ALT = {"symbol": "💬", "eltern": True, "darf_schreiben": True, "eigene_texte": True, "nur_freizeit": False,
                "medien": True}
 KONTAKT_NEU = {"symbol": "💬", "eltern": False, "darf_schreiben": False, "eigene_texte": False, "nur_freizeit": True,
@@ -101,6 +102,8 @@ def pruefe(t):
         if "meldungen" in c and (not isinstance(c["meldungen"], dict) or set(c["meldungen"]) - set(MELDUNG_ARTEN) or
                                  not all(isinstance(v, bool) for v in c["meldungen"].values())):
             raise ValueError("Telegram: Meldungen bei %s sind ungültig." % c["name"])
+        if not klaenge.gueltig(c.get("klang")):
+            raise ValueError("Telegram: unbekannter Klang bei %s." % c["name"])
         if not isinstance(c["symbol"], str) or not c["symbol"].strip() or len(c["symbol"]) > 8:
             raise ValueError("Telegram: Symbol bei %s fehlt oder ist zu lang." % c["name"])
     if len({c["id"] for c in t["chats"]}) != len(t["chats"]):
@@ -217,7 +220,8 @@ class Telegram:
                              for c in self.schreibbar()]}
 
     def _zeigen(self, c, text, medium=None):
-        self.hub.familie.nachricht(text, quelle=c["name"], bleibt=True, chat=c["id"], symbol=c["symbol"], medium=medium)
+        self.hub.familie.nachricht(text, quelle=c["name"], bleibt=True, chat=c["id"], symbol=c["symbol"], medium=medium,
+                                   klang=c.get("klang"))
 
     # ------------------------------------------------------------ 4.4: Meldungen und Befehle für die Eltern
     def melde_eltern(self, art, text):
@@ -252,7 +256,7 @@ class Telegram:
             log.warning("Telegram: %s", str(fehler).replace(self.einstellungen()["token"], "…"))
 
     HILFE = ("Befehle für Eltern:\n/status – Restzeit und was gerade läuft\n/zeit 15 · /zeit 30 · /zeit frei\n"
-             "/sperren [Text] · /freigeben\n/gutenacht – Gute Nacht starten\n/aus – Fernseher aus\n"
+             "/sperren [Text] · /freigeben\n/auszeit 15 – Auszeit mit Countdown (Minuten)\n/gutenacht – Gute Nacht starten\n/aus – Fernseher aus\n"
              "/foto – Bild vom Fernseher\n/bericht – Tagesbericht jetzt")
 
     def antwort(self, c, text):
@@ -277,6 +281,12 @@ class Telegram:
             if name == "/sperren":
                 h.sperren(rest or "Der Fernseher macht jetzt Pause.")
                 return self.antwort(c, "🔒 Der Fernseher ist gesperrt.")
+            if name == "/auszeit":                   # 5.1: Auszeit mit Countdown
+                try:
+                    a = h.auszeit(int(rest or "15"))
+                except ValueError:
+                    return self.antwort(c, "So geht's: /auszeit 15 (1 bis 240 Minuten)")
+                return self.antwort(c, "⏳ Auszeit bis %s Uhr. Mit /freigeben früher beenden." % a["bis"])
             if name == "/freigeben":
                 h.entsperren()
                 return self.antwort(c, "🔓 Der Fernseher ist wieder frei.")

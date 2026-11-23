@@ -21,7 +21,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
-from . import hoerbuch as hoerbuch_mod, katalog as katalog_mod, kinderwelten as kinderwelten_mod, sicherung as sicherung_mod, wetter as wetter_mod
+from . import hoerbuch as hoerbuch_mod, katalog as katalog_mod, kinderwelten as kinderwelten_mod, klaenge as klaenge_mod, sicherung as sicherung_mod, wetter as wetter_mod
 
 log = logging.getLogger("fernsehfranzi.web")
 
@@ -199,14 +199,18 @@ class Basis(BaseHTTPRequestHandler):
             ("POST", "/api/eltern/bonus"): lambda q: self._eltern(lambda d: h.bonus(_bonus_art(d))),
             ("POST", "/api/eltern/sperre"): lambda q: self._eltern(
                 lambda d: h.entsperren() if d.get("frei") else h.sperren(d.get("text", ""))),
+            # 5.2: Klang-Archiv - Datei zum Probehören (ohne Anmeldung: sie ist für alle gleich) und Probe am Fernseher
+            ("GET", "/api/klang"): lambda q: self._klang(q.get("id", [""])[0]),
+            ("GET", "/api/eltern/klaenge-eigen"): lambda q: (self.eltern_pflicht(), self.json({"klaenge": h.klaenge_eigen()})),
+            ("POST", "/api/eltern/klang-test"): lambda q: self._eltern(lambda d: h.klang_testen(d.get("klang"))),
+            ("POST", "/api/eltern/auszeit"): lambda q: self._eltern_ergebnis(lambda d: h.auszeit(d.get("minuten"))),   # 5.1
             ("POST", "/api/eltern/geraet"): lambda q: self._eltern(lambda d: h.system.geraet(
                 _wahl(d.get("aktion"), ("neustart", "aus")))),
             ("POST", "/api/eltern/zeichnung-loeschen"): lambda q: self._eltern(self._zeichnung_loeschen),
             ("GET", "/api/eltern/zeichnungen"): lambda q: (self.eltern_pflicht(),
                                                          self.json({"zeichnungen": self._zeichnungen()})),
             ("POST", "/api/eltern/desktop"): lambda q: self._eltern(lambda d: self._desktop()),
-            ("POST", "/api/eltern/nachricht"): lambda q: self._eltern(
-                lambda d: h.familie.nachricht(d.get("text"), bleibt=True)),
+            ("POST", "/api/eltern/nachricht"): lambda q: self._eltern(lambda d: h.eltern_nachricht(d.get("text"), d.get("von"))),
             ("POST", "/api/eltern/gute-nacht"): lambda q: self._eltern(lambda d: h.gute_nacht_starten()),
             ("POST", "/api/eltern/fernseher-aus"): lambda q: self._eltern(lambda d: h.cec_befehl("standby")),
             ("POST", "/api/eltern/ton"): lambda q: self._eltern(
@@ -299,6 +303,12 @@ class Basis(BaseHTTPRequestHandler):
         self.eltern_pflicht()
         self.json(dict(aktion(self.lies_json()) or {}, ok=True))
 
+    def _klang(self, kennung):
+        """5.2/6.0: Klang zum Probehören - aus dem Archiv (erzeugt) oder ein eigener aus dem Klang-Ordner (durchgereicht)."""
+        if klaenge_mod.eigen_pfad(kennung):
+            return self._durchreichen(self.hub.klang_eigen_adresse(kennung), klaenge_mod.eigen_pfad(kennung))
+        self.sende(200, klaenge_mod.erzeuge(kennung), "audio/wav", {"Cache-Control": "max-age=86400"})
+
     def _whitelist(self, abfrage):
         self.eltern_pflicht()
         format_ = (abfrage.get("format") or ["liste"])[0]
@@ -375,7 +385,7 @@ class KioskHandler(Basis):
             ("GET", "/api/hoerbuch/cover"): lambda q: self._hoerbuch_cover(q),
             ("POST", "/api/hoerbuch/stand"): lambda q: self._hoerbuch_stand(),
             ("GET", "/api/youtube"): lambda q: self.json(h.youtube_fuer_tv()),
-            ("GET", "/api/startseite"): lambda q: self.json(h.startseite_anzeige()),
+            ("GET", "/api/startseite"): lambda q: self.json(dict(h.startseite_anzeige(), zuletzt=h.zuletzt())),
             # 5.0: Wetter, Schule (Klassenkiste), Kinderwelten (Familienfabrik), Kinder-News - alles nur lesen
             ("GET", "/api/wetter"): lambda q: self.json(h.wetter.fuer_tv()),
             ("GET", "/api/schule"): lambda q: self.json(h.schule.fuer_tv()),

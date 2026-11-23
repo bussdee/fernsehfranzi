@@ -18,7 +18,7 @@ import os
 import random
 from datetime import datetime, timedelta
 
-from . import daten, zeitkonto
+from . import daten, klaenge, zeitkonto
 
 log = logging.getLogger("fernsehfranzi.familie")
 
@@ -26,6 +26,8 @@ VORGABE = {
     # [{"zeit": "19:00", "text": "Zähneputzen!", "tage": [0..6], "wann": "immer"}] - 4.6: wann = immer / schule (nicht in
     # den Ferien) / ferien (nur in den Ferien)
     "erinnerungen": [],
+    # 5.2: Klang für Nachrichten der Eltern (Eltern-Seite, Elternbereich); None = Gong. Erinnerungen haben ihren eigenen.
+    "klang_nachricht": None,
     "tv_aus_bei_zeitende": False,
     # 3.4: Gute Nacht (Hörbuch-App "gute-nacht") öffnet sich zu Beginn der Nachtruhe von selbst, wenn an
     "gute_nacht": {"automatisch": False},
@@ -101,6 +103,8 @@ def pruefe(familie):
             raise ValueError("Erinnerung %d: Tage 0 (Mo) bis 6 (So)." % nr)
         if e.get("wann", "immer") not in ERINNERUNG_WANN:
             raise ValueError("Erinnerung %d: immer, nicht in den Ferien oder nur in den Ferien." % nr)
+        klaenge.pruefe(e.get("klang"), "Erinnerung %d" % nr)
+    klaenge.pruefe(familie.get("klang_nachricht"), "Nachrichten der Eltern")
     if len(familie.get("erinnerungen", [])) > 30:
         raise ValueError("Höchstens 30 Erinnerungen.")
     g = familie.get("gute_nacht", VORGABE["gute_nacht"])
@@ -162,7 +166,8 @@ class Familie:
             self.zuletzt_gespeichert = self.hub.monoton()
 
     # ------------------------------------------------------------ Nachricht ans TV
-    def nachricht(self, text, quelle="Nachricht von Mama oder Papa", bleibt=False, chat=None, symbol=None, medium=None):
+    def nachricht(self, text, quelle="Nachricht von Mama oder Papa", bleibt=False, chat=None, symbol=None, medium=None,
+                  klang=None):
         """bleibt=True (Eltern-Nachricht, Erinnerung): steht, bis sie am Fernseher mit OK bestätigt wird, und kommt
         alle 5 Minuten wieder. Sonst ein kurzer Hinweis."""
         text = str(text or "").strip()[:140]
@@ -176,17 +181,17 @@ class Familie:
                 liste = self.zustand["meldungen"]
                 nr = max([m["nr"] for m in liste] + [0]) + 1
                 liste.append({"nr": nr, "text": text, "quelle": quelle or "", "zeit": jetzt.isoformat(timespec="seconds"),
-                              "gesehen": None, "chat": chat, "symbol": symbol, "medium": medium})
+                              "gesehen": None, "chat": chat, "symbol": symbol, "medium": medium, "klang": klang})
                 del liste[:-MELDUNGEN_MAX]
             self._wiederholt = self.hub.monoton()        # nächste Wiederholung 5 min nach dieser Meldung
             self.speichern(sofort=True)
-        self._zeigen(voll)
+        self._zeigen(voll, klang)
         log.info("Nachricht ans TV: %s", text)
 
-    def _zeigen(self, voll):
+    def _zeigen(self, voll, klang=None):
         if not self.hub.still():                    # Gute-Nacht-Modus/Fernseher aus: kein Gong, kein Hinweis
             if not self.nachrichten_leise():        # 4.4: in Sperrzeiten ohne Gong (einstellbar), sichtbar bleibt sie
-                self.hub.system.gong()              # hörbar überall - auch wenn sie gerade nicht hinschaut
+                self.hub.klang_spielen(klang)       # hörbar überall - auch wenn sie gerade nicht hinschaut (5.2: mit Klang)
             self.hub.auftrag("hinweis", text=voll)
             laeuft, _ = self.hub.system.retropie_zustand()
             if laeuft:
@@ -234,7 +239,7 @@ class Familie:
             return
         m = offen[-1]
         self._zeigen(("%s: %s" % (m["quelle"], m["text"]) if m["quelle"] else m["text"]) +
-                     (" (+%d weitere)" % (len(offen) - 1) if len(offen) > 1 else ""))
+                     (" (+%d weitere)" % (len(offen) - 1) if len(offen) > 1 else ""), m.get("klang"))
 
     # ------------------------------------------------------------ Takt
     def tick(self, jetzt, app, sekunden, aktiv):
@@ -269,7 +274,7 @@ class Familie:
             zeit = datetime.combine(jetzt.date(), _uhr(er["zeit"]))
             if zeit <= jetzt < zeit + timedelta(minutes=2) and \
                     self._einmal("erinnerung:%s:%s:%s" % (heute, er["zeit"], er["text"])):
-                self.nachricht(er["text"], quelle="Erinnerung", bleibt=True)
+                self.nachricht(er["text"], quelle="Erinnerung", bleibt=True, klang=er.get("klang"))
 
     def zeitende(self):
         """Vom Hub, wenn das Tagesbudget aufgebraucht ist (nach dem Speichern und Zurück)."""

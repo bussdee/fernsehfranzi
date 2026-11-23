@@ -50,6 +50,11 @@ def beispiel_hub(ordner):
         {"name": "Musik", "eintraege": [{"art": "video", "id": "ccccccccccc", "titel": "Bass für Anfänger"}]},
         {"name": "Basteln", "eintraege": [{"art": "video", "id": "ddddddddddd", "titel": "Papierflieger"}]}]}})
     hub.einstellungen.pop("zeit_pruefen", None)       # Hinweis nach einem Update, hier nicht gewollt
+    # 6.0: „Zuhause“ mit Lieblingen und „Weiter, wo du warst“
+    hub.einstellungen_aendern({"startseite": {"lieblinge": ["youtube", "spiel-snake", "spiel-malen", "spiel-memory", "buecher", "spiel-lernen"],
+                                              "thema": "blau"}})
+    for app in ("spiel-drei", "spiel-witz", "spiel-bass"):
+        hub._zuletzt_merken(app)
     hub.pin_festlegen(PIN, erster_start_am_tv=True)
     for tag, app, stunde, sek in ((0, "spiel-snake", 14, 1200), (0, "youtube", 15, 1500), (0, "buecher", 13, 900),
                                   (1, "spiel-bass", 17, 1200), (1, "games", 16, 2700), (1, "gute-nacht", 19, 1800),
@@ -122,6 +127,7 @@ def buch_bilder(browser, hub, lan_url):
                                  ("spiel-echo", ["Enter", 900], "farben-echo"), ("spiel-witz", [], "witz"),
                                  ("youtube", [], "youtube"), ("youtube", ["Enter", 500], "youtube-videos")):
         seite = tv_seite(browser)
+        seite.wait_for_function("k => window.FernsehFranzi && FernsehFranzi.zeige(k)", arg=kachel)
         seite.locator("[data-id=%s]" % kachel).click()
         seite.wait_for_selector(".overlay")
         seite.wait_for_timeout(700)
@@ -129,12 +135,11 @@ def buch_bilder(browser, hub, lan_url):
             seite.wait_for_timeout(t) if isinstance(t, int) else seite.keyboard.press(t)
         foto(seite, name + ".png", BUCH)
         seite.close()
-    # Bereiche weiter unten
+    # 6.0: der Bereich „Filme & Musik“ als Raster
     seite = tv_seite(browser)
-    for _ in range(4):
-        seite.keyboard.press("ArrowDown")
-        seite.wait_for_timeout(250)
-    seite.wait_for_timeout(400)
+    seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('youtube')")
+    seite.evaluate("FernsehFranzi.zuhause(); document.querySelector('.kachel[data-id=ordner-filme]').click()")
+    seite.wait_for_timeout(600)
     foto(seite, "bereich-filme.png", BUCH)
     seite.close()
     # Elternbereich am Fernseher: PIN, dann die Knöpfe
@@ -169,16 +174,14 @@ def buch_bilder(browser, hub, lan_url):
     seite.fill(".eh-pin", PIN)
     seite.click("text=Anmelden")
     seite.wait_for_selector(".eh-leiste")
-    seite.click(".eh-leiste >> text=Menü")
-    seite.wait_for_selector(".eh-kachel")
     seite.wait_for_timeout(400)
-    foto(seite, "eltern-menue.png", BUCH)
-    for bereich in ("zeit", "telegram", "apps"):
-        seite.click(".eh-leiste >> text=Menü")
-        seite.click(".eh-kachel[data-bereich=%s]" % bereich)
-        seite.wait_for_selector(".eh-bereich-kopf")
+    foto(seite, "eltern-menue.png", BUCH)                        # 6.0: „Heute“ (Dateiname bleibt fürs Handbuch)
+    for reiter, bereich in (("Zeit", "zeit"), ("Familie", "telegram"), ("Inhalte", "apps")):
+        seite.click(".eh-leiste >> text=" + reiter)
+        seite.click(".eh-abschnitt[data-bereich=%s] .eh-abschnitt-kopf" % bereich)
+        seite.wait_for_selector(".eh-abschnitt.offen[data-bereich=%s] .eh-abschnitt-inhalt" % bereich)
         seite.wait_for_timeout(500)
-        seite.evaluate("window.scrollTo(0, 0)")
+        seite.evaluate("(b) => document.querySelector(`.eh-abschnitt[data-bereich='${b}']`).scrollIntoView()", bereich)
         foto(seite, "eltern-%s.png" % bereich, BUCH)
     seite.close()
 
@@ -193,6 +196,7 @@ def handy_bilder(browser, hub):
     raum_server = web.baue_server(web.RaumHandler, hub, os.path.join(REPO, "web"), os.path.join(hub.ordner, "z"), ("127.0.0.1", 0))
     threading.Thread(target=raum_server.serve_forever, daemon=True).start()
     tv = tv_seite(browser)
+    tv.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-handys')")
     tv.locator("[data-id=spiel-handys]").click()
     tv.wait_for_selector(".hs-qr svg")
     tv.wait_for_timeout(800)
@@ -281,26 +285,23 @@ def aussen_bilder(browser, hub):
                         "morgen": {"datum": None, "name": "", "frei": [], "stunden": [], "satz": ""}}
     hub.schule.geholt = time.time()
     try:
-        hub.startseite_setzen({"lieblinge": [], "thema": "himmel"})
+        hub.startseite_setzen({"lieblinge": [], "thema": "hellblau"})
         seite = tv_seite(browser)
         seite.wait_for_selector("#wetter-kopf:not([hidden])", timeout=6000)
         seite.wait_for_timeout(500)
         foto(seite, "startseite-hell.png", BUCH)
         seite.close()
-        for thema, ansicht in (("zuckerwatte", "karussell"), ("wiese", "seitenleiste")):
-            hub.startseite_setzen({"lieblinge": [], "thema": thema, "ansicht": ansicht})
+        for thema in ("rosa", "mint"):                           # 6.0: zwei weitere Farben für die Übersicht im README
+            hub.startseite_setzen({"lieblinge": [], "thema": thema})
             seite = tv_seite(browser)
             seite.wait_for_timeout(500)
-            for _ in range(2):
-                seite.keyboard.press("ArrowRight")
-                seite.wait_for_timeout(250)
-            seite.wait_for_timeout(500)
-            foto(seite, "ansicht-%s.png" % ansicht, BUCH)
+            foto(seite, "farbe-%s.png" % thema, ZWISCHEN)
             seite.close()
-        hub.startseite_setzen({"lieblinge": [], "thema": "weltall", "ansicht": "konsole"})
+        hub.startseite_setzen({"lieblinge": [], "thema": "blau"})
         for kachel, tasten, name in (("spiel-wetter", [], "wetter"), ("spiel-schule", [], "schule"),
                                      ("spiel-kinderwelten", [], "geschichten"), ("spiel-kinderwelten", ["Enter", 1200], "lesen")):
             seite = tv_seite(browser)
+            seite.wait_for_function("k => window.FernsehFranzi && FernsehFranzi.zeige(k)", arg=kachel)
             seite.locator("[data-id=%s]" % kachel).click()
             seite.wait_for_selector(".overlay")
             seite.wait_for_timeout(1200)
@@ -309,7 +310,8 @@ def aussen_bilder(browser, hub):
             foto(seite, name + ".png", BUCH)
             seite.close()
         b = lambda n: os.path.join(BUCH, n + ".png")  # noqa: E731
-        collage(browser, [b("startseite-hell"), b("ansicht-seitenleiste"), b("ansicht-karussell")], "designs.png", 3, 1800, "#ffffff")
+        collage(browser, [b("startseite-hell"), os.path.join(ZWISCHEN, "farbe-mint.png"), os.path.join(ZWISCHEN, "farbe-rosa.png")],
+                "designs.png", 3, 1800, "#ffffff")
         collage(browser, [b("wetter"), b("schule"), b("lesen")], "wetter-schule-geschichten.png", 3, 1800)
     finally:
         hub.uhr.jetzt = uhr_vorher
@@ -339,6 +341,7 @@ def medien_bilder(browser, hub):
     hub.familie.meldungen_gesehen([m["nr"] for m in hub.familie.offene_meldungen()])
     seite.close()
     seite = tv_seite(browser)
+    seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-fotoalbum')")
     seite.locator("[data-id=spiel-fotoalbum]").click()
     seite.wait_for_selector(".fa-kachel img")
     seite.keyboard.press("ArrowDown")
@@ -368,6 +371,7 @@ def medien_bilder(browser, hub):
     hub.katalog_aendern(apps)
     hub._kk.update(cookie="beispiel", zeit=hub.monoton() + 10 ** 6)
     seite = tv_seite(browser)
+    seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-karaoke')")
     seite.locator("[data-id=spiel-karaoke]").click()
     seite.wait_for_selector(".ka-eintrag.gewaehlt")
     foto(seite, "karaoke-liste.png", BUCH)
@@ -399,8 +403,8 @@ def main():
             # Startseite und die Bereiche
             seite = tv_seite(browser)
             foto(seite, "startseite.png")
-            seite.keyboard.press("ArrowDown")
-            seite.wait_for_timeout(500)
+            seite.evaluate("document.querySelector('.kachel[data-id=ordner-spiele]').click()")   # 6.0: Bereich „Spiele“
+            seite.wait_for_timeout(600)
             foto(seite, "startseite-spiele.png")
             seite.close()
 
@@ -411,6 +415,7 @@ def main():
                                          ("spiel-malen", ["Enter", 600] + ["ArrowRight"] * 14 + ["ArrowDown"] * 6 + ["3"] + ["ArrowLeft"] * 14 + ["5"] + ["ArrowUp"] * 6 + ["6"] + ["ArrowRight"] * 7 + ["ArrowDown"] * 3, "malen"),
                                          ("spiel-memory", ["Enter", 600], "memory")):
                 seite = tv_seite(browser)
+                seite.wait_for_function("k => window.FernsehFranzi && FernsehFranzi.zeige(k)", arg=kachel)
                 seite.locator("[data-id=%s]" % kachel).click()
                 seite.wait_for_selector(".overlay")
                 for t in tasten:
@@ -434,7 +439,7 @@ def main():
             seite.fill(".eh-pin", PIN)
             seite.click("text=Anmelden")
             seite.wait_for_selector(".eh-leiste")
-            for name, datei in (("Heute", "heute"), ("Menü", "menue"), ("Statistik", "statistik")):
+            for name, datei in (("Heute", "heute"), ("Zeit", "zeit"), ("Inhalte", "inhalte")):   # 6.0: Reiter
                 seite.click(".eh-leiste >> text=" + name)
                 seite.wait_for_timeout(500)
                 seite.evaluate("window.scrollTo(0, 0)")

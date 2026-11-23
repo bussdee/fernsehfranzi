@@ -68,12 +68,19 @@ class Startseite34(unittest.TestCase):
 
     def test_gesperrte_kacheln_grau_mit_symbol(self):
         seite = self.seite()
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('plex')")
         plex = seite.locator(".kachel[data-id=plex]")
         self.assertIn("gesperrt", plex.get_attribute("class"))
         self.assertEqual(plex.locator(".sperr-symbol").inner_text(), "🌙")         # Nachtsperre geht vor
+        self.assertEqual(plex.locator(".grund").inner_text(), "Nachtruhe", "6.0: kurzer Grund auf der Kachel")
+        # 6.0: gesperrte Kacheln stehen am Ende des Rasters
+        ids = seite.evaluate("[...document.querySelectorAll('.zeile-kacheln .kachel')].map(k => k.dataset.id + (k.classList.contains('gesperrt') ? '!' : ''))")
+        gesperrt = [i.endswith("!") for i in ids]
+        self.assertEqual(gesperrt, sorted(gesperrt), "erst freie, dann gesperrte: %s" % ids)
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-snake')")
         snake = seite.locator(".kachel[data-id=spiel-snake]")
         self.assertEqual(snake.locator(".sperr-symbol").inner_text(), "🌙")
-        self.assertEqual(snake.locator(".grund").count(), 0, "kein Text mehr auf der Kachel")
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('gute-nacht')")
         self.assertNotIn("gesperrt", seite.locator(".kachel[data-id=gute-nacht]").get_attribute("class"))
         seite.screenshot(path=os.path.join(FOTOS, "start34-kacheln.png"))
         self.assertEqual(self.fehler, [])
@@ -145,23 +152,25 @@ class Startseite34(unittest.TestCase):
 
     def test_startseite_selbst_gestalten(self):
         seite = self.seite()
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-gestalten')")
         seite.click(".kachel[data-id=spiel-gestalten]")
         seite.wait_for_selector(".gestalten-zeile.thema")
-        seite.keyboard.press("ArrowRight")                                       # Hintergrund: Ozean
-        seite.wait_for_function("() => document.body.dataset.thema === 'ozean'")
+        seite.keyboard.press("ArrowRight")                                       # 6.0: Farbe Blau -> Grün
+        seite.wait_for_function("() => document.body.dataset.thema === 'gruen'")
         for _ in range(40):                                                      # bis Snake gewählt ist, dann ⭐
             seite.keyboard.press("ArrowDown")
             if seite.inner_text(".gestalten-zeile.gewaehlt span") == "Snake":
                 break
         seite.keyboard.press("Enter")
         seite.wait_for_timeout(400)
-        self.assertEqual(self.hub.einstellungen["startseite"], {"lieblinge": ["spiel-snake"], "thema": "ozean", "ansicht": "konsole"})   # 5.0: + Ansicht
-        seite.keyboard.press("Escape")
-        seite.wait_for_selector(".reihe[data-bereich=start] .kachel[data-id=spiel-snake]")
-        erste = seite.locator(".reihe[data-bereich=start] .kachel").first.get_attribute("data-id")
-        self.assertEqual(erste, "spiel-snake", "Liebling steht vorne in Start")
+        self.assertEqual(self.hub.einstellungen["startseite"], {"lieblinge": ["spiel-snake"], "thema": "gruen", "ansicht": "konsole"})   # 5.0: + Ansicht
+        seite.keyboard.press("Escape")                                           # Gestalten zu
+        seite.keyboard.press("Escape")                                           # 6.0: zurück nach „Zuhause“
+        seite.wait_for_selector(".zeile-kacheln.lieblinge .kachel[data-id=spiel-snake]")
+        erste = seite.locator(".zeile-kacheln.lieblinge .kachel").first.get_attribute("data-id")
+        self.assertEqual(erste, "spiel-snake", "Liebling steht ganz oben auf Zuhause")
         seite.screenshot(path=os.path.join(FOTOS, "start40-gestaltet.png"))
-        self.hub.einstellungen_aendern({"startseite": {"lieblinge": [], "thema": "weltall"}})
+        self.hub.einstellungen_aendern({"startseite": {"lieblinge": [], "thema": "blau"}})
         self.assertEqual(self.fehler, [])
 
     def test_gute_nacht_automatisch_ohne_wahl(self):

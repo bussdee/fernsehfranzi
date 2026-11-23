@@ -82,8 +82,10 @@ def pruefe(y):
     namen = set()
     for k in kategorien:
         name = str((k or {}).get("name", "")).strip()
-        if not name or len(name) > 30 or set(k) - {"name", "eintraege"}:
+        if not name or len(name) > 30 or set(k) - {"name", "eintraege", "aktiv"}:
             raise ValueError("Kategorie: Name fehlt (höchstens 30 Zeichen).")
+        if not isinstance(k.get("aktiv", True), bool):                 # 6.0: Kategorie vorübergehend aus
+            raise ValueError("Kategorie „%s“: an oder aus." % name)
         if name in namen:
             raise ValueError("Kategorie „%s“ gibt es zweimal." % name)
         namen.add(name)

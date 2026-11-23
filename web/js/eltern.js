@@ -104,7 +104,10 @@ export function oeffneElternbereich(box, api) {
     /* 3.2: in beschrifteten Reihen - ← → innerhalb einer Reihe, ↑ ↓ zwischen den Reihen */
     const gruppen = [
       ["Zeit", [["+15 Minuten", () => bonus("15")], ["+30 Minuten", () => bonus("30")], ["Heute ohne Limit", () => bonus("ohne_limit")],
-                [d.gesperrt ? "Fernseher freigeben" : "Fernseher jetzt sperren", () => sperre(!d.gesperrt)]]],
+                [d.gesperrt ? (d.gesperrt.auszeit ? "Auszeit beenden" : "Fernseher freigeben") : "Fernseher jetzt sperren", () => sperre(!d.gesperrt)]]],
+      /* 5.1: Auszeit mit Countdown (bei laufender Auszeit: verlängern) */
+      ...(d.gesperrt && !d.gesperrt.auszeit ? [] : [[d.gesperrt ? "Auszeit verlängern" : "Auszeit",
+        [5, 10, 15, 30].map((m) => [`${d.gesperrt ? "+" : ""}${m} Minuten`, () => auszeit(m)])]]),
       ["Fernseher", [["Ton: Fernseher", () => sende("/api/audio", { ziel: "hdmi" }).then(() => api.hinweis("Ton: Fernseher"))],
                      ["Ton: Klinke", () => sende("/api/audio", { ziel: "klinke" }).then(() => api.hinweis("Ton: Klinke"))],
                      ...(d.kopfhoerer ? [["Ton: Kopfhörer", () => sende("/api/audio", { ziel: "kopfhoerer" }).then(() => api.hinweis("Ton: Kopfhörer"))]] : []),
@@ -155,6 +158,13 @@ export function oeffneElternbereich(box, api) {
     try {
       await sende("/api/eltern/sperre", an ? { text: "Der Fernseher macht jetzt Pause." } : { frei: true });
       api.hinweis(an ? "Gesperrt." : "Freigegeben.");
+      uebersicht();
+    } catch (e) { api.hinweis(e.message); }
+  }
+  async function auszeit(minuten) {
+    try {
+      const a = await sende("/api/eltern/auszeit", { minuten });
+      api.hinweis(`Auszeit bis ${a.bis} Uhr.`);
       uebersicht();
     } catch (e) { api.hinweis(e.message); }
   }

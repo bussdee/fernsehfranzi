@@ -10,7 +10,8 @@
  * Lernen zählt nicht zur Spielzeit; Erfolge melden Sticker (POST /api/erfolg). */
 import { el } from "../gemeinsam.js";
 import { kopf, ton, menue, konfetti } from "./kern.js";
-import { gitarre, keyboard, singen, songSuche, aufnehmen } from "./musik.js";      /* 3.5: Musik-Akademie */
+import { gitarre, keyboard, singen, songSuche, aufnehmen } from "./musik.js";
+import { stimmUhr } from "./stimme.js";      /* 3.5: Musik-Akademie */
 
 const SAITEN = [{ name: "G", hz: 98.0 }, { name: "D", hz: 73.42 }, { name: "A", hz: 55.0 }, { name: "E", hz: 41.2 }];
 const TOENE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "H"];
@@ -364,20 +365,16 @@ export default {
 
     /* ---------------------------------------------------- Stimmgerät (Mikrofon) */
     async function stimmgeraet(saitenInfo = "Bass: E · A · D · G") {
-      const name = el("div", { class: "witz", style: "font-size:clamp(60px,10vw,140px)", text: "–" });
-      const zeiger = el("div", { style: "height:24px;width:60vw;margin:3vh auto;background:#1d2636;border-radius:12px;position:relative" },
-        el("div", { style: "position:absolute;left:50%;top:-6px;width:3px;height:36px;background:#fff" }));
-      const punkt = el("div", { style: "position:absolute;top:2px;width:20px;height:20px;border-radius:50%;background:#4ccf8f;left:50%;transition:left .1s" });
-      zeiger.append(punkt);
-      const info = el("p", { class: "leise", style: "text-align:center" });
-      inhalt.replaceChildren(el("div", { style: "text-align:center" }, el("p", { class: "leise", text: saitenInfo }), name, zeiger, info));
+      /* 6.0: großes Stimmgerät mit Zeiger - grün, wenn der Ton genau stimmt */
+      const uhr = stimmUhr();
+      const info = el("p", { class: "leise su-hz" });
+      inhalt.replaceChildren(el("div", { class: "su-ansicht" }, el("p", { class: "leise", text: saitenInfo }), uhr.knoten, info));
       hilfe.textContent = "Saite zupfen · OK Mithören an/aus · STOP Zurück";
       let strom;
       try {
         strom = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
       } catch (_) {
-        name.textContent = "🎤?";
-        info.textContent = "Kein Mikrofon gefunden. Dafür braucht der Fernseh-Pi ein USB-Mikrofon oder ein Audio-Interface.";
+        uhr.leer("Kein Mikrofon gefunden. Dafür braucht der Fernseher ein USB-Mikrofon oder ein Audio-Interface.");
         modus = { unter: true, taste: () => false };
         return;
       }
@@ -392,9 +389,7 @@ export default {
         const hz = tonhoehe(puffer, a.sampleRate);
         if (hz) {
           const t = naechsterTon(hz);
-          name.textContent = t.name;
-          punkt.style.left = `calc(50% + ${Math.max(-50, Math.min(50, t.cent))}% - 10px)`;
-          punkt.style.background = Math.abs(t.cent) <= 5 ? "#4ccf8f" : "#ffc95a";
+          uhr.zeige(t.name, t.cent);
           info.textContent = `${hz.toFixed(1)} Hz · ${t.cent > 0 ? "+" : ""}${t.cent} Cent` + (mithoeren ? " · Mithören an" : "");
         }
         setTimeout(() => requestAnimationFrame(schleife), 80);

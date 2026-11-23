@@ -19,7 +19,7 @@ const SYMBOL_WAHL = [["film", "🎬 Film"], ["musik", "🎵 Musik"], ["lernen", 
 const ZEIT_WAHL = [["zaehlt", "Bildschirmzeit"], ["gaming", "Gaming-Zeit"], ["limit", "Nur eigenes Limit"], ["frei", "Kein Limit"]];
 const ZEIT_KURZ = { zaehlt: "Bildschirmzeit", gaming: "Gaming-Zeit", limit: "eigenes Limit", frei: "kein Limit" };
 const ZEIT_ERKLAERT = {
-  zaehlt: "Zieht von der Bildschirmzeit ab (Menü → Spielzeit & Sperrzeiten).",
+  zaehlt: "Zieht von der Bildschirmzeit ab (Zeit → Spielzeit & Sperrzeiten).",
   gaming: "Zieht von der Bildschirmzeit UND von der Gaming-Zeit ab – Spiele sind ein Teil der Bildschirmzeit.",
   limit: "Kostet keine Bildschirmzeit, hat aber eine eigene Höchstgrenze am Tag (unten eintragen).",
   frei: "Kostet keine Zeit – nur die Sperrzeiten gelten.",
@@ -31,26 +31,38 @@ const TYP_NAME = { web: "Webseite", hoerbuch: "Hörbücher", konsole: "Retro-Spi
 /* Symbole für eigene Sticker - nur solche, die die Emoji-Schrift am Fernseher sicher hat (sie steht in dieser Datei) */
 const STICKER_SYMBOLE = ["🦄", "🌟", "🏆", "🥇", "💎", "👑", "🚀", "🌈", "🎉", "💖", "🧹", "🛏️", "🦷", "🍎", "🥦", "📚",
                          "✏️", "🎹", "🎤", "🐶", "🐱", "🦋", "🌻", "⚽", "🚲", "🏊", "🧩", "🎨", "🌙", "☀️"];
-const LEISTE = [["heute", "🏠", "Heute"], ["menue", "⚙️", "Menü"], ["statistik", "📊", "Statistik"]];
-const ALTE_SEITEN = { regeln: "zeit", bass: "musik", mehr: "menue" };     /* Lesezeichen von früher führen weiter */
-const GRUPPEN = [
-  ["Alltag", ["zeit", "abend", "erinnerungen"]],
-  ["Familie und Kontakte", ["telegram", "bilder"]],
-  ["Was es am Fernseher gibt", ["apps", "youtube", "musik", "spiele"]],
-  ["Aussehen, Wetter & Schule", ["design", "wetter", "schule", "kinderwelten"]],
-  ["Technik und Hilfe", ["internet", "geraet", "hilfe"]],
-];
+/* 6.0: fünf Reiter unten statt Menü - jeder Reiter zeigt seine Bereiche als kurze Zeilen, ein Tipp klappt einen auf */
+const LEISTE = [["heute", "🏠", "Heute"], ["regeln", "⏰", "Zeit"], ["inhalte", "🧩", "Inhalte"], ["familie", "💬", "Familie"], ["technik", "🔧", "Gerät"]];
+const REITER = {
+  regeln: { titel: "Zeit und Regeln", bereiche: ["zeit", "abend", "erinnerungen"] },
+  inhalte: { titel: "Was es am Fernseher gibt", bereiche: ["apps", "youtube", "musik", "spiele", "kinderwelten", "schule", "wetter", "design"] },
+  familie: { titel: "Familie und Kontakte", bereiche: ["telegram", "bilder"] },
+  technik: { titel: "Gerät und Hilfe", bereiche: ["geraet", "internet", "hilfe"] },
+};
+/* Lesezeichen von früher führen weiter */
+const ALTE_SEITEN = { menue: "regeln", mehr: "technik", statistik: "heute/statistik", bass: "inhalte/musik" };
+const reiterVon = (bereich) => Object.keys(REITER).find((r) => REITER[r].bereiche.includes(bereich));
 
 export function elternHandy(wurzel) {
   let d = null;                     /* Daten vom Server (wird beim Speichern mitgeändert) */
-  const seiteAusAdresse = () => { const s = (location.hash || "#heute").slice(1); return ALTE_SEITEN[s] || s || "heute"; };
-  let seite = seiteAusAdresse();
-  window.addEventListener("popstate", () => { if (d) { seite = seiteAusAdresse(); zeichne(); } });   /* Zurück-Taste des Handys */
-  function geheZu(ziel) {
-    seite = ziel;
-    history.pushState(null, "", "#" + ziel);
+  /* Adresse: #reiter oder #reiter/bereich (aufgeklappt); ein einzelner Bereichsname führt in seinen Reiter */
+  function ausAdresse() {
+    let s = decodeURIComponent((location.hash || "#heute").slice(1)) || "heute";
+    s = ALTE_SEITEN[s] || s;
+    let [r, b] = s.split("/");
+    if (!LEISTE.some(([id]) => id === r)) { b = r; r = reiterVon(r) || "heute"; }
+    return { r, b: b || null };
+  }
+  let { r: seite, b: offen } = ausAdresse();
+  const vonAdresse = () => { if (d) { ({ r: seite, b: offen } = ausAdresse()); zeichne(); } };
+  window.addEventListener("popstate", vonAdresse);   /* Zurück-Taste des Handys */
+  window.addEventListener("hashchange", vonAdresse);
+  function geheZu(ziel, bereich = null) {
+    seite = ziel; offen = bereich;
+    history.pushState(null, "", "#" + ziel + (bereich ? "/" + bereich : ""));
     zeichne();
-    scrollTo(0, 0);
+    if (bereich) requestAnimationFrame(() => document.querySelector(`.eh-abschnitt[data-bereich="${bereich}"]`)?.scrollIntoView({ block: "start" }));
+    else scrollTo(0, 0);
   }
 
   /* ---------------------------------------------------------------- Rückmeldung */
@@ -97,7 +109,10 @@ export function elternHandy(wurzel) {
     return k;
   };
   const karte = (titel, ...inhalt) => el("section", { class: "eh-karte" }, titel ? el("h3", { text: titel }) : null, ...inhalt);
-  const hilfe = (text) => el("p", { class: "eh-hilfe", text });
+  /* 6.0: lange Erklärungen klappen ein („ℹ️ Mehr dazu“), damit die Seiten kurz bleiben */
+  const hilfe = (text) => (String(text).length <= 120 ? el("p", { class: "eh-hilfe", text })
+    : el("details", { class: "eh-info" }, el("summary", { text: "ℹ️ " + String(text).split(/(?<=[.!?:])\s/)[0].slice(0, 90) + (String(text).length > 90 ? " …" : "") }),
+      el("p", { class: "eh-hilfe", text })));
   /* 4.2: lange Sammlungen nach n Einträgen einklappen („… weitere anzeigen“), sonst werden die Seiten endlos */
   const kurzliste = (elemente, n = 5) => elemente.length <= n + 1 ? elemente : [...elemente.slice(0, n),
     el("details", { class: "eh-mehr" }, el("summary", { text: `${elemente.length - n} weitere anzeigen` }), ...elemente.slice(n))];
@@ -132,6 +147,42 @@ export function elternHandy(wurzel) {
     const s = el("select", {}, ...optionen.map(([w, t]) => { const o = el("option", { value: w, text: t }); o.selected = w === wert; return o; }));
     s.addEventListener("change", () => bei(s.value, s));
     return s;
+  }
+  /* 5.2: Klang aus dem Archiv wählen - ▶ hört am Handy, 📺 am Fernseher. 6.0: dazu die eigenen Klänge aus dem Klang-Ordner */
+  let probeTon = null;
+  let auszeitAuf = false;                               /* 6.0: Auszeit-Minuten auf „Heute“ aufgeklappt */
+  let eigeneKlaenge = null, eigeneFehler = "";          /* einmal je Sitzung geholt (der Ordner liegt im Heimnetz) */
+  function eigeneLaden(neu = false) {
+    if (eigeneKlaenge && !neu) return Promise.resolve(eigeneKlaenge);
+    if (!d?.einstellungen?.klaenge?.ordner) { eigeneKlaenge = []; eigeneFehler = ""; return Promise.resolve([]); }
+    return hole("/api/eltern/klaenge-eigen").then((r) => { eigeneKlaenge = r.klaenge || []; eigeneFehler = ""; return eigeneKlaenge; })
+      .catch((e) => { eigeneKlaenge = []; eigeneFehler = e.message; return []; });
+  }
+  function klangWahl(wert, bei) {
+    const liste = (d.klaenge || []).filter((k) => k.id !== "gong");
+    const s = auswahl([["", "🔔 Gong (Standard)"], ...liste.map((k) => [k.id, `${k.symbol} ${k.name}`])], wert || "", (v) => bei(v || null));
+    const eigeneGruppe = (namen) => {
+      s.querySelector("optgroup")?.remove();
+      const bekannt = new Set(namen.map((k) => k.id));
+      if (wert && String(wert).startsWith("eigen:") && !bekannt.has(wert)) namen = [...namen, { id: wert, name: wert.slice(6) + " (fehlt im Ordner)" }];
+      if (!namen.length) return;
+      const g = el("optgroup", { label: "🎵 Eigene Klänge" }, ...namen.map((k) => { const o = el("option", { value: k.id, text: "🎵 " + k.name }); o.selected = k.id === wert; return o; }));
+      s.append(g);
+    };
+    eigeneGruppe(eigeneKlaenge || []);
+    if (!eigeneKlaenge) eigeneLaden().then(eigeneGruppe);
+    const id = () => s.value || "gong";
+    const hoeren = el("button", { type: "button", class: "eh-knopf rund", text: "▶", title: "Am Handy anhören" });
+    hoeren.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (id() === "stumm") { zeige("Ohne Ton – hier gibt es nichts zu hören."); return; }
+      try { probeTon?.pause(); } catch (_) { /* weiter */ }
+      probeTon = new Audio("/api/klang?id=" + encodeURIComponent(id()));
+      probeTon.play().catch(() => zeige("Das Handy spielt den Ton gerade nicht ab.", true));
+    });
+    const tv = knopf("📺", () => (id() === "stumm" ? Promise.resolve() : sende("/api/eltern/klang-test", { klang: id() })), "rund", "Am Fernseher ✔");
+    tv.title = "Am Fernseher anhören";
+    return el("span", { class: "eh-klang" }, s, hoeren, tv);
   }
   function tageWahl(tage, bei) {
     const gewaehlt = new Set(tage && tage.length ? tage : [0, 1, 2, 3, 4, 5, 6]);
@@ -172,9 +223,8 @@ export function elternHandy(wurzel) {
 
   function zeichne() {
     const inhalt = el("main", { class: "eh-inhalt" });
-    const alle = bereiche();
-    if (!alle[seite] && !["heute", "menue", "statistik"].includes(seite)) seite = "heute";
-    const aktiv = alle[seite] ? "menue" : seite;
+    if (!LEISTE.some(([id]) => id === seite)) seite = "heute";
+    const aktiv = seite;
     const leiste = el("nav", { class: "eh-leiste" }, ...LEISTE.map(([id, symbol, name]) => {
       const a = el("a", { href: "#" + id, class: id === aktiv ? "an" : "" }, el("span", { text: symbol }), el("small", { text: name }));
       a.addEventListener("click", (e) => { e.preventDefault(); geheZu(id); });
@@ -183,8 +233,9 @@ export function elternHandy(wurzel) {
     const h = d.heute;
     const kopf = el("header", { class: "eh-kopf" }, el("b", { text: "📺 FernsehFranzi" }),
       el("span", { class: "eh-chip" + (d.gesperrt ? " rot" : ""), text: d.gesperrt ? "gesperrt" : h.ohne_limit ? "ohne Limit" : `${h.rest_min ?? "–"} min übrig` }));
-    if (alle[seite]) inhalt.append(...bereichSeite(alle[seite]));
-    else inhalt.append(...({ heute: seiteHeute, menue: seiteMenue, statistik: seiteStatistik })[seite]());
+    if (seite === "heute") inhalt.append(...seiteHeute(), abschnitt("heute", "statistik", { symbol: "📊", titel: "Statistik",
+      text: "Was wann wie lange lief", inhalt: () => seiteStatistik() }));
+    else inhalt.append(...seiteReiter(seite));
     wurzel.replaceChildren(kopf, inhalt, leiste, meldung);
   }
 
@@ -200,7 +251,7 @@ export function elternHandy(wurzel) {
       abend: { symbol: "🌙", titel: "Gute Nacht & Wecker", text: "Hörbuch zum Einschlafen und der Wecker am Morgen.",
                status: d.apps.find((a) => a.id === "gute-nacht")?.start ? "" : "Hörbuch-Ordner fehlt", warn: !d.apps.find((a) => a.id === "gute-nacht")?.start, inhalt: () => { const x = r(); return [x.gutenacht, x.wecker]; } },
       erinnerungen: { symbol: "🔔", titel: "Erinnerungen & Pausen", text: "Erinnerungen zur Uhrzeit, Bewegungspause, Lernen bringt Spielzeit.",
-                      status: `${(d.familie.erinnerungen || []).length} Erinnerungen`, inhalt: () => { const x = r(); return [x.erinnerungen, x.bewegung, x.lernbonus]; } },
+                      status: `${(d.familie.erinnerungen || []).length} Erinnerungen`, inhalt: () => { const x = r(); return [x.erinnerungen, x.klaengeEigen, x.bewegung, x.lernbonus]; } },
       telegram: { symbol: "💬", titel: "Telegram & Kontakte", text: "Nachrichten und Fotos ans Handy, Freunde freigeben, mitlesen.",
                   status: tg.aktiv ? `${(tg.chats || []).length} Kontakte` : "aus", inhalt: () => [m().telegram] },
       bilder: { symbol: "🖼️", titel: "Bilder & Fotoalbum", text: "Gemalte Bilder ansehen, Fotoalbum und Speicherplatz.",
@@ -214,15 +265,16 @@ export function elternHandy(wurzel) {
       spiele: { symbol: "🎮", titel: "Spiele, Gutscheine & Sticker", text: "Handy-Spiele, Gutscheine drucken, eigene Witze, Quizfragen und Sticker.",
                 status: d.einstellungen.handyspiele?.aktiv ? "Handy-Spiele an" : "", inhalt: () => { const x = m(); return [x.gutscheine, x.handyspiele, x.inhalte, x.stickerEigen, x.sticker]; } },
       /* 5.0 */
-      design: { symbol: "🎨", titel: "Designs", text: "Helle und dunkle Farbwelten der Startseite, abends automatisch dunkel.",
-                status: d.design.abend_aktiv ? `abends ab ${d.design.abend_ab} dunkel` : `${d.design.erlaubt.length} Designs`, inhalt: () => [karteDesign()] },
+      design: { symbol: "🎨", titel: "Farben", text: "Farben der Startseite, abends automatisch dunkel.",
+                status: `${d.design.erlaubt.length} Farben` + (d.design.abend_aktiv ? ` · abends ab ${d.design.abend_ab} dunkel` : ""),
+                inhalt: () => [karteDesign()] },
       wetter: { symbol: "🌤️", titel: "Wetter", text: "Wetter und Regenzeiten oben auf der Startseite und als eigene Seite.",
                 status: d.wetter.aktiv ? (d.wetter.ort?.name || "") : "aus", inhalt: () => [karteWetter()] },
       schule: { symbol: "🏫", titel: "Schule (Klassenkiste)", text: "Stundenplan, Hausaufgaben, Termine und Klassennachrichten am Fernseher.",
                 status: d.schule.aktiv ? (d.schule.stand?.fehler ? "Fehler" : "an") : "aus", warn: Boolean(d.schule.aktiv && d.schule.stand?.fehler),
                 inhalt: () => [karteSchule()] },
       kinderwelten: { symbol: "📖", titel: "Kinderwelten & Kinder-News", text: "Geschichten, Bücher, Rätsel und Draußen-Spiele der Familienfabrik, Kinder-News.",
-                      status: [d.kinderwelten.aktiv && "Kinderwelten an", d.news.quellen.some((q) => q.an) && "News an"].filter(Boolean).join(" · ") || "aus",
+                      status: [d.kinderwelten.aktiv && "Kinderwelten an", (d.news.feeds || []).length && "News an"].filter(Boolean).join(" · ") || "aus",
                       inhalt: () => [karteKinderwelten(), karteNews()] },
       internet: { symbol: "🌐", titel: "Internetseiten", text: "Welche Seiten der Fernseher laden darf.",
                   status: blockiert ? `${blockiert} blockiert` : "", warn: blockiert > 0, inhalt: () => { const x = m(); return [x.internet, x.zusatz]; } },
@@ -236,35 +288,38 @@ export function elternHandy(wurzel) {
     };
   }
 
-  function seiteMenue() {
+  /* 6.0: ein Reiter = Liste seiner Bereiche; der aufgeklappte zeigt seine Einstellungen */
+  function seiteReiter(r) {
     const alle = bereiche();
-    return [
-      el("div", { class: "eh-menue-gruss" }, el("h2", { text: "Einstellungen" }), hilfe("Tippe auf ein Thema.")),
-      ...GRUPPEN.map(([titel, ids]) => el("section", { class: "eh-gruppe" }, el("h3", { text: titel }),
-        el("div", { class: "eh-kacheln" }, ...ids.map((id) => {
-          const b = alle[id];
-          const kachel = el("a", { href: "#" + id, class: "eh-kachel", "data-bereich": id },
-            el("span", { class: "eh-kachel-symbol", text: b.symbol }),
-            el("span", { class: "eh-kachel-text" }, el("b", { text: b.titel }), el("small", { text: b.text })),
-            b.status ? el("span", { class: "eh-kachel-status" + (b.warn ? " warn" : ""), text: b.status }) : null);
-          kachel.addEventListener("click", (e) => { e.preventDefault(); geheZu(id); });
-          return kachel;
-        })))),
-    ];
+    return [el("h2", { class: "eh-reiter-titel", text: REITER[r].titel }),
+            ...REITER[r].bereiche.map((id) => abschnitt(r, id, alle[id]))];
   }
-
-  function bereichSeite(b) {
-    const zurueck = el("a", { href: "#menue", class: "eh-zurueck", text: "‹ Menü" });
-    zurueck.addEventListener("click", (e) => { e.preventDefault(); geheZu("menue"); });
-    return [el("div", { class: "eh-bereich-kopf" }, zurueck, el("h2", {}, el("span", { text: b.symbol + " " }), b.titel), hilfe(b.text)),
-            ...b.inhalt().filter(Boolean)];
+  function abschnitt(r, id, b) {
+    const auf = offen === id;
+    const kopf = el("button", { type: "button", class: "eh-abschnitt-kopf", "aria-expanded": String(auf) },
+      el("span", { class: "eh-kachel-symbol", text: b.symbol }),
+      el("span", { class: "eh-kachel-text" }, el("b", { text: b.titel }), el("small", { text: b.text })),
+      b.status ? el("span", { class: "eh-kachel-status" + (b.warn ? " warn" : ""), text: b.status }) : null,
+      el("span", { class: "eh-pfeil", text: auf ? "▾" : "▸" }));
+    kopf.addEventListener("click", () => (auf ? geheZu(r) : geheZu(r, id)));
+    return el("section", { class: "eh-abschnitt" + (auf ? " offen" : ""), "data-bereich": id }, kopf,
+      auf ? el("div", { class: "eh-abschnitt-inhalt" }, ...b.inhalt().filter(Boolean)) : null);
   }
 
   /* ================================================================ Heute */
   function seiteHeute() {
     const h = d.heute;
     const nachricht = el("input", { type: "text", maxlength: 140, placeholder: "Nachricht an den Fernseher …", class: "eh-breit" });
-    const senden = async (text) => { await sende("/api/eltern/nachricht", { text }); nachricht.value = ""; };
+    /* 5.3: Absender - die Eltern-Kontakte aus Telegram; jedes Handy merkt sich seine Wahl */
+    const elternKontakte = (d.einstellungen.telegram?.chats || []).filter((c) => c.eltern !== false && Number.isInteger(c.id));
+    let von = "";
+    try { von = localStorage.getItem("ff-eltern-von") || ""; } catch (_) { /* ohne */ }
+    if (!elternKontakte.some((c) => String(c.id) === von)) von = "";
+    const vonWahl = elternKontakte.length ? zeile("Von", auswahl([["", "Mama oder Papa"],
+      ...elternKontakte.map((c) => [String(c.id), `${c.symbol || "💬"} ${c.name}`])], von, (v) => {
+        von = v; try { localStorage.setItem("ff-eltern-von", v); } catch (_) { /* ohne */ }
+      })) : null;
+    const senden = async (text) => { await sende("/api/eltern/nachricht", { text, von: von ? Number(von) : null }); nachricht.value = ""; };
     const sendenKnopf = el("button", { class: "eh-knopf haupt", type: "submit", text: "Senden" });
     const form = el("form", { class: "eh-reihe eng" }, nachricht, sendenKnopf);
     form.addEventListener("submit", (e) => {
@@ -277,9 +332,10 @@ export function elternHandy(wurzel) {
     return [
       d.zeit_pruefen ? karte("", el("b", { text: "Neu in 3.4: Sperrzeiten" }),
         hilfe("Die Zeitregeln wurden übernommen (Zeitfenster → Sperrzeiten „Nacht“ und „Schule“). Bitte unter Regeln und bei den Apps kurz prüfen."),
-        knopf("Zu den Regeln", () => { geheZu("zeit"); return Promise.resolve(); }, "haupt", "")) : null,
+        knopf("Zu den Regeln", () => { geheZu("regeln", "zeit"); return Promise.resolve(); }, "haupt", "")) : null,
       (d.sperrzeiten_jetzt || []).length ? karte("", el("div", { text: `🌙 Gerade Sperrzeit: ${d.sperrzeiten_jetzt.join(", ")}` })) : null,
-      karte("", el("div", { class: "eh-gross", text: d.gesperrt ? "🔒 gesperrt" : h.ohne_limit ? "ohne Limit" : `${h.rest_min ?? "–"} min` }),
+      karte("", el("div", { class: "eh-gross", text: d.gesperrt?.auszeit ? `⏳ Auszeit bis ${d.gesperrt.bis_uhr}`
+                                                    : d.gesperrt ? "🔒 gesperrt" : h.ohne_limit ? "ohne Limit" : `${h.rest_min ?? "–"} min` }),
         el("div", { class: "eh-hilfe", text: `übrig heute (${h.tagesart === "frei" ? "freier Tag" : "Schultag"}) · gespielt ${h.genutzt_min} min` +
                                            (h.gaming_rest_min != null ? ` · davon Gaming ${h.gaming_min ?? 0} min (noch ${h.gaming_rest_min} min)` : "") +
                                            (h.bonus_min ? ` · Bonus ${h.bonus_min} min` : "") }),
@@ -287,9 +343,15 @@ export function elternHandy(wurzel) {
           knopf("+15 min", () => sende("/api/eltern/bonus", { art: "15" }).then(laden)),
           knopf("+30 min", () => sende("/api/eltern/bonus", { art: "30" }).then(laden)),
           knopf("ohne Limit", () => sende("/api/eltern/bonus", { art: "ohne_limit" }).then(laden))),
-        d.gesperrt ? knopf("🔓 Fernseher freigeben", () => sende("/api/eltern/sperre", { frei: true }).then(laden), "haupt breit")
-                   : knopf("🔒 Jetzt sperren", () => sende("/api/eltern/sperre", { text: "Der Fernseher macht jetzt Pause." }).then(laden), "gefahr breit")),
-      karte("Nachricht", form,
+        /* 6.0: Sperren und Auszeit nebeneinander; die Auszeit-Minuten klappen erst beim Antippen auf */
+        d.gesperrt ? el("div", { class: "eh-reihe" }, knopf(d.gesperrt.auszeit ? "🔓 Auszeit beenden" : "🔓 Fernseher freigeben",
+                           () => sende("/api/eltern/sperre", { frei: true }).then(laden), "haupt"),
+                           d.gesperrt.auszeit ? auszeitSchalter("⏳ Verlängern") : null)
+                   : el("div", { class: "eh-reihe" },
+                       knopf("🔒 Sperren", () => sende("/api/eltern/sperre", { text: "Der Fernseher macht jetzt Pause." }).then(laden), "gefahr"),
+                       auszeitSchalter("⏳ Auszeit …")),
+        auszeitAuf ? karteAuszeit() : null),
+      karte("Nachricht", vonWahl, form,
         el("div", { class: "eh-chips" }, ...["Essen ist fertig!", "Bitte Zähne putzen!", "In 5 Minuten ausschalten, bitte.", "Komm mal kurz zu mir"]
           .map((t) => knopf(t, () => senden(t), "chip", "Gesendet ✔")))),
       karte("Fernseher",
@@ -380,7 +442,8 @@ export function elternHandy(wurzel) {
         knopf("×", () => { f.erinnerungen.splice(n, 1); zeichneErinnerungen(); familie({ sofort: true }); return Promise.resolve(); }, "rund", "")),
       tageWahl(e.tage, (tage) => { e.tage = tage; if (e.text.trim()) familie(); }),
       segment([["immer", "immer"], ["schule", "nicht in den Ferien"], ["ferien", "nur in den Ferien"]], e.wann || "immer",
-        (w) => { e.wann = w; if (e.text.trim()) familie({ sofort: true }); }))));
+        (w) => { e.wann = w; if (e.text.trim()) familie({ sofort: true }); }),
+      zeile("Klang", klangWahl(e.klang, (k) => { if (k) e.klang = k; else delete e.klang; if (e.text.trim()) familie({ sofort: true }); })))));
     zeichneErinnerungen();
 
     const b = f.bewegungspause, l = f.lernbonus;
@@ -390,10 +453,10 @@ export function elternHandy(wurzel) {
         el("h4", { text: "📺 Bildschirmzeit (alles zusammen)" }), timer("schultag"), timer("frei"),
         el("h4", { text: "🎮 davon höchstens Gaming" }), timer("schultag", "gaming_min"), timer("frei", "gaming_min"),
         hilfe("Bildschirmzeit gilt für alle Apps mit „Bildschirmzeit“ oder „Gaming-Zeit“. Gaming-Zeit ist ein Teil davon: Ist sie " +
-              "aufgebraucht, gehen Spiele nicht mehr, Filme und Lernen aber schon. Welche App wovon abzieht, steht unter Menü → Apps & Kacheln."),
+              "aufgebraucht, gehen Spiele nicht mehr, Filme und Lernen aber schon. Welche App wovon abzieht, steht unter Inhalte → Apps & Kacheln."),
         zeile("Fernseher aus, wenn der Timer abgelaufen ist", schalter(f.tv_aus_bei_zeitende, (an) => { f.tv_aus_bei_zeitende = an; familie({ sofort: true }); }))),
       sperrzeiten: karte("Sperrzeiten (z. B. Nacht, Schule)", sperrBox,
-        hilfe("In einer Sperrzeit sind alle Apps gesperrt – außer die, die sie ausdrücklich erlauben (Menü → Apps & Kacheln → „erlaubt in“). 10, 5 und 1 Minute vorher kommt ein Hinweis."),
+        hilfe("In einer Sperrzeit sind alle Apps gesperrt – außer die, die sie ausdrücklich erlauben (Inhalte → Apps & Kacheln → „erlaubt in“). 10, 5 und 1 Minute vorher kommt ein Hinweis."),
         knopf("+ Sperrzeit", () => { r.sperrzeiten.push({ name: "Pause " + (r.sperrzeiten.length + 1), von: "12:00", bis: "13:00",
           tage: [0, 1, 2, 3, 4, 5, 6], ferien_frei: false, nacht: false }); zeichneSperren(); regeln({ sofort: true }); return Promise.resolve(); }, "leise", "")),
       gutenacht: karte("Gute Nacht (Hörbuch zum Einschlafen)",
@@ -402,7 +465,7 @@ export function elternHandy(wurzel) {
               "Aus: ein 15-Sekunden-Countdown fragt „Fernseher aus / an / Gute Nacht“."),
         zeile("längster Sleep-Timer", auswahl([[15, "15 min"], [30, "30 min"], [45, "45 min"], [60, "1 Stunde"], [90, "1½ Stunden"], [120, "2 Stunden"]]
           .map(([w, t]) => [String(w), t]), String(f.hoerbuch?.schlaf_max_min ?? 60), (v) => { f.hoerbuch = { ...(f.hoerbuch || {}), schlaf_max_min: +v }; familie({ sofort: true }); })),
-        hilfe(gn && gn.start ? "Hörbuch-Ordner: eingerichtet (Menü → Apps & Kacheln → Gute Nacht)." : "⚠️ Noch kein Hörbuch-Ordner: Menü → Apps & Kacheln → Gute Nacht → Freigabelink eintragen.")),
+        hilfe(gn && gn.start ? "Hörbuch-Ordner: eingerichtet (Inhalte → Apps & Kacheln → Gute Nacht)." : "⚠️ Noch kein Hörbuch-Ordner: Inhalte → Apps & Kacheln → Gute Nacht → Freigabelink eintragen.")),
       wecker: karteWecker(),
       ferien: karte("Ferien und freie Tage",
         zeile("Bundesland", auswahl([["", "bitte wählen …"], ...Object.entries(d.bundeslaender || {}).sort((a, b) => a[1].localeCompare(b[1]))],
@@ -414,9 +477,12 @@ export function elternHandy(wurzel) {
         el("h4", { text: "Eingetragen" }), ferienBox,
         knopf("+ eigene freie Tage", () => { const z = ["", ""]; neueFerien.add(z); r.ferien.unshift(z); zeichneFerien(); return Promise.resolve(); }, "leise", ""),
         hilfe("Eigene Einträge (z. B. bewegliche Ferientage der Schule) bleiben beim Eintragen erhalten.")),
+      klaengeEigen: karteEigeneKlaenge(),
       erinnerungen: karte("Erinnerungen", erinnerungBox,
-        hilfe("Erscheinen zur Uhrzeit am Fernseher (mit Gong) und bleiben stehen, bis sie mit OK bestätigt werden – alle 5 Minuten kommen sie wieder. " +
-              "„nicht in den Ferien“: z. B. Sportsachen oder Training – an Ferien und Feiertagen (Menü → Spielzeit & Sperrzeiten → Ferien) kommt sie dann nicht."),
+        el("div", { class: "eh-feld" }, el("span", { text: "Klang für Nachrichten von Mama oder Papa" }),
+          klangWahl(f.klang_nachricht, (k) => { f.klang_nachricht = k; familie({ sofort: true }); })),
+        hilfe("Erscheinen zur Uhrzeit am Fernseher (mit ihrem Klang, ▶ zum Anhören) und bleiben stehen, bis sie mit OK bestätigt werden – alle 5 Minuten kommen sie wieder. " +
+              "„nicht in den Ferien“: z. B. Sportsachen oder Training – an Ferien und Feiertagen (Zeit → Spielzeit & Sperrzeiten → Ferien) kommt sie dann nicht."),
         knopf("+ Erinnerung", () => { f.erinnerungen.push({ zeit: "19:00", text: "", tage: [0, 1, 2, 3, 4, 5, 6], wann: "immer" }); zeichneErinnerungen(); return Promise.resolve(); }, "leise", "")),
       bewegung: karte("Bewegungspause",
         zeile("Bewegungspause", schalter(b.aktiv, (an) => { b.aktiv = an; familie({ sofort: true }); })),
@@ -664,13 +730,30 @@ export function elternHandy(wurzel) {
     const zeichneAuswahl = () => katAuswahl.replaceChildren(y.kategorien.length ?
       auswahl(y.kategorien.map((k) => [k.name, k.name]).concat([["", "➕ neue Kategorie …"]]), katWahl, (v) => { katWahl = v; neuKat.hidden = Boolean(v); })
       : el("span"));
-    const zeichneListe = () => box.replaceChildren(...y.kategorien.map((k, n) => el("details", { class: "eh-app" },
-      el("summary", {}, el("span", { class: "eh-app-name" }, el("b", { text: k.name }), el("small", { text: `${k.eintraege.length} Einträge` }))),
+    /* 6.0: Reihenfolge ändern - Kategorien und Videos mit ↑ ↓; offene Kategorien bleiben beim Neuzeichnen offen */
+    const offen = new Set();
+    const verschiebe = (liste, i, schritt) => {
+      const j = i + schritt;
+      if (j < 0 || j >= liste.length) return false;
+      [liste[i], liste[j]] = [liste[j], liste[i]];
+      return true;
+    };
+    const pfeile = (liste, i, danach) => el("span", { class: "eh-pfeile" },
+      knopf("↑", () => { if (verschiebe(liste, i, -1)) danach(); return Promise.resolve(); }, "rund" + (i === 0 ? " aus" : ""), ""),
+      knopf("↓", () => { if (verschiebe(liste, i, 1)) danach(); return Promise.resolve(); }, "rund" + (i === liste.length - 1 ? " aus" : ""), ""));
+    const neuOrdnen = () => { zeichneListe(); zeichneAuswahl(); speichernY({ sofort: true }); };
+    const zeichneListe = () => box.replaceChildren(...y.kategorien.map((k, n) => el("details", { class: "eh-app", open: offen.has(k) ? true : null,
+      ontoggle: (ev) => { if (ev.target.open) offen.add(k); else offen.delete(k); } },
+      el("summary", { class: k.aktiv === false ? "eh-aus" : "" }, el("span", { class: "eh-app-name" }, el("b", { text: k.name }),
+        el("small", { text: `${k.eintraege.length} Einträge` + (k.aktiv === false ? " · gerade aus" : "") }))),
+      y.kategorien.length > 1 ? zeile("Reihenfolge der Kategorie", pfeile(y.kategorien, n, neuOrdnen)) : null,
+      zeile("Am Fernseher zeigen", schalter(k.aktiv !== false, (an) => { if (an) delete k.aktiv; else k.aktiv = false; speichernY({ sofort: true }); zeichneListe(); })),
       eingabe(k.name, (v, i) => { const neu = v.trim(); if (neu) { k.name = neu; speichernY({ feld: i }); zeichneAuswahl(); } },
         { type: "text", maxlength: 30, class: "eh-breit fett" }),
       ...k.eintraege.map((e, m) => el("div", { class: "eh-eintrag" },
         e.bild ? el("img", { src: e.bild, alt: "", class: "eh-yt-bild" }) : null,
         el("div", { class: "eh-app-name" }, el("b", { text: e.titel }), el("small", { text: e.art === "playlist" ? "Playlist" : "Video" })),
+        k.eintraege.length > 1 ? pfeile(k.eintraege, m, neuOrdnen) : null,
         knopf("×", () => { k.eintraege.splice(m, 1); zeichneListe(); speichernY({ sofort: true }); return Promise.resolve(); }, "rund", ""))),
       knopf("Kategorie löschen", () => { if (!confirm(`„${k.name}“ mit allen Einträgen löschen?`)) return Promise.resolve();
         y.kategorien.splice(n, 1); zeichneListe(); zeichneAuswahl(); speichernY({ sofort: true }); return Promise.resolve(); }, "gefahr leise", ""))));
@@ -890,6 +973,7 @@ export function elternHandy(wurzel) {
           knopf("×", () => { if (!confirm(`${c.name} entfernen?`)) return Promise.resolve(); t.chats.splice(n, 1); zeichneChats(); speichernT({ sofort: true }); return Promise.resolve(); }, "rund", "")),
         el("small", { class: "eh-hilfe", text: `Chat ${c.id}` }),
         schalterZeile("Eltern (darf alles)", "eltern"),
+        zeile("Klang bei Nachrichten", klangWahl(c.klang, (k) => { if (k) c.klang = k; else delete c.klang; speichernT({ sofort: true }); })),
         c.eltern ? null : schalterZeile("Kind darf schreiben", "darf_schreiben"),
         c.eltern || !c.darf_schreiben ? null : schalterZeile("Eigene Texte (Tastatur) erlaubt", "eigene_texte"),
         c.eltern ? null : schalterZeile("Fotos, Sprachnachrichten und Videos erlaubt", "medien"),
@@ -929,7 +1013,7 @@ export function elternHandy(wurzel) {
       zeile("Eigene Texte erlauben (Tastatur)", schalter(t.eigene_texte !== false, (an) => { t.eigene_texte = an; speichernT({ sofort: true }); })),
       zeile("Nachrichten in Sperrzeiten ohne Ton (Eltern-Nachrichten kommen trotzdem an)", schalter(t.sperrzeit_still !== false, (an) => { t.sperrzeit_still = an; speichernT({ sofort: true }); })),
       zeile("Tagesbericht um", uhr(t.bericht_uhr || "19:30", (v, i) => { t.bericht_uhr = v; speichernT({ feld: i }); })),
-      hilfe("Befehle für Eltern im Chat mit dem Bot: /status, /zeit 15, /zeit 30, /zeit frei, /sperren, /freigeben, /gutenacht, /aus, /foto, /bericht"),
+      hilfe("Befehle für Eltern im Chat mit dem Bot: /status, /zeit 15, /zeit 30, /zeit frei, /sperren, /auszeit 15, /freigeben, /gutenacht, /aus, /foto, /bericht"),
       el("h4", { text: "Antworten des Kindes" }), antwortBox,
       t.antworten.length < 12 ? knopf("+ Antwort", () => { t.antworten.push(""); zeichneAntworten(); return Promise.resolve(); }, "leise", "") : null);
   }
@@ -1117,11 +1201,52 @@ export function elternHandy(wurzel) {
     zeichne_();
   }
 
+  /* ================================================================ 6.0: Klang-Ordner (eigene Klänge) */
+  function karteEigeneKlaenge() {
+    const kl = d.einstellungen.klaenge = Object.assign({ ordner: "" }, d.einstellungen.klaenge || {});
+    const stand = el("p", { class: "eh-hilfe", text: kl.ordner ? "Klänge werden gesucht …" : "Noch kein Ordner eingetragen." });
+    const zeigeStand = () => eigeneLaden(true).then((l) => {
+      stand.textContent = eigeneFehler ? "⚠️ " + eigeneFehler : kl.ordner ? `${l.length} eigene Klänge gefunden – sie stehen in jeder Klang-Auswahl unter „🎵 Eigene Klänge“.` : "Noch kein Ordner eingetragen.";
+    });
+    if (kl.ordner) zeigeStand();
+    const feld = eingabe(kl.ordner, (v, i) => { kl.ordner = v.trim(); speichere("klaenge", () => sende("/api/eltern/einstellungen", { einstellungen: { klaenge: kl } }).then(zeigeStand), { feld: i }); },
+      { type: "url", placeholder: "http://server:8080/share/…", class: "eh-breit" });
+    return karte("🎵 Eigene Klänge",
+      hilfe("Einen Ordner mit kurzen Tönen (mp3, ogg, wav …) im FileBrowser freigeben (unbefristet, ohne Passwort) und den Link hier eintragen – " +
+            "es kann auch der Ordner der Wecktöne sein. Am Fernseher spielt ein eigener Klang höchstens 10 Sekunden, jede Datei höchstens 4 MB."),
+      feld, stand, knopf("Neu laden", () => zeigeStand(), "leise", ""));
+  }
+
+  /* ================================================================ 5.1: Auszeit */
+  function auszeitSchalter(text) {
+    const k = el("button", { type: "button", class: "eh-knopf" + (auszeitAuf ? " an" : ""), text });
+    k.addEventListener("click", () => { auszeitAuf = !auszeitAuf; zeichne(); });
+    return k;
+  }
+  function karteAuszeit() {
+    if (d.gesperrt && !d.gesperrt.auszeit) return null;             /* fest gesperrt: erst freigeben */
+    const laeuft = Boolean(d.gesperrt?.auszeit);
+    const feld = el("input", { type: "number", min: 1, max: 240, value: 20, inputmode: "numeric", class: "eh-zahl", "aria-label": "Minuten" });
+    const starte = (min) => sende("/api/eltern/auszeit", { minuten: min }).then((a) => { laden(); return a; });
+    return el("div", { class: "eh-auszeit" },
+      el("h4", { text: laeuft ? `⏳ Auszeit verlängern (noch ${Math.ceil((d.gesperrt.rest_s || 0) / 60)} min)` : "⏳ Auszeit" }),
+      hilfe(laeuft ? "Die Minuten kommen zur laufenden Auszeit dazu."
+                   : "Alles wird gesperrt, am Fernseher läuft nur ein Countdown. Danach ist er von selbst wieder frei."),
+      el("div", { class: "eh-chips" }, ...(laeuft ? [5, 10, 15] : [5, 10, 15, 30, 60]).map((m) =>
+        knopf(`${laeuft ? "+" : ""}${m} min`, () => starte(m), "chip", laeuft ? "Verlängert ✔" : "Auszeit läuft ✔"))),
+      el("div", { class: "eh-reihe eh-suche" }, feld,
+        knopf(laeuft ? "Verlängern" : "Auszeit starten", () => {
+          const m = parseInt(feld.value, 10);
+          if (!(m >= 1 && m <= 240)) return Promise.reject(new Error("Bitte 1 bis 240 Minuten."));
+          return starte(m);
+        }, laeuft ? "" : "gefahr", laeuft ? "Verlängert ✔" : "Auszeit läuft ✔")));
+  }
+
   /* ================================================================ 5.0: Designs, Wetter, Schule, Kinderwelten, Kinder-News */
   function karteDesign() {
     const ds = d.design;
     const speichernD = (opt) => einstellung("design", { erlaubt: ds.erlaubt, ansichten: ds.ansichten, abend_aktiv: ds.abend_aktiv, abend_ab: ds.abend_ab,
-                                                         morgen_ab: ds.morgen_ab, abend_design: ds.abend_design }, opt);
+                                                         morgen_ab: ds.morgen_ab }, opt);
     const liste = el("div", { class: "eh-liste" }, ...ds.alle.map((x) => zeile(`${x.name}${x.hell ? " (hell)" : ""}`,
       schalter(ds.erlaubt.includes(x.id), (an, c) => {
         const neu = an ? [...ds.erlaubt, x.id] : ds.erlaubt.filter((y) => y !== x.id);
@@ -1129,28 +1254,17 @@ export function elternHandy(wurzel) {
         ds.erlaubt = ds.alle.map((y) => y.id).filter((y) => neu.includes(y));
         speichernD({ sofort: true });
       }))));
-    const ansichten = el("div", { class: "eh-liste" }, ...ds.alle_ansichten.map((x) => zeile(x.name,
-      schalter(ds.ansichten.includes(x.id), (an, c) => {
-        const neu = an ? [...ds.ansichten, x.id] : ds.ansichten.filter((y) => y !== x.id);
-        if (!neu.length) { c.checked = true; zeige("Mindestens eine Ansicht muss bleiben.", true); return; }
-        ds.ansichten = ds.alle_ansichten.map((y) => y.id).filter((y) => neu.includes(y));
-        speichernD({ sofort: true });
-      }))));
-    return karte("🎨 Designs der Startseite",
-      hilfe("Am Fernseher wählt das Kind unter „Gestalten“ die Farben und die Ansicht. Hier legt ihr fest, was es gibt. " +
+    return karte("🎨 Farben der Startseite",
+      hilfe("Am Fernseher wählt das Kind unter „Gestalten“ die Farbe und bis zu 6 Lieblinge. Hier legt ihr fest, welche Farben es gibt. " +
             "Spiele, Player und der Elternbereich bleiben immer dunkel."),
       el("h4", { text: "Farben" }),
       liste,
-      el("h4", { text: "Ansichten (Aufteilung der Startseite)" }),
-      hilfe("🎮 Konsole: Bereiche oben, eine Reihe je Bereich. 📋 Seitenleiste: Bereiche links, Kacheln als großes Raster. " +
-            "🎠 Karussell: nur der gewählte Bereich, die Kachel groß in der Mitte. Überall gilt: ↑ ↓ Bereich, ← → Kachel."),
-      ansichten,
-      el("h4", { text: "Abends automatisch dunkel" }),
+
+      el("h4", { text: "Abends automatisch dunkel (helle Farben)" }),
       zeile("Abend-Automatik", schalter(ds.abend_aktiv, (an) => { ds.abend_aktiv = an; speichernD({ sofort: true }); })),
       zeile("Dunkel ab", uhr(ds.abend_ab, (v, i) => { ds.abend_ab = v; speichernD({ feld: i }); })),
       zeile("Wieder hell ab", uhr(ds.morgen_ab, (v, i) => { ds.morgen_ab = v; speichernD({ feld: i }); })),
-      zeile("Abend-Design", auswahl(ds.alle.filter((x) => ds.dunkel.includes(x.id)).map((x) => [x.id, x.name]), ds.abend_design,
-        (v) => { ds.abend_design = v; speichernD({ sofort: true }); })));
+      hilfe("Abends wird eine helle Farbe zu ihrer dunklen Schwester (z. B. Hellblau → Blau). Eine dunkle Farbe bleibt, wie sie ist."));
   }
 
   function karteWetter() {
@@ -1187,7 +1301,8 @@ export function elternHandy(wurzel) {
   function karteSchule() {
     const sc = d.schule;
     const speichernS = (opt) => einstellung("schule", { aktiv: sc.aktiv, tv_hinweis: sc.tv_hinweis, telegram: sc.telegram,
-                                                         morgen_check: sc.morgen_check, morgen_check_um: sc.morgen_check_um }, opt);
+                                                         morgen_check: sc.morgen_check, morgen_check_um: sc.morgen_check_um,
+                                                         klang: sc.klang, klang_morgen: sc.klang_morgen }, opt);
     const st = sc.stand || {};
     return karte("🏫 Schule (Klassenkiste)",
       hilfe("Der Fernseher liest mit der Anmeldung des Kindes aus der Klassenkiste: heutige Stunden mit Ausfall und Vertretung, " +
@@ -1196,11 +1311,13 @@ export function elternHandy(wurzel) {
       zeile("Schul-Seite einschalten", schalter(sc.aktiv, (an) => { sc.aktiv = an; speichernS({ sofort: true }); })),
       el("h4", { text: "Was ist neu? (alle 15 Minuten)" }),
       zeile("Hinweis am Fernseher", schalter(sc.tv_hinweis, (an) => { sc.tv_hinweis = an; speichernS({ sofort: true }); })),
+      zeile("Klang", klangWahl(sc.klang, (k) => { sc.klang = k; speichernS({ sofort: true }); })),
       zeile("Telegram an die Eltern", schalter(sc.telegram, (an) => { sc.telegram = an; speichernS({ sofort: true }); })),
       hilfe("Gemeldet werden neue Hausaufgaben, neue Klassennachrichten und Stundenausfälle oder Vertretungen – jeweils einmal."),
       el("h4", { text: "Morgen-Check am Abend" }),
       zeile("Morgen-Check", schalter(sc.morgen_check, (an) => { sc.morgen_check = an; speichernS({ sofort: true }); })),
       zeile("Uhrzeit", uhr(sc.morgen_check_um, (v, i) => { sc.morgen_check_um = v; speichernS({ feld: i }); })),
+      zeile("Klang", klangWahl(sc.klang_morgen, (k) => { sc.klang_morgen = k; speichernS({ sofort: true }); })),
       hilfe("Nur am Abend vor einem Schultag: erste Stunde und Hausaufgaben bis morgen."),
       st.stand ? hilfe(`Zuletzt ${st.zeit || ""}: ${st.stand.hausaufgaben.length} offene Hausaufgaben, ${st.stand.nachrichten.length} Nachrichten.` +
                        (st.stand.morgen?.satz ? " " + st.stand.morgen.satz : "")) : st.fehler ? hilfe("⚠️ " + st.fehler) : null,
@@ -1221,14 +1338,16 @@ export function elternHandy(wurzel) {
   }
 
   function karteNews() {
-    const qs = d.news.quellen;
-    const speichernN = () => einstellung("news", { quellen: Object.fromEntries(qs.map((q) => [q.id, q.an])) }, { sofort: true });
+    const feld = el("textarea", { rows: 4, class: "eh-breit", placeholder: "eine RSS-Adresse pro Zeile, z. B. https://…/feed" });
+    feld.value = (d.news.feeds || []).join("\n");
+    feld.addEventListener("change", () => {
+      d.news.feeds = feld.value.split(/\s+/).filter(Boolean);
+      einstellung("news", { feeds: d.news.feeds }, { feld, sofort: true });
+    });
     return karte("📰 Kinder-News",
-      hilfe("Nur Quellen, die ihr hier einzeln einschaltet. Ab Werk ist alles aus. Gezeigt werden Überschrift und kurzer Text, " +
-            "ohne Links und Bilder. Sobald eine Quelle an ist, gibt es die Kachel „Kinder-News“."),
-      ...qs.map((q) => el("div", { class: "eh-eintrag spalte" },
-        zeile(q.name, schalter(q.an, (an) => { q.an = an; speichernN(); })),
-        el("small", { class: "eh-hilfe", text: q.info + " " + q.url }))));
+      hilfe("Tragt hier die RSS-Adressen ein, die ihr selbst ausgesucht habt (höchstens 10). Ohne Adresse gibt es keine Kachel. " +
+            "Gezeigt werden Überschrift und kurzer Text, ohne Links und Bilder. Gespeichert wird, sobald ihr das Feld verlasst."),
+      feld);
   }
 
   /* ================================================================ Mehr */

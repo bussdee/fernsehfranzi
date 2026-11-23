@@ -4,7 +4,7 @@
  * Zeitkonto). Eingabe: Tastatur-Ereignisse - Fernbedienung und Controller übersetzt
  * eingabe.py in Tasten, die Startseite liest keine Gamepads selbst (ein Besitzer pro Aufgabe).
  */
-import { hole, sende, el, pause } from "./gemeinsam.js";
+import { hole, sende, el, pause, bild, mitBild, franzi } from "./gemeinsam.js";
 import { oeffneElternbereich } from "./eltern.js";
 import { oeffneHoerbuch } from "./hoerbuch.js";
 import { oeffneYoutube } from "./youtube.js";
@@ -42,6 +42,7 @@ const SYMBOLE = { video: "▶️", film: "🎬", spiel: "🕹️", haus: "🏠",
 const FARBEN = { "spiel-snake": "#1d7a5e", "spiel-memory": "#8a3b8a", "spiel-drei": "#a8791c",
                  "spiel-echo": "#2a6b9e", "spiel-malen": "#6d3fa8", "spiel-witz": "#b06520",
                  "spiel-bass": "#8d2f2f", "spiel-duell": "#2f6d8d", "spiel-sticker": "#8d7a2f", "spiel-lernen": "#00897b", "spiel-handys": "#2f5fa8", "spiel-fotoalbum": "#2f7a8d", "spiel-karaoke": "#a8326b",
+                 "spiel-gutschein": "#c2453a", "spiel-wecker": "#d0782a", "spiel-nachrichten": "#c99a1e", "spiel-gestalten": "#8a4fc2",
                  "spiel-wetter": "#2f86c9", "spiel-schule": "#3a7d44", "spiel-kinderwelten": "#e07b1a", "spiel-news": "#6b4fb3",
                  "gute-nacht": "#2b2f6b", "retro": "#4a2b6b" };
 const TON_NAMEN = { hdmi: "Fernseher (HDMI)", klinke: "Klinke (Kopfhörer / Anlage)", kopfhoerer: "🎧 Bluetooth-Kopfhörer" };
@@ -81,52 +82,64 @@ function gruessen(name) {
 }
 
 /* ------------------------------------------------------------ Kacheln */
+/* 6.0: Startseite „Zuhause + Ordner“ - auf „Zuhause“ die Lieblinge, „Weiter, wo du warst“ und je eine Kachel pro Bereich;
+   OK auf einen Bereich öffnet sein Raster, STOP geht zurück. Freie Kacheln zuerst, gesperrte am Ende mit Grund. */
 const SPERR_SYMBOL = { zeit: "⏳", nacht: "🌙", schule: "🏫", sperrzeit: "🚫", eltern: "🔒", uhr: "🕐" };
+const SPERR_KURZ = { zeit: "Zeit um", nacht: "Nachtruhe", schule: "Schulzeit", sperrzeit: "Sperrzeit", eltern: "gesperrt", uhr: "gleich" };
 function baueKachel(app, nummer) {
   const istSpiel = app.typ === "spiel";
   const farbe = app.farbe || FARBEN[app.id] || "#2a3550";
-  const symbol = SYMBOLE[app.symbol] || (istSpiel && SPIELE[app.id]?.symbol) || "⭐";
-  const knoten = el("button", { class: "kachel" + (app.frei ? "" : " gesperrt"), type: "button", tabindex: "-1",
-                                "data-id": app.id },
+  const symbol = app.ordnerSymbol || SYMBOLE[app.symbol] || (istSpiel && SPIELE[app.id]?.symbol) || "⭐";
+  const knoten = el("button", { class: "kachel" + (app.frei === false ? " gesperrt" : "") + (app.ordner ? " ordner-kachel" : ""),
+                                type: "button", tabindex: "-1", "data-id": app.ordner ? "ordner-" + app.ordner : app.id },
     el("div", { class: "bg", style: `--farbe: ${farbe}; background: linear-gradient(130deg, var(--kachel-anfang), ${farbe})` }),
-    el("span", { class: "taste", text: nummer }),
-    el("div", { class: "symbol", text: symbol }),
-    el("div", {},
+    nummer ? el("span", { class: "taste", text: nummer }) : null,
+    el("div", { class: "symbol" }, bild(symbol)),
+    el("div", { class: "unten" },
       el("div", { class: "name", text: app.name }),
-      null));
-  /* 3.4: gesperrt = nur grau mit einem Symbol (den Grund sagt der Hinweis beim Anwählen) */
-  const symbolSperre = !app.frei ? (SPERR_SYMBOL[app.sperre] || "🔒") : app.eingerichtet === false ? "⚙️" : "";
+      app.zusatz ? el("div", { class: "zusatz", text: app.zusatz }) : null));
+  const symbolSperre = app.frei === false ? (SPERR_SYMBOL[app.sperre] || "🔒") : app.eingerichtet === false ? "⚙️" : "";
   if (symbolSperre) {
     knoten.classList.add("gesperrt");
-    knoten.append(el("div", { class: "sperr-symbol", text: symbolSperre }));
+    knoten.append(el("div", { class: "sperr-symbol", text: symbolSperre }),
+      el("div", { class: "grund", text: app.frei === false ? (SPERR_KURZ[app.sperre] || "geht gerade nicht") : "nicht eingerichtet" }));
   }
-  if (app.liebling) knoten.append(el("div", { class: "liebling", text: "⭐" }));
-  knoten.addEventListener("click", () => oeffne(app));
+  if (app.hinweis) knoten.append(el("div", { class: "kachel-hinweis", text: app.hinweis }));
+  knoten.addEventListener("click", () => (app.ordner ? oeffneOrdner(app.ordner) : oeffne(app)));
   return knoten;
 }
 
-/* 3.5: Bereiche (Konsolen-Stil). Eltern können eine App einem Bereich zuordnen (Feld "bereich"), sonst automatisch. */
+/* Bereiche („Ordner“). Eltern können eine App einem Bereich zuordnen (Feld "bereich", auch alte Namen), sonst automatisch. */
 const BEREICHE = [
-  { id: "start", name: "Start", symbol: "🏠" }, { id: "spiele", name: "Spiele", symbol: "🎮" },
-  { id: "lernen", name: "Lernen", symbol: "🎓" }, { id: "musik", name: "Musik", symbol: "🎼" },
-  { id: "filme", name: "Filme & YouTube", symbol: "🎬" }, { id: "retro", name: "Retro", symbol: "🕹️" },
+  { id: "spiele", name: "Spiele", symbol: "🎮", farbe: "#2f8a5e" },
+  { id: "filme", name: "Filme", symbol: "🎬", farbe: "#b0442f" },
+  { id: "musik", name: "Musik", symbol: "🎵", farbe: "#a8326b" },
+  { id: "lernen", name: "Lernen", symbol: "🎓", farbe: "#2f6db5" },
+  { id: "zimmer", name: "Mein Zimmer", symbol: "📨", farbe: "#8a4fc2" },
+  { id: "retro", name: "Retro", symbol: "🕹️", farbe: "#5a3d8a" },
 ];
-const START_IDS = ["gute-nacht", "spiel-nachrichten", "spiel-wecker", "spiel-gutschein", "familie", "spiel-gestalten", "spiel-fotoalbum",
-                   "spiel-wetter", "spiel-schule", "spiel-news"];
+const BEREICH_ALT = { start: "zimmer", medien: "filme" };
+const ZIMMER_IDS = ["spiel-nachrichten", "spiel-wecker", "spiel-gutschein", "familie", "spiel-gestalten", "spiel-fotoalbum",
+                    "spiel-sticker", "spiel-wetter", "spiel-news"];
 function bereichVon(app) {
-  if (app.bereich && BEREICHE.some((b) => b.id === app.bereich)) return app.bereich;
-  if (START_IDS.includes(app.id)) return "start";
-  if (app.typ === "youtube" || app.typ === "hoerbuch" || app.typ === "video" || app.id === "plex") return "filme";
+  const eigen = BEREICH_ALT[app.bereich] || app.bereich;
+  if (eigen && BEREICHE.some((b) => b.id === eigen)) return eigen;
+  if (ZIMMER_IDS.includes(app.id)) return "zimmer";
+  if (app.typ === "hoerbuch" || app.id === "spiel-bass" || app.id === "spiel-karaoke") return "musik";   /* 6.0: getrennt */
+  if (app.typ === "youtube" || app.typ === "video" || app.id === "plex") return "filme";
   if (app.typ === "konsole" || app.typ === "retro") return "retro";
-  if (app.id === "spiel-bass" || app.id === "spiel-karaoke") return "musik";
-  if (app.lernen || app.id === "buecher") return "lernen";
+  if (app.lernen || app.id === "buecher" || app.id === "spiel-schule") return "lernen";
   if (app.typ === "spiel") return "spiele";
-  return "start";
+  return "zimmer";
 }
 const BESCHREIBUNG = { "gute-nacht": "Hörbuch zum Einschlafen", "spiel-wecker": "Deine Wecker", "spiel-gutschein": "Code vom Zettel einlösen",
                        "spiel-bass": "Bass, Gitarre, Keyboard, Singen", youtube: "Deine Videos", games: "Alle Retro-Spiele",
                        "spiel-wetter": "Wann kann ich raus?", "spiel-schule": "Stundenplan und Hausaufgaben",
-                       "spiel-kinderwelten": "Geschichten lesen, Rätsel, Draußen-Spiele", "spiel-news": "Nachrichten für Kinder" };
+                       "spiel-kinderwelten": "Geschichten lesen, Rätsel, Draußen-Spiele", "spiel-news": "Nachrichten für Kinder",
+                       "spiel-gestalten": "Lieblinge und Farben aussuchen", "spiel-fotoalbum": "Deine Bilder und die Diashow" };
+const LIEBLINGE_MAX = 6, ZULETZT_MAX = 4, SPALTEN = 6;
+const freiZuerst = (liste) => liste.filter((a) => a.frei !== false && a.eingerichtet !== false)
+  .concat(liste.filter((a) => a.frei === false || a.eingerichtet === false));
 
 async function ladeKacheln() {
   let apps;
@@ -142,49 +155,87 @@ async function ladeKacheln() {
   const gamesFrei = apps.find((a) => a.id === "games");
   const alle = apps.concat(retro.map((spiel) => ({ id: "retro", typ: "retro", name: spiel.name, symbol: spiel.favorit ? "stern" : "spiel",
     frei: gamesFrei ? gamesFrei.frei : true, grund: gamesFrei?.grund, sperre: gamesFrei?.sperre, zaehlt: true, spiel })));
-  /* 4.0: vom Kind gestaltet - Lieblinge vorne in „Start“, Hintergrund */
-  let gestaltung = { lieblinge: [], thema: "weltall" };
+  let gestaltung = { lieblinge: [], thema: "blau", zuletzt: [] };
   try { gestaltung = await hole("/api/startseite"); } catch (_) { /* Vorgabe */ }
-  designZeigen(gestaltung.design?.jetzt || gestaltung.thema, gestaltung.design?.hell,   /* 5.0: Design (abends dunkel) */
-               gestaltung.design?.ansicht || "konsole");                              /* 5.0: Ansicht */
-  const vorher = zustand.reihen[zustand.zeile]?.bereich;
-  zustand.reihen = [];
+  designZeigen(gestaltung.design?.jetzt || gestaltung.thema, gestaltung.design?.hell);   /* 6.0: Farbe (abends dunkel) */
+  zustand.alle = alle;
+  zustand.gestaltung = gestaltung;
+  const vorherId = zustand.reihen[zustand.zeile]?.[zustand.spalte]?.knoten?.dataset.id;
+  baueSeite(vorherId);
+  return true;
+}
+
+/* Eine Seite zeichnen: „Zuhause“ (zustand.ordner = null) oder das Raster eines Bereichs */
+function baueSeite(fokusId) {
+  const alle = zustand.alle || [], st = zustand.gestaltung || {};
   const reihenBox = document.getElementById("reihen");
   reihenBox.replaceChildren();
-  for (const b of BEREICHE) {
-    let inhalt = alle.filter((a) => bereichVon(a) === b.id);
-    if (b.id === "start") {
-      const lieb = (gestaltung.lieblinge || []).map((id) => alle.find((a) => a.id === id)).filter(Boolean)
-        .map((a) => ({ ...a, liebling: true }));
-      inhalt = lieb.concat(inhalt.filter((a) => !(gestaltung.lieblinge || []).includes(a.id)));
-    }
-    if (!inhalt.length) continue;
-    const zeile = el("div", { class: "reihe-kacheln" });
+  reihenBox.style.transform = "none";
+  /* 6.0: Kacheln gleiten nur beim Wechsel der Seite herein, nicht beim stillen Nachladen jede Minute */
+  const seite = zustand.ordner || "zuhause", neueSeite = zustand.gezeigteSeite !== seite;
+  zustand.gezeigteSeite = seite;
+  reihenBox.classList.toggle("rein", neueSeite);
+  let nr = 0;
+  zustand.reihen = [];
+  const neueReihe = (titel, eintraege, art) => {
+    if (!eintraege.length) return;
+    const zeile = el("div", { class: "zeile-kacheln" + (art ? " " + art : "") });
     const reihe = [];
-    inhalt.forEach((app, i) => {
-      const taste = i < 10 ? String((i + 1) % 10) : "";
+    eintraege.forEach((app, i) => {
+      const taste = i < 9 ? String(i + 1) : "";
       const knoten = baueKachel(app, taste);
+      knoten.style.setProperty("--i", String(Math.min(nr++, 14)));
       zeile.append(knoten);
       reihe.push({ daten: app, knoten, taste });
     });
-    const abschnitt = el("section", { class: "reihe", "data-bereich": b.id, "aria-label": b.name },
-      el("h2", { class: "reihe-titel", text: `${b.symbol} ${b.name}` }), zeile);
+    const abschnitt = el("section", { class: "zeile", "data-art": art || "" }, titel ? el("h2", { class: "reihe-titel", text: titel }) : null, zeile);
     reihenBox.append(abschnitt);
-    reihe.bereich = b.id;
     reihe.abschnitt = abschnitt;
     zustand.reihen.push(reihe);
+  };
+  const pfad = document.getElementById("pfad");
+  document.getElementById("reihen-fenster").classList.toggle("im-ordner", Boolean(zustand.ordner));
+  if (!zustand.ordner) {
+    pfad.textContent = "";
+    const lieb = (st.lieblinge || []).map((id) => alle.find((a) => a.id === id)).filter(Boolean).slice(0, LIEBLINGE_MAX);
+    neueReihe("⭐ Meine Lieblinge", lieb.length ? lieb : [{ id: "spiel-gestalten-hinweis", name: "Lieblinge aussuchen", ordnerSymbol: "⭐",
+      zusatz: "unter Gestalten", farbe: "#a8791c", frei: true, verweis: "spiel-gestalten" }], "lieblinge");
+    const zuletzt = (st.zuletzt || []).map((id) => alle.find((a) => a.id === id)).filter((a) => a && a.frei !== false)
+      .filter((a) => !lieb.includes(a)).slice(0, ZULETZT_MAX);
+    neueReihe("▶ Weiter, wo du warst", zuletzt, "zuletzt");
+    const neu = (zustand.meldungenAnzahl || 0);
+    neueReihe("Bereiche", BEREICHE.map((b) => {
+      const drin = alle.filter((a) => bereichVon(a) === b.id);
+      if (!drin.length) return null;
+      const frei = drin.filter((a) => a.frei !== false).length;
+      return { id: "ordner-" + b.id, ordner: b.id, name: b.name, ordnerSymbol: b.symbol, farbe: b.farbe, frei: true,
+               zusatz: frei === drin.length ? "" : `${frei} von ${drin.length} frei`,
+               hinweis: b.id === "zimmer" && neu ? `🔔 ${neu} neu` : "" };
+    }).filter(Boolean), "bereiche");
+  } else {
+    const b = BEREICHE.find((x) => x.id === zustand.ordner);
+    pfad.textContent = `🏠 Zuhause  ›  ${b.symbol} ${b.name}`;
+    const drin = freiZuerst(alle.filter((a) => bereichVon(a) === b.id));
+    for (let i = 0; i < drin.length; i += SPALTEN) neueReihe("", drin.slice(i, i + SPALTEN), "raster");
+    if (!drin.length) reihenBox.append(el("div", { class: "seite-leer" }, franzi("staunen", "franzi-leer"), el("div", { text: "Hier ist gerade nichts." })));
   }
-  /* Leiste oben */
-  const leiste = document.getElementById("bereiche");
-  leiste.replaceChildren(...zustand.reihen.map((r, z) => {
-    const b = BEREICHE.find((x) => x.id === r.bereich);
-    const k = el("button", { type: "button", tabindex: "-1", class: "bereich", "data-bereich": b.id }, el("span", { text: b.symbol }), b.name);
-    k.addEventListener("click", () => { markiere(z, 0); ton("bewegen"); });
-    return k;
-  }));
-  const zeile = Math.max(0, zustand.reihen.findIndex((r) => r.bereich === vorher));
-  markiere(zeile, zustand.reihen[zeile]?.bereich === vorher ? zustand.spalte : 0);
-  return true;
+  /* Fokus: dieselbe Kachel wie vorher, sonst die erste */
+  let z = 0, s = 0;
+  if (fokusId) zustand.reihen.forEach((r, ri) => r.forEach((k, ki) => { if (k.knoten.dataset.id === fokusId) { z = ri; s = ki; } }));
+  if (zustand.reihen.length) markiere(z, s);
+  else { document.getElementById("held-name").textContent = ""; document.getElementById("held-info").textContent = ""; }
+}
+
+function oeffneOrdner(id) {
+  zustand.ordner = id;
+  baueSeite();
+  ton("ok");
+}
+function zuhause() {
+  const war = zustand.ordner;
+  zustand.ordner = null;
+  baueSeite(war ? "ordner-" + war : null);
+  ton("bewegen");
 }
 
 function markiere(zeile, spalte) {
@@ -200,40 +251,19 @@ function markiere(zeile, spalte) {
   }
   const k = reihe[zustand.spalte];
   k.knoten.classList.add("gewaehlt");
-  /* aktive Reihe nach oben schieben, gewählte Kachel in den sichtbaren Bereich */
-  const fenster = document.getElementById("reihen");
-  const ansicht = document.body.dataset.ansicht || "konsole";     /* 5.0: Konsole · Seitenleiste · Karussell */
-  fenster.style.transform = ansicht === "konsole" ? `translateY(${-reihe.abschnitt.offsetTop}px)` : "none";
-  const streifen = k.knoten.parentElement;
-  if (ansicht === "seitenleiste") {
-    /* Raster: nur so weit nach oben schieben, dass die gewählte Kachel ganz zu sehen ist */
-    const sicht = document.getElementById("reihen-fenster").clientHeight;
-    let versatz = Number(streifen.dataset.versatz || 0);
-    const oben = k.knoten.offsetTop, unten = oben + k.knoten.offsetHeight;
-    if (oben - versatz < 10) versatz = Math.max(0, oben - 10);
-    if (unten - versatz > sicht - 20) versatz = unten - sicht + 20;
-    streifen.dataset.versatz = String(versatz);
-    streifen.style.transform = `translateY(${-versatz}px)`;
-  } else if (ansicht === "karussell") {
-    /* die gewählte Kachel steht immer in der Mitte */
-    const versatz = k.knoten.offsetLeft + k.knoten.offsetWidth / 2 - streifen.clientWidth / 2;
-    streifen.dataset.versatz = String(versatz);
-    streifen.style.transform = `translateX(${-versatz}px)`;
-  } else {
-    /* Reihe nur so weit schieben, dass die gewählte Kachel ganz zu sehen ist (mit etwas Rand) */
-    let versatz = Number(streifen.dataset.versatz || 0);
-    const rand = 40, sicht = streifen.clientWidth;
-    const links = k.knoten.offsetLeft, rechts = links + k.knoten.offsetWidth;
-    if (links - versatz < rand) versatz = Math.max(0, links - rand);
-    if (rechts - versatz > sicht - rand) versatz = rechts - sicht + rand;
-    streifen.dataset.versatz = String(versatz);
-    streifen.style.transform = `translateX(${-versatz}px)`;
-  }
-  for (const b of document.querySelectorAll("#bereiche .bereich")) b.classList.toggle("an", b.dataset.bereich === reihe.bereich);
-  /* großer Titel wie bei der Konsole, Hintergrund in der Farbe der Kachel */
+  /* senkrecht nur so weit schieben, dass die gewählte Reihe ganz zu sehen ist */
+  const fenster = document.getElementById("reihen-fenster"), box = document.getElementById("reihen");
+  let versatz = Number(box.dataset.versatz || 0);
+  const oben = reihe.abschnitt.offsetTop, unten = oben + reihe.abschnitt.offsetHeight, sicht = fenster.clientHeight;
+  if (oben - versatz < 0) versatz = Math.max(0, oben - 8);
+  if (unten - versatz > sicht) versatz = unten - sicht + 8;
+  box.dataset.versatz = String(versatz);
+  box.style.transform = `translateY(${-versatz}px)`;
+  /* Info-Zeile unten: Name und ein Satz (bei gesperrten Kacheln der Grund) */
   const d = k.daten;
   document.getElementById("held-name").textContent = d.name;
-  document.getElementById("held-info").textContent = !d.frei ? d.grund : d.eingerichtet === false ? "Noch nicht eingerichtet"
+  document.getElementById("held-info").textContent = d.ordner ? "OK öffnet den Bereich" : d.verweis ? "Unter „Gestalten“ suchst du dir bis zu 6 Lieblinge aus"
+    : d.frei === false ? d.grund : d.eingerichtet === false ? "Noch nicht eingerichtet"
     : BESCHREIBUNG[d.id] || (d.typ === "retro" ? "Zuletzt gespielt" : d.zaehlt ? "Mit Spielzeit" : "Ohne Zeit");
   document.body.style.setProperty("--held-farbe", d.farbe || FARBEN[d.id] || "#2a3550");
 }
@@ -251,22 +281,35 @@ function anschlag(dx, dy) {
 
 function bewege(dx, dy) {
   if (dy) {
-    let ziel = zustand.zeile + dy;
-    while (ziel >= 0 && ziel < zustand.reihen.length && !zustand.reihen[ziel].length) ziel += dy;
+    const ziel = zustand.zeile + dy;
     if (ziel < 0 || ziel >= zustand.reihen.length) return anschlag(0, dy);
-    /* ungefähr gleiche horizontale Lage in der anderen Reihe */
-    const anteil = (zustand.spalte + 0.5) / zustand.reihen[zustand.zeile].length;
-    markiere(ziel, Math.floor(anteil * zustand.reihen[ziel].length));
+    /* dieselbe Spalte (vorhersehbar), höchstens bis zur letzten Kachel der Zielreihe */
+    markiere(ziel, Math.min(zustand.spalte, zustand.reihen[ziel].length - 1));
   } else {
-    const ziel = zustand.spalte + dx;
-    if (ziel < 0 || ziel >= zustand.reihen[zustand.zeile].length) return anschlag(dx, 0);
-    markiere(zustand.zeile, ziel);
+    let z = zustand.zeile, s = zustand.spalte + dx;
+    /* im Raster am Zeilenende in die nächste Zeile weiter */
+    if (zustand.ordner && s >= zustand.reihen[z].length && z + 1 < zustand.reihen.length) { z++; s = 0; }
+    else if (zustand.ordner && s < 0 && z > 0) { z--; s = zustand.reihen[z].length - 1; }
+    if (s < 0 || s >= zustand.reihen[z].length) return anschlag(dx, 0);
+    markiere(z, s);
   }
   ton("bewegen");
 }
 
+/* Für Tests und Fehlersuche: zur Kachel einer App springen (öffnet ihren Bereich) und sie wählen */
+function zeigeKachel(id) {
+  const app = (zustand.alle || []).find((a) => a.id === id);
+  if (!app) return false;
+  const imZuhause = !zustand.ordner && zustand.reihen.some((r) => r.some((k) => k.knoten.dataset.id === id));
+  if (!imZuhause) { zustand.ordner = bereichVon(app); baueSeite(id); }
+  zustand.reihen.forEach((r, ri) => r.forEach((k, ki) => { if (k.knoten.dataset.id === id) markiere(ri, ki); }));
+  return true;
+}
+
 /* ------------------------------------------------------------ Öffnen */
 async function oeffne(app) {
+  if (app.ordner) return oeffneOrdner(app.ordner);                                  /* 6.0: Bereich öffnen */
+  if (app.verweis) { const ziel = (zustand.alle || []).find((a) => a.id === app.verweis); return ziel && oeffne(ziel); }
   if (!app.frei) { hinweis(app.grund); ton("fehler"); return; }
   if (app.eingerichtet === false) { hinweis(`${app.name} ist noch nicht eingerichtet. Bitte Mama oder Papa fragen.`); ton("fehler"); return; }
   if (app.typ === "retro") {
@@ -304,8 +347,13 @@ function oeffneSpiel(app) {
   const wurzel = document.getElementById("overlay-wurzel");
   const box = el("section", { class: "overlay" });
   wurzel.replaceChildren(box);
-  const steuerung = spiel.oeffne(box, { hinweis, sende, hole, schliessen: schliesseOverlay });
+  const steuerung = spiel.oeffne(box, { hinweis, sende, hole, schliessen: schliesseOverlay,
+                                       diashow: () => { schliesseOverlay(); schonerPruefen(true); } });   /* 6.0 */
   zustand.overlay = { ...steuerung, id: app.id };
+  /* 6.0: jede Überschrift mit dem Symbol des Spiels (einheitlich) */
+  const titel = box.querySelector(".overlay-kopf h2");
+  if (titel && spiel.symbol && !titel.querySelector(".icon") && !/^\p{Extended_Pictographic}/u.test(titel.textContent))
+    titel.replaceChildren(...mitBild(`${spiel.symbol} ${titel.textContent}`, "icon kopf-icon"));
   ton("ok");
 }
 
@@ -491,7 +539,7 @@ function zeigeMeldungen(liste) {
   const box = el("div", { id: "meldungen" },
     el("div", { class: "meldungen-karte" },
       /* 4.3: Wer schreibt? Symbol und Name des Telegram-Kontakts (sonst „Nachricht von Mama oder Papa“) */
-      el("div", { class: "meldungen-symbol", text: liste.every((m) => m.symbol && m.symbol === liste[0].symbol) ? liste[0].symbol : "📣" }),
+      el("div", { class: "meldungen-symbol" }, bild(liste.every((m) => m.symbol && m.symbol === liste[0].symbol) ? liste[0].symbol : "📣")),
       ...liste.map((m) => el("div", { class: "meldung-zeile" }, el("span", { class: "meldung-uhr", text: uhr(m.zeit) }),
         el("span", {}, el("b", { text: (m.quelle ? (m.symbol ? m.symbol + " " : "") + m.quelle + ": " : "") }), m.text))),
       mediumAnzeige(liste.filter((m) => m.medium).pop()?.medium),
@@ -561,6 +609,7 @@ function tonAusgang(ziel) {
 }
 
 document.addEventListener("keydown", (event) => {
+  if (zustand.wartung) { event.preventDefault(); event.stopPropagation(); return; }   /* 5.3: Wartung - keine Taste wirkt */
   if (event.ctrlKey || event.metaKey) return;
   if (event.altKey) {
     /* EXIT der Fernbedienung (kurz) = Alt+F4: im Spiel nur das Spiel schließen */
@@ -598,10 +647,11 @@ document.addEventListener("keydown", (event) => {
       const k = zustand.reihen[zustand.zeile][zustand.spalte];
       return k && oeffne(k.daten);
     }
-    case "Home": return markiere(0, 0);
+    case "Home": return zustand.ordner ? zuhause() : markiere(0, 0);
+    case "Escape": case "Backspace": return zustand.ordner ? zuhause() : undefined;   /* 6.0: STOP = eine Ebene zurück */
     case "F21": {                                     /* 4.1: Suche-Taste der Tastatur = Nachrichten */
-      const k = zustand.reihen.flat().find((x) => x.daten?.id === "spiel-nachrichten");
-      return k && oeffne(k.daten);
+      const app = (zustand.alle || []).find((a) => a.id === "spiel-nachrichten");
+      return app && oeffne(app);
     }
     default:
       if (/^[0-9]$/.test(taste)) {                     /* 3.5: Ziffern gelten in der gewählten Reihe */
@@ -613,11 +663,12 @@ document.addEventListener("keydown", (event) => {
 }, true);
 
 /* ------------------------------------------------------------ Status (alle 2 s) */
-function zeigeRestzeit(rest) {
+function zeigeRestzeit(rest, budget) {
   const box = document.getElementById("restzeit");
   if (rest === null || rest === undefined) { box.hidden = true; return; }
   box.hidden = false;
-  box.textContent = rest <= 0 ? "Spielzeit für heute vorbei" : `Noch ${rest} ${rest === 1 ? "Minute" : "Minuten"}`;
+  box.replaceChildren(el("span", { text: rest <= 0 ? "Spielzeit für heute vorbei" : `Noch ${rest} ${rest === 1 ? "Minute" : "Minuten"}` }),
+    el("span", { class: "balken" }, el("span", { style: `width: ${budget ? Math.max(0, Math.min(100, Math.round((100 * rest) / budget))) : 100}%` })));
   box.className = rest <= 0 ? "aus" : rest <= 10 ? "knapp" : "";
 }
 
@@ -629,7 +680,7 @@ async function wetterKopf() {
   const d = w.aktiv && w.kopf ? w.daten : null;
   box.hidden = !d;
   if (!d) return;
-  box.replaceChildren(el("span", { text: d.symbol }), el("span", { class: "wk-temp", text: `${d.temp}°` }),
+  box.replaceChildren(bild(d.symbol, "icon wk-icon"), el("span", { class: "wk-temp", text: `${d.temp}°` }),
     el("span", { class: "wk-satz" + (d.regen.nass || d.regen.ab ? " nass" : ""), text: "· " + d.regen.text }));
 }
 
@@ -639,7 +690,7 @@ async function statusAbfrage() {
   document.getElementById("version").textContent = "FERNSEHFRANZI · V" + s.version;
   if (s.untertitel) document.getElementById("untertitel").textContent = s.untertitel;
   gruessen(s.name);
-  zeigeRestzeit(s.rest_min);
+  zeigeRestzeit(s.rest_min, s.budget_min);
 
   if (zustand.meldungNr !== null && s.meldung.nr !== zustand.meldungNr && s.meldung.text) hinweis(s.meldung.text, 6000);
   zustand.meldungNr = s.meldung.nr;
@@ -669,16 +720,71 @@ async function statusAbfrage() {
   /* 3.5: Glocke oben mit Zahl der neuen Nachrichten (und auf der Kachel) */
   /* 4.4: Nachrichten von Freunden in der Sperrzeit zählen nur mit (lesen erst danach) */
   const anzahl = (s.meldungen || []).length + (s.freunde_spaeter || 0);
+  if (anzahl !== (zustand.meldungenAnzahl || 0)) {          /* 6.0: „🔔 2 neu“ auf der Kachel „Mein Zimmer“ */
+    zustand.meldungenAnzahl = anzahl;
+    const z = document.querySelector('.kachel[data-id="ordner-zimmer"]');
+    if (z) { z.querySelector(".kachel-hinweis")?.remove(); if (anzahl) z.append(el("div", { class: "kachel-hinweis", text: `🔔 ${anzahl} neu` })); }
+  }
   const glocke = document.getElementById("glocke");
   glocke.hidden = !anzahl;
   glocke.textContent = `🔔 ${anzahl}`;
   document.querySelector('.kachel[data-id="spiel-nachrichten"]')?.classList.toggle("hat-neue", anzahl > 0);
   if (s.wecker && zustand.overlay?.id !== "wecker-klingelt") weckerKlingelt(s.wecker);
 
+  /* 5.3: Wartungsmodus (Ausliefern läuft) - Warnbildschirm über allem, offene Spiele und Player schließen */
+  const warAn = Boolean(zustand.wartung);
+  vorwarnung(s.wartung?.vorwarnung_s);
+  zustand.wartung = s.wartung?.rest_s ? s.wartung : null;
+  document.getElementById("wartung").hidden = !zustand.wartung;
+  if (zustand.wartung && !warAn) { if (zustand.overlay) schliesseOverlay(); if (zustand.schoner) schonerAus(); }
+  if (!zustand.wartung && warAn) { hinweis("Fertig – weiter geht's! 🎉"); ladeKacheln(); }
+
   const sperre = document.getElementById("sperre");
   zustand.gesperrt = s.gesperrt;
   sperre.hidden = !s.gesperrt || (zustand.overlay && zustand.overlay.id === "eltern");
   if (s.gesperrt) document.getElementById("sperre-text").textContent = s.gesperrt.text;
+  auszeitZeigen(s.gesperrt);
+}
+
+/* 5.3: Vorwarnung - Countdown oben rechts (über Spielen und Playern), zählt jede Sekunde selbst weiter */
+let vorwarnEnde = 0, vorwarnTimer = 0;
+function vorwarnung(sekunden) {
+  const box = document.getElementById("wartung-bald");
+  if (!sekunden) { box.hidden = true; clearInterval(vorwarnTimer); vorwarnTimer = 0; return; }
+  if (!vorwarnTimer) ton("fehler");
+  vorwarnEnde = Date.now() + sekunden * 1000;
+  box.hidden = false;
+  const zeichne = () => {
+    const rest = Math.max(0, Math.ceil((vorwarnEnde - Date.now()) / 1000));
+    document.getElementById("wartung-bald-zahl").textContent = String(rest);
+  };
+  zeichne();
+  if (!vorwarnTimer) vorwarnTimer = setInterval(zeichne, 250);
+}
+
+/* 5.1: Auszeit - alles gesperrt, groß nur der Countdown (läuft jede Sekunde, der Status bringt alle 2 s den genauen Rest) */
+let auszeitEnde = 0, auszeitTimer = 0;
+function auszeitZeigen(g) {
+  const uhr = document.getElementById("sperre-uhr");
+  const auszeit = Boolean(g && g.auszeit && typeof g.rest_s === "number");
+  document.getElementById("sperre").classList.toggle("auszeit", auszeit);
+  const sym = document.getElementById("sperre-symbol"), soll = auszeit ? "⏳" : "franzi";
+  if (sym.dataset.bild !== soll) {                                                              /* nicht alle 2 s neu */
+    sym.dataset.bild = soll;
+    sym.replaceChildren(auszeit ? bild(soll) : franzi("schlaf", "franzi-sperre"));
+  }
+  document.getElementById("sperre-klein").textContent = auszeit
+    ? `Bis ${g.bis_uhr} Uhr · Mama oder Papa können sie früher beenden.` : "Mama oder Papa können ihn wieder freigeben.";
+  uhr.hidden = !auszeit;
+  if (!auszeit) { clearInterval(auszeitTimer); auszeitTimer = 0; return; }
+  auszeitEnde = Date.now() + g.rest_s * 1000;
+  const zeichne = () => {
+    const rest = Math.max(0, Math.round((auszeitEnde - Date.now()) / 1000));
+    const h = Math.floor(rest / 3600), m = Math.floor((rest % 3600) / 60), sek = rest % 60;
+    uhr.textContent = (h ? `${h}:${String(m).padStart(2, "0")}` : String(m)) + ":" + String(sek).padStart(2, "0");
+  };
+  zeichne();
+  if (!auszeitTimer) auszeitTimer = setInterval(zeichne, 1000);
 }
 
 /* ------------------------------------------------------------ Bildschirmschoner (3.1): eigene Zeichnungen */
@@ -689,12 +795,13 @@ function auswahlUrl(id) {
   if (art === "ordner") return "/api/fotoalbum/bild?pfad=" + encodeURIComponent(wert);
   return (art === "album" ? "/album/" : "/zeichnung/") + encodeURIComponent(wert);
 }
-async function schonerPruefen() {
-  if (zustand.schoner || zustand.overlay || Date.now() - zustand.letzteTaste < SCHONER_NACH_MS) return;
+async function schonerPruefen(sofort = false) {
+  if (zustand.schoner || zustand.overlay || zustand.gesperrt?.auszeit || zustand.wartung) return;
+  if (!sofort && Date.now() - zustand.letzteTaste < SCHONER_NACH_MS) return;
   let bilder = [];
   try {
     const fa = await hole("/api/fotoalbum").catch(() => null);
-    if (fa?.erlaubt && fa.bildschirmschoner && fa.auswahl.length) bilder = fa.auswahl.map((id) => ({ url: auswahlUrl(id) }));
+    if (fa?.erlaubt && (fa.bildschirmschoner || sofort) && fa.auswahl.length) bilder = fa.auswahl.map((id) => ({ url: auswahlUrl(id) }));
     else bilder = (await hole("/api/zeichnungen")).zeichnungen;
   } catch (_) { return; }
   const box = el("div", { id: "schoner" });
@@ -779,6 +886,9 @@ function hashPruefen() {
 }
 
 async function start() {
+  /* 6.0: feste Symbole der Seite als 3D-Bilder */
+  document.querySelectorAll("#wartung .gross, #sperre .gross").forEach((g) => g.replaceChildren(bild(g.textContent.trim())));
+  document.getElementById("franzi-kopf").replaceChildren(franzi("froh"));     /* 6.0: Maskottchen winkt zur Begrüßung */
   uhrStellen();
   setInterval(uhrStellen, 10000);
   gruessen("");
@@ -793,5 +903,5 @@ async function start() {
   setInterval(schonerPruefen, 30000);
 }
 
-window.FernsehFranzi = { zustand, ladeKacheln, oeffneEltern };   // für Tests und Fehlersuche
+window.FernsehFranzi = { zustand, ladeKacheln, oeffneEltern, zeige: zeigeKachel, zuhause };   // für Tests und Fehlersuche
 start();

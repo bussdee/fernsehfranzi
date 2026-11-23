@@ -155,6 +155,8 @@ class PlayerImBrowser(unittest.TestCase):
             csp = a.headers["Content-Security-Policy"]
         self.assertIn("frame-src https://www.youtube-nocookie.com", csp)
         seite.goto("http://127.0.0.1:8765/")
+        seite.wait_for_selector(".kachel")                                # echte Sicherheitsrichtlinie: kein Warten per Skript
+        seite.evaluate("FernsehFranzi.zeige('youtube')")
         seite.click(".kachel[data-id=youtube]")
         seite.wait_for_selector(".yt-kategorie")
         seite.keyboard.press("Enter")
@@ -211,6 +213,8 @@ class PlayerImBrowser(unittest.TestCase):
         seite.route("https://www.youtube.com/iframe_api", lambda r: r.fulfill(body=attrappe, content_type="text/javascript"))
         seite.goto("http://127.0.0.1:8765/")
         seite.evaluate("localStorage.clear()")
+        seite.wait_for_selector(".kachel")
+        seite.evaluate("FernsehFranzi.zeige('youtube')")
         seite.click(".kachel[data-id=youtube]")
         seite.wait_for_selector(".yt-kategorie")
         seite.keyboard.press("Enter")

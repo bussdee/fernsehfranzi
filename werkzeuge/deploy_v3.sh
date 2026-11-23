@@ -16,8 +16,8 @@ V3_PATH="${V3_PATH:-~/fernsehfranzi}"
 BENUTZER="${PI_HOST%%@*}"
 VERSION="$(tr -d '[:space:]' < VERSION)"
 case "$VERSION" in
-  3.*|4.*|5.*) ;;                 # 4.0 und 5.0 nutzen denselben Weg (gleicher Aufbau, gleiche Daten, keine neuen Pakete)
-  *) echo "❌ VERSION ist $VERSION – dieses Werkzeug liefert 3.x bis 5.x aus."; exit 2 ;;
+  3.*|4.*|5.*|6.*) ;;             # 4.0, 5.0 und 6.0 nutzen denselben Weg (gleicher Aufbau, gleiche Daten, keine neuen Pakete)
+  *) echo "❌ VERSION ist $VERSION – dieses Werkzeug liefert 3.x bis 6.x aus."; exit 2 ;;
 esac
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=10)
 # Root-Schritte: über das Admin-Konto (sudo mit Passwort, seit make admin-einrichten), sonst wie bisher
@@ -32,6 +32,20 @@ als_root() {   # $1 = Befehl (Pfade absolut, ~ wäre beim Admin dessen Home)
   fi
 }
 TEILE=(VERSION server web kiosk eingabe fernbedienung system install)
+# 5.3: Wartungsmodus - eine Datei im Datenordner (nur diese, nichts sonst). Der Server zeigt dann einen Warnbildschirm und
+# nimmt keine Taste an; make v3-pruefen löscht sie, wenn alles grün ist. Spätestens nach 45 Minuten endet er von selbst.
+WARTUNG_MIN=45
+WARTUNG_VORWARNUNG_S=10            # so lange läuft vorher ein Countdown in der Ecke (schnell speichern)
+wartung_an() {
+  if "${SSH[@]}" "$PI_HOST" "d=\$HOME/fernsehfranzi-daten; t=\$(date +%s); mkdir -p \"\$d\" && printf '{\"ab\": %s, \"bis\": %s, \"grund\": \"deploy\"}\\n' \"\$(( t + $WARTUNG_VORWARNUNG_S ))\" \"\$(( t + $WARTUNG_VORWARNUNG_S + $WARTUNG_MIN * 60 ))\" > \"\$d/wartung.json.neu\" && mv \"\$d/wartung.json.neu\" \"\$d/wartung.json\""; then
+    echo "⏳ Am Fernseher läuft jetzt $WARTUNG_VORWARNUNG_S Sekunden ein Countdown (schnell speichern), dann der Wartungsmodus."
+    for ((i = WARTUNG_VORWARNUNG_S; i > 0; i--)); do printf '\r   noch %2d s ' "$i"; sleep 1; done
+    printf '\r'
+    echo "🛠️  Wartungsmodus am Fernseher an (Warnbildschirm, keine Taste; endet mit make v3-pruefen, spätestens nach $WARTUNG_MIN min)."
+  else
+    echo "⚠️  Wartungsmodus ließ sich nicht einschalten – weiter ohne."
+  fi
+}
 
 rsync_v3() {
   rsync -az --delete --relative --exclude '__pycache__/' --exclude '*.pyc' -e "${SSH[*]}" "$@" \
@@ -87,6 +101,7 @@ case "${1:-}" in
     rsync -a --exclude '/.kiosk-profile/' -e "${SSH[*]}" "$PI_HOST:~/familyhub/" "$SICHERUNG/familyhub/" || true
     echo "Sicherung (lokal): $SICHERUNG"
     frage "❓ BESTÄTIGUNG 2/2: Jetzt übertragen und auf FernsehFranzi $VERSION umstellen?"
+    wartung_an
     "${SSH[@]}" "$PI_HOST" "mkdir -p $V3_PATH"
     rsync_v3                       # direkt davor: Code auf dem Gerät = geprüfter Stand aus dem Repository
     CODE_ABS="$("${SSH[@]}" "$PI_HOST" "cd $V3_PATH && pwd")"
@@ -108,11 +123,13 @@ case "${1:-}" in
     if [ "$INSTALL_OK" != 1 ] || [ "$NACH_CODE" != 0 ]; then
       echo "❌ Nicht grün. Nicht herumprobieren – zurück auf den Stand vor diesem Deploy:"
       echo "   cd $REPO && make v3-rollback SICHERUNG=$GERAET_SICHERUNG"
+      echo "   Der Wartungsmodus bleibt an (endet nach $WARTUNG_MIN min von selbst oder mit: make v3-wartung-aus)."
       exit 1
     fi
     echo "✅ Übertragen und eingerichtet: $VERSION"
     echo "   Jetzt das Gerät EINMAL sauber neu starten:  ssh -t ${ADMIN_HOST:-$PI_HOST} sudo systemctl reboot"
     echo "   (nicht Strom ziehen), danach:  cd $REPO && make v3-pruefen"
+    echo "   Der Wartungsmodus bleibt bis dahin an; ist die Prüfung grün, schaltet sie ihn ab."
     echo "   Zurück auf den Stand vor diesem Deploy, falls etwas nicht stimmt:  cd $REPO && make v3-rollback SICHERUNG=$GERAET_SICHERUNG"
     ;;
   zurueck)

@@ -60,11 +60,15 @@ class ElternAmHandy(unittest.TestCase):
         seite.wait_for_selector(".eh-leiste")
         return seite
 
+    REITER = {"zeit": "Zeit", "abend": "Zeit", "erinnerungen": "Zeit", "apps": "Inhalte", "youtube": "Inhalte", "musik": "Inhalte",
+              "spiele": "Inhalte", "kinderwelten": "Inhalte", "schule": "Inhalte", "wetter": "Inhalte", "design": "Inhalte",
+              "telegram": "Familie", "bilder": "Familie", "geraet": "Gerät", "internet": "Gerät", "hilfe": "Gerät"}
+
     def bereich(self, seite, bereich):
-        """4.5: Menü öffnen und einen Bereich antippen."""
-        seite.click(".eh-leiste >> text=Menü")
-        seite.click(".eh-kachel[data-bereich=%s]" % bereich)
-        seite.wait_for_selector(".eh-bereich-kopf")
+        """6.0: Reiter unten antippen, dann den Bereich aufklappen."""
+        seite.click(".eh-leiste >> text=" + self.REITER[bereich])
+        seite.click(".eh-abschnitt[data-bereich=%s] .eh-abschnitt-kopf" % bereich)
+        seite.wait_for_selector(".eh-abschnitt.offen[data-bereich=%s] .eh-abschnitt-inhalt" % bereich)
 
     def gespeichert(self, seite):
         seite.wait_for_selector(".eh-meldung.zeigen:not(.fehler)", timeout=4000)
@@ -79,28 +83,29 @@ class ElternAmHandy(unittest.TestCase):
             for _ in range(sek // 60):
                 self.hub.nutzung.zaehle(jetzt, app, 60, True)
         seite = self.anmelden()
-        for name in ("Heute", "Menü", "Statistik"):
+        for name in ("Heute", "Zeit", "Inhalte", "Familie", "Gerät"):
             seite.click(".eh-leiste >> text=" + name)
             seite.wait_for_timeout(250)
             breite = seite.evaluate("document.documentElement.scrollWidth")
             self.assertLessEqual(breite, 390, "%s ist breiter als das Handy" % name)
             seite.screenshot(path=os.path.join(FOTOS, "eltern-%s.png" % name.lower()), full_page=True)
-        # 4.5: jeder Bereich des Menüs öffnet ohne Fehler, „‹ Menü“ und die Zurück-Taste führen zurück
-        seite.click(".eh-leiste >> text=Menü")
-        bereiche = seite.evaluate("[...document.querySelectorAll('.eh-kachel')].map(k => k.dataset.bereich)")
-        self.assertEqual(len(bereiche), 16)          # 5.0: + Designs, Wetter, Schule, Kinderwelten
-        for b in bereiche:
-            seite.click(".eh-kachel[data-bereich=%s]" % b)
-            seite.wait_for_selector(".eh-bereich-kopf")
-            self.assertGreaterEqual(seite.locator(".eh-karte").count(), 1, b)
+        # 6.0: jeder Bereich jedes Reiters klappt ohne Fehler auf; die Zurück-Taste klappt wieder zu
+        self.assertEqual(len(self.REITER), 16)
+        for b in self.REITER:
+            self.bereich(seite, b)
+            self.assertGreaterEqual(seite.locator(".eh-abschnitt.offen .eh-karte").count(), 1, b)
             breite = seite.evaluate("document.documentElement.scrollWidth")
             self.assertLessEqual(breite, 390, "%s ist breiter als das Handy" % b)
             seite.screenshot(path=os.path.join(FOTOS, "eltern-bereich-%s.png" % b), full_page=True)
             if b == "zeit":
                 seite.go_back()                                   # Zurück-Taste des Handys
-            else:
-                seite.click("text=‹ Menü")
-            seite.wait_for_selector(".eh-kacheln")
+                seite.wait_for_selector(".eh-abschnitt[data-bereich=zeit]:not(.offen)")
+        # Lesezeichen von früher führen weiter (#erinnerungen -> Reiter Zeit, aufgeklappt)
+        seite.evaluate("location.hash = '#erinnerungen'")
+        seite.wait_for_selector(".eh-abschnitt.offen[data-bereich=erinnerungen]")
+        seite.click(".eh-leiste >> text=Heute")
+        seite.click(".eh-abschnitt[data-bereich=statistik] .eh-abschnitt-kopf")
+        seite.wait_for_selector(".eh-abschnitt.offen[data-bereich=statistik] .eh-abschnitt-inhalt")
         self.assertEqual(self.fehler, [])
 
     def test_bildschirmfoto_wird_angezeigt(self):
@@ -242,6 +247,24 @@ class ElternAmHandy(unittest.TestCase):
         self.gespeichert(seite)
         self.assertEqual(self.hub.familie.einstellungen()["erinnerungen"][-1]["wann"], "schule")
         seite.screenshot(path=os.path.join(FOTOS, "eltern-46.png"), full_page=True)
+        self.assertEqual(self.fehler, [])
+
+    def test_youtube_reihenfolge_mit_pfeilen(self):
+        """6.0: Kategorien und Videos lassen sich mit ↑ ↓ umsortieren; gespeichert wird sofort."""
+        v = lambda i, t: {"art": "video", "id": i * 11, "titel": t}
+        self.hub.einstellungen_aendern({"youtube": {"kategorien": [
+            {"name": "Musik", "eintraege": [v("a", "Eins"), v("b", "Zwei"), v("c", "Drei")]}, {"name": "Tiere", "eintraege": []}]}})
+        seite = self.anmelden()
+        self.bereich(seite, "youtube")
+        karte = seite.locator(".eh-abschnitt[data-bereich=youtube]")
+        karte.locator("summary >> text=Musik").click()
+        karte.locator("details[open] .eh-eintrag:has-text('Eins') .eh-pfeile >> text=↓").click()
+        self.gespeichert(seite)
+        self.assertEqual([e["titel"] for e in self.hub.youtube()["kategorien"][0]["eintraege"]], ["Zwei", "Eins", "Drei"])
+        self.assertEqual(karte.locator("details[open]").count(), 1, "die Kategorie bleibt offen")
+        karte.locator("details[open] .eh-zeile:has-text('Reihenfolge') >> text=↓").click()
+        self.gespeichert(seite)
+        self.assertEqual([k["name"] for k in self.hub.youtube()["kategorien"]], ["Tiere", "Musik"])
         self.assertEqual(self.fehler, [])
 
     def test_bass_songs_als_felder(self):

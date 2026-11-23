@@ -66,29 +66,36 @@ class Startseite3(unittest.TestCase):
 
     def test_kacheln_aus_dem_katalog(self):
         seite = self.seite()
-        namen = seite.locator(".kachel .name").all_text_contents()
+        # 6.0: „Zuhause“ zeigt die Bereiche, die Apps liegen in den Bereichen
+        self.assertEqual(seite.locator(".zeile-kacheln.bereiche .kachel .name").all_text_contents(),
+                         ["Spiele", "Filme", "Musik", "Lernen", "Mein Zimmer", "Retro"])
+        namen = seite.evaluate("FernsehFranzi.zustand.alle.map(a => a.name)")
         for name in ("Plex", "Games", "Klassenkiste", "Kinderwelten", "Snake", "Farben-Echo", "Musik-Akademie"):
             self.assertIn(name, namen)
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('plex')")
         self.assertEqual(seite.locator("[data-id=plex] .sperr-symbol").text_content(), "⚙️")   # 3.4: Symbol statt Text
         seite.wait_for_function("document.getElementById('restzeit').textContent.includes('Minuten')")
         self.assertEqual(self.fehler, [])
 
     def test_spiel_oeffnen_und_schliessen(self):
         seite = self.seite()
-        seite.keyboard.press("ArrowDown")      # 3.5: Reihe „Spiele“, dann ganz nach links zu Snake
-        for _ in range(3):
-            seite.keyboard.press("ArrowLeft")
+        seite.keyboard.press("ArrowDown")      # 6.0: Reihe „Bereiche“, erste Kachel „Spiele“
+        seite.keyboard.press("Enter")          # Bereich öffnen: Snake steht vorne
+        seite.wait_for_selector("#pfad:has-text('Spiele')")
         seite.keyboard.press("Enter")
         seite.keyboard.press("Enter")          # gleich danach: gehört schon dem Spiel (Tempostufe)
         seite.wait_for_selector("canvas.spielfeld")
         self.assertEqual(self.hub.aktuell, "spiel-snake")
         seite.keyboard.press("Escape")
         seite.wait_for_selector(".overlay", state="detached")
+        seite.keyboard.press("Escape")         # 6.0: STOP führt zurück nach „Zuhause“
+        seite.wait_for_selector(".zeile-kacheln.bereiche")
         seite.wait_for_function("true")
         self.assertEqual(self.fehler, [])
 
     def test_web_app_wird_kiosk_auftrag(self):
         seite = self.seite()
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('klassenkiste')")
         seite.locator("[data-id=klassenkiste]").click()
         seite.wait_for_function("document.getElementById('hinweis').textContent.includes('startet')")
         auftraege, _ = self.hub.auftraege_nach(0)

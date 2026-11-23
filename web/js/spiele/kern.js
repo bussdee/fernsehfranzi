@@ -5,7 +5,7 @@
  * - kopf(): Überschrift + Hilfezeile für jedes Spiel
  * - canvasScharf(): Canvas in echter Bildschirmauflösung (kein CSS-Skalieren)
  */
-import { el } from "../gemeinsam.js";
+import { el, mitBild, franzi } from "../gemeinsam.js";
 
 let audio = null;
 const TOENE = {
@@ -65,7 +65,7 @@ export function takt(schritt, logik, zeichne) {
 export function kopf(box, titel, hilfe) {
   const hilfeKnoten = el("div", { class: "hilfe", text: hilfe });
   const punkte = el("div", { class: "punkte" });
-  box.append(el("div", { class: "overlay-kopf" }, el("h2", { text: titel }), punkte, hilfeKnoten));
+  box.append(el("div", { class: "overlay-kopf" }, el("h2", {}, ...mitBild(titel, "icon kopf-icon")), punkte, hilfeKnoten));
   const inhalt = el("div", { class: "overlay-inhalt" });
   box.append(inhalt);
   return { inhalt, punkte, hilfe: hilfeKnoten };
@@ -84,7 +84,7 @@ export function canvasScharf(canvas, breite, hoehe) {
 
 /** Auswahl-Menü aus Knöpfen (links/rechts/hoch/runter, OK). Rückgabe {taste, knoepfe}. */
 export function menue(box, eintraege, gewaehlt = 0) {
-  const reihe = el("div", { class: "knopfreihe" });
+  const reihe = el("div", { class: "knopfreihe gross" });            /* 6.0: Auswahl groß wie Kacheln */
   const knoepfe = eintraege.map((e, i) => {
     const k = el("button", { class: "knopf", type: "button", tabindex: "-1", text: e.text });
     k.addEventListener("click", () => e.aktion());
@@ -122,4 +122,8 @@ export function konfetti(box) {
     if (++n < 150) requestAnimationFrame(schritt); else canvas.remove();
   };
   requestAnimationFrame(schritt);
+  /* 6.0: Franzi jubelt mit */
+  const f = franzi("jubel", "franzi-jubel");
+  box.append(f);
+  setTimeout(() => f.remove(), 2600);
 }

@@ -2,6 +2,71 @@
 
 Alle nennenswerten Änderungen an FernsehFranzi. Versionsquelle ist die Datei `VERSION`.
 
+## 6.0.0 – Neue Startseite „Zuhause“, neues Aussehen mit Franzi, neue Eltern-Seite, Mikro-Spiele (24.11.2026)
+
+- **Neue Startseite „Zuhause + Bereiche“:** oben der Gruß mit Uhr, Wetter und der Restzeit als Balken; darunter
+  ⭐ bis zu 6 Lieblinge, ▶ „Weiter, wo du warst“ (zuletzt benutzt) und je eine Kachel pro Bereich (Spiele, Filme, Musik,
+  Lernen, Mein Zimmer, Retro). OK öffnet einen Bereich als Raster, STOP führt zurück. Freie Kacheln zuerst, gesperrte am
+  Ende mit kurzem Grund auf der Kachel. Unten der Name der gewählten Kachel mit einem Satz und die Tasten mit Symbolen.
+  Die drei Ansichten von 5.0 (Konsole, Seitenleiste, Karussell) entfallen dafür.
+- **Eltern-Seite mit fünf Reitern:** Heute · Zeit · Inhalte · Familie · Gerät statt Menü mit 16 Kacheln. Jeder Bereich ist
+  eine kurze Zeile mit Stand und klappt mit einem Tipp auf; lange Erklärungen stehen hinter „ℹ️“. Auf „Heute“ stehen
+  Sperren und Auszeit nebeneinander, die Auszeit-Minuten klappen erst beim Antippen auf; die Statistik liegt unten auf
+  „Heute“. Alte Lesezeichen führen weiter.
+- **Klare Farben:** Blau, Grün, Lila, Rot, Schwarz und hell Hellblau, Mint, Rosa, Sonnengelb, Weiß – jede färbt Hintergrund,
+  Leiste, Rahmen und Kacheln deutlich anders. „Gestalten“ zeigt eine Vorschau. Abends wird nur eine helle Farbe zu ihrer
+  dunklen Schwester, eine dunkle Wahl bleibt (bisher sprang abends alles auf ein Abend-Design, deshalb ließ sich die Farbe
+  scheinbar nicht ändern). Die alten Namen werden beim Start einmal umgestellt.
+- **Spiele und Seiten am Fernseher:** jede Überschrift mit Symbol, Bedienhinweise größer und lesbar, Auswahl („Wie
+  schnell?“, „Gegen wen?“ …) als große Karten, Gutschein-Ziffernblock größer, die großen Start-Kacheln farbig.
+- **Fotoalbum:** „▶ Diashow jetzt“ startet den Bildschirmschoner mit den ausgesuchten Bildern sofort.
+- **Eigene Klänge** aus einem freigegebenen Ordner, wählbar wie die eingebauten (höchstens 10 s, 4 MB).
+- **YouTube-Kategorien** lassen sich vorübergehend ausschalten; die Videos bleiben gespeichert.
+- **Neues Aussehen:** 3D-Bilder statt flacher Emojis (Fluent Emoji von Microsoft, MIT-Lizenz), zu jeder Farbe ein ruhiges
+  Hintergrundbild mit Motiv (Weltraum, Wald, Zaubernacht, Abendrot, Himmel, Wiese, Zuckerwatte, Strand, Winter), Kacheln
+  gleiten beim Öffnen eines Bereichs herein, das Bild der gewählten Kachel hüpft kurz. Alle Bewegungen nutzen nur
+  transform und opacity, damit der Pi 3 flüssig bleibt.
+- **Maskottchen Franzi:** ein kleiner Fernseher mit Gesicht. Franzi winkt auf der Startseite, schläft bei der Sperre,
+  jubelt bei Siegen und staunt auf leeren Seiten.
+- **Mikro-Spiele neu gestaltet:** Lautstärke-Rakete mit Himmel bis zum Mond, Flamme, Lautstärke-Balken und großem
+  Countdown; Klatsch-Rhythmus mit Taktlinie und den eigenen Klatschern als Punkte; Ton-Treffer und Singen mit der Stimme als
+  Linie, grünem Zielband und Ring zum Halten; Stimmgerät mit großem Zeiger.
+- **YouTube-Reihenfolge:** Kategorien und Videos lassen sich auf der Eltern-Seite mit ↑ ↓ verschieben.
+- **Kinder-News nur aus eigenen RSS-Adressen:** Die fest eingebaute Quellen-Auswahl ist entfernt. Die Eltern tragen bis zu
+  10 RSS-Adressen selbst ein; ohne Adresse gibt es keine Kachel. Bisher eingeschaltete Quellen werden nicht übernommen.
+
+## 5.3.0 – Wartungsmodus beim Ausliefern (23.11.2026)
+
+- **Vorwarnung:** Nach der zweiten Bestätigung von `make v3-deploy` läuft am Fernseher oben rechts 10 Sekunden ein
+  Countdown („Gleich kommt ein Update – schnell speichern!“), über Spielen und Playern. Im Retro-Spiel erscheint der
+  Hinweis im Spiel, über Plex und Webseiten als Hinweis. Bis dahin geht noch alles.
+- **Wartungsmodus:** Danach zeigt der Fernseher einen Warnbildschirm („Bitte jetzt nichts drücken und nicht ausschalten!“).
+  Keine Taste wirkt, nichts lässt sich starten – auch nach dem Neustart des Geräts.
+- **Automatisch aus:** Ist `make v3-pruefen` grün, schaltet es den Wartungsmodus ab („Fertig – weiter geht's!“). Bei Rot
+  bleibt er an; von Hand mit `make v3-wartung-aus`. Spätestens nach 45 Minuten endet er von selbst.
+- Technik: eine Datei `wartung.json` im Datenordner (`ab`, `bis`); `make v3-pruefen` löscht nur diese Datei.
+- **Nachrichten von der Eltern-Seite mit Absender:** Über dem Nachrichtenfeld steht „Von“ mit den Eltern-Kontakten aus
+  Telegram. Am Fernseher steht dann deren Symbol und Name (z. B. „🐼 Papa: …“) statt „Nachricht von Mama oder Papa“, und es
+  klingt ihr Klang. Jedes Handy merkt sich seine Wahl.
+
+## 5.2.0 – Klang-Archiv: eigener Klang je Erinnerung, Kontakt und Schule (23.11.2026)
+
+- **Klang-Archiv** mit 15 eigenen, vom Fernseher selbst erzeugten Klängen (keine fremden Dateien): Gong, Glöckchen,
+  Xylophon, Harfe, Spieluhr, Fanfare, Vogelzwitschern, Wassertropfen, Fahrradklingel, Sternschnuppe, Marimba,
+  Level geschafft, Trommelwirbel, Ufo und Sanft, dazu „Ohne Ton“.
+- **Wählbar** je Erinnerung, je Telegram-Kontakt (z. B. Vogelzwitschern für die beste Freundin), für Nachrichten von Mama
+  oder Papa und für die Schule (Neues aus der Klassenkiste, Morgen-Check). Ohne Wahl bleibt es beim Gong. Auch die
+  Wiederholung alle 5 Minuten kommt mit dem gewählten Klang.
+- **Probehören:** ▶ spielt den Klang am Handy, 📺 am Fernseher.
+
+## 5.1.0 – Auszeit mit Countdown (23.11.2026)
+
+- **Auszeit:** Unter „Jetzt sperren“ gibt es auf der Eltern-Seite (Heute) den Knopf „⏳ Auszeit“: 5, 10, 15, 30 oder 60
+  Minuten oder eine eigene Zahl (bis 240). Alles wird gesperrt, laufende Apps und Spiele enden, und am Fernseher steht nur
+  ein großer Countdown. Danach ist der Fernseher von selbst wieder frei („Die Auszeit ist vorbei – weiter geht's!“).
+  Während einer Auszeit kann man verlängern (+5, +10, +15 min) oder sie früher beenden. Die Auszeit gibt es auch im
+  Elternbereich am Fernseher und per Telegram (`/auszeit 15`); sie übersteht einen Neustart des Geräts.
+
 ## 5.0.0 – Designs und Ansichten, Wetter, Schule, Geschichten & Rätsel, Kinder-News (23.11.2026)
 
 - **Farben und Ansichten:** Unter „Gestalten“ wählt das Kind jetzt zwei Dinge. Bei den Farben gibt es zu den dunklen

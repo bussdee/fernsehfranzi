@@ -53,6 +53,7 @@ class FotoalbumImBrowser(unittest.TestCase):
             seite.goto("http://127.0.0.1:8765/")
             seite.wait_for_selector("#meldungen .meldung-foto")         # Foto groß in der Meldung
             seite.click("#meldungen button")
+            seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-nachrichten')")
             seite.click(".kachel[data-id=spiel-nachrichten]")
             seite.wait_for_selector(".nachricht.gewaehlt")
             self.assertIn("📷 Schau mal!", seite.inner_text(".nachrichten-liste"))
@@ -69,6 +70,7 @@ class FotoalbumImBrowser(unittest.TestCase):
             seite.keyboard.press("Escape")
             seite.keyboard.press("Escape")
             seite.wait_for_timeout(400)
+            seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-fotoalbum')")
             seite.click(".kachel[data-id=spiel-fotoalbum]")
             seite.wait_for_selector(".fa-raster .fa-kachel")
             seite.keyboard.press("ArrowDown")                            # ins Raster

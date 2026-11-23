@@ -20,51 +20,67 @@ from test_v3_server import MITTWOCH, Uhr, neuer_hub  # noqa: E402
 
 
 class Designs(unittest.TestCase):
-    def test_abend_automatik_ueber_mitternacht(self):
-        d = {"abend_aktiv": True, "abend_ab": "19:00", "morgen_ab": "06:30", "abend_design": "nacht"}
-        self.assertEqual(design.jetzt_design(d, "himmel", datetime(2026, 11, 18, 15, 0)), "himmel")
-        self.assertEqual(design.jetzt_design(d, "himmel", datetime(2026, 11, 18, 19, 30)), "nacht")
-        self.assertEqual(design.jetzt_design(d, "himmel", datetime(2026, 11, 19, 6, 0)), "nacht")
-        self.assertEqual(design.jetzt_design(d, "himmel", datetime(2026, 11, 19, 6, 30)), "himmel")
-        self.assertEqual(design.jetzt_design({"erlaubt": ["wiese"]}, "himmel", datetime(2026, 11, 18, 12)), "wiese",
-                         "nicht (mehr) erlaubt: das erste erlaubte")
+    def test_abends_wird_nur_hell_dunkel(self):
+        d = {"abend_aktiv": True, "abend_ab": "19:00", "morgen_ab": "06:30"}
+        self.assertEqual(design.jetzt_design(d, "hellblau", datetime(2026, 11, 18, 15, 0)), "hellblau")
+        self.assertEqual(design.jetzt_design(d, "hellblau", datetime(2026, 11, 18, 19, 30)), "blau", "dunkle Schwester")
+        self.assertEqual(design.jetzt_design(d, "rosa", datetime(2026, 11, 19, 6, 0)), "lila")
+        self.assertEqual(design.jetzt_design(d, "rot", datetime(2026, 11, 18, 21, 0)), "rot", "dunkle Wahl bleibt")
+        self.assertEqual(design.jetzt_design(d, "hellblau", datetime(2026, 11, 19, 6, 30)), "hellblau")
+        self.assertEqual(design.jetzt_design({"erlaubt": ["mint"]}, "blau", datetime(2026, 11, 18, 12)), "mint",
+                         "nicht (mehr) erlaubt: die erste erlaubte")
+
+    def test_alte_namen(self):
+        self.assertEqual(design.jetzt_design({}, "sonne", datetime(2026, 11, 18, 12)), "rot")
+        einst = {"startseite": {"thema": "zuckerwatte"}, "design": {"erlaubt": ["weltall", "himmel"], "abend_design": "nacht"}}
+        self.assertTrue(design.migriere(einst))
+        self.assertEqual(einst, {"startseite": {"thema": "rosa"}, "design": {"erlaubt": ["blau", "hellblau"]}})
+        self.assertFalse(design.migriere(einst), "nur einmal")
 
     def test_pruefen(self):
-        for falsch in ({"erlaubt": []}, {"erlaubt": ["gibtsnicht"]}, {"abend_design": "himmel"}, {"abend_ab": "25:00"},
-                       {"farbe": "rot"}):
+        for falsch in ({"erlaubt": []}, {"erlaubt": ["gibtsnicht"]}, {"abend_ab": "25:00"}, {"farbe": "rot"}):
             with self.assertRaises(ValueError, msg=falsch):
                 design.pruefe(falsch)
+        self.assertNotIn("abend_design", design.pruefe({"abend_design": "nacht"}), "Feld von 5.x wird still entfernt")
 
     def test_im_hub_kind_waehlt_nur_erlaubte(self):
         ordner = tempfile.mkdtemp(prefix="ff-50d-")
         self.addCleanup(shutil.rmtree, ordner, True)
         uhr = Uhr(MITTWOCH)
         hub = neuer_hub(ordner, uhr)
-        hub.startseite_setzen({"lieblinge": [], "thema": "zuckerwatte"})
+        hub.startseite_setzen({"lieblinge": [], "thema": "rosa"})
         a = hub.startseite_anzeige()
-        self.assertEqual(a["design"]["jetzt"], "zuckerwatte")
-        self.assertTrue(a["design"]["hell"])
-        hub.einstellungen_aendern({"design": {"erlaubt": ["weltall", "himmel"], "abend_aktiv": True, "abend_ab": "18:00"}})
+        self.assertEqual((a["design"]["jetzt"], a["design"]["hell"]), ("rosa", True))
+        hub.einstellungen_aendern({"design": {"erlaubt": ["blau", "hellblau"], "abend_aktiv": True, "abend_ab": "18:00"}})
         with self.assertRaisesRegex(ValueError, "ausgeschaltet"):
-            hub.startseite_setzen({"lieblinge": [], "thema": "wiese"})
-        hub.startseite_setzen({"lieblinge": ["spiel-snake"], "thema": "himmel"})
+            hub.startseite_setzen({"lieblinge": [], "thema": "mint"})
+        hub.startseite_setzen({"lieblinge": ["spiel-snake"], "thema": "hellblau"})
         uhr.jetzt = datetime(2026, 11, 18, 18, 5)
         a = hub.startseite_anzeige()
-        self.assertEqual((a["design"]["jetzt"], a["design"]["hell"], a["design"]["abend_ab"]), ("weltall", False, "18:00"))
-        self.assertEqual([x["id"] for x in a["design"]["designs"]], ["weltall", "himmel"])
+        self.assertEqual((a["design"]["jetzt"], a["design"]["hell"], a["design"]["gewaehlt"]), ("blau", False, "hellblau"))
+        self.assertEqual([x["id"] for x in a["design"]["designs"]], ["blau", "hellblau"])
+
+    def test_alte_einstellungen_beim_start(self):
+        ordner = tempfile.mkdtemp(prefix="ff-50m-")
+        self.addCleanup(shutil.rmtree, ordner, True)
+        with open(os.path.join(ordner, "einstellungen.json"), "w") as f:
+            json.dump({"startseite": {"lieblinge": [], "thema": "sonne"}, "design": {"abend_design": "nacht", "abend_aktiv": True}}, f)
+        hub = neuer_hub(ordner, Uhr(MITTWOCH))
+        self.assertEqual(hub.einstellungen["startseite"]["thema"], "rot")
+        self.assertNotIn("abend_design", hub.einstellungen["design"])
 
     def test_ansichten(self):
         ordner = tempfile.mkdtemp(prefix="ff-50a-")
         self.addCleanup(shutil.rmtree, ordner, True)
         hub = neuer_hub(ordner, Uhr(MITTWOCH))
         self.assertEqual(hub.startseite_anzeige()["design"]["ansicht"], "konsole", "Vorgabe wie bisher")
-        hub.startseite_setzen({"lieblinge": [], "thema": "weltall", "ansicht": "karussell"})
+        hub.startseite_setzen({"lieblinge": [], "thema": "blau", "ansicht": "karussell"})
         self.assertEqual(hub.startseite_anzeige()["design"]["ansicht"], "karussell")
         hub.einstellungen_aendern({"design": {"ansichten": ["konsole", "seitenleiste"]}})
         self.assertEqual(hub.startseite_anzeige()["design"]["ansicht"], "konsole", "nicht mehr erlaubt: die erste erlaubte")
-        hub.startseite_setzen({"lieblinge": [], "thema": "weltall", "ansicht": "seitenleiste"})
+        hub.startseite_setzen({"lieblinge": [], "thema": "blau", "ansicht": "seitenleiste"})
         with self.assertRaisesRegex(ValueError, "ausgeschaltet"):
-            hub.startseite_setzen({"lieblinge": [], "thema": "weltall", "ansicht": "karussell"})
+            hub.startseite_setzen({"lieblinge": [], "thema": "blau", "ansicht": "karussell"})
         with self.assertRaises(ValueError):
             hub.einstellungen_aendern({"design": {"ansichten": []}})
         with self.assertRaises(ValueError):
@@ -327,23 +343,53 @@ RSS = b"""<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><tit
 <item><title>Aeltere</title><pubDate>Fri, 20 Nov 2026 10:00:00 +0100</pubDate></item></channel></rss>"""
 
 
+class YoutubeKategorien(unittest.TestCase):
+    def test_kategorie_voruebergehend_aus(self):
+        ordner = tempfile.mkdtemp(prefix="ff-60y-")
+        self.addCleanup(shutil.rmtree, ordner, True)
+        hub = neuer_hub(ordner, Uhr(MITTWOCH))
+        video = {"art": "video", "id": "aaaaaaaaaaa", "titel": "Pinguine"}
+        hub.einstellungen_aendern({"youtube": {"kategorien": [{"name": "Tiere", "eintraege": [video]},
+                                                              {"name": "Musik", "eintraege": [video], "aktiv": False}]}})
+        self.assertEqual([k["name"] for k in hub.youtube_fuer_tv()["kategorien"]], ["Tiere"], "aus = am Fernseher unsichtbar")
+        self.assertEqual(len(hub.youtube()["kategorien"]), 2, "bleibt gespeichert")
+        with self.assertRaises(ValueError):
+            hub.einstellungen_aendern({"youtube": {"kategorien": [{"name": "X", "eintraege": [], "aktiv": "nein"}]}})
+
+    def test_reihenfolge_bleibt(self):
+        ordner = tempfile.mkdtemp(prefix="ff-60r-")
+        self.addCleanup(shutil.rmtree, ordner, True)
+        hub = neuer_hub(ordner, Uhr(MITTWOCH))
+        v = lambda i, t: {"art": "video", "id": i * 11, "titel": t}
+        hub.einstellungen_aendern({"youtube": {"kategorien": [
+            {"name": "Musik", "eintraege": [v("c", "Drei"), v("a", "Eins"), v("b", "Zwei")]}, {"name": "Tiere", "eintraege": []}]}})
+        tv = hub.youtube_fuer_tv()["kategorien"]
+        self.assertEqual([k["name"] for k in tv], ["Musik", "Tiere"], "Kategorien in der Reihenfolge der Eltern")
+        self.assertEqual([e["titel"] for e in tv[0]["eintraege"]], ["Drei", "Eins", "Zwei"], "Videos in der Reihenfolge der Eltern")
+
+
 class KinderNews(unittest.TestCase):
-    def test_nur_freigeschaltete_quellen(self):
+    def test_nur_eingetragene_rss_adressen(self):
         ordner = tempfile.mkdtemp(prefix="ff-50n-")
         self.addCleanup(shutil.rmtree, ordner, True)
         hub = neuer_hub(ordner, Uhr(MITTWOCH))
         geholt = []
         hub.news = news.News(hub, holer=lambda url: geholt.append(url) or RSS)
-        self.assertFalse(hub.news.aktiv())
+        self.assertFalse(hub.news.aktiv(), "ab Werk keine Adresse")
+        self.assertFalse(hasattr(news, "QUELLEN"), "keine fest eingebauten Quellen")
         self.assertNotIn("spiel-news", [k["id"] for k in hub.kacheln()])
         with self.assertRaises(ValueError):
             hub.news.liste()
-        with self.assertRaises(ValueError):
-            hub.einstellungen_aendern({"news": {"quellen": {"irgendwas": True}}})
-        hub.einstellungen_aendern({"news": {"quellen": {"logo": True}}})
+        for falsch in ({"quellen": {"logo": True}}, {"feeds": ["ftp://x.de/rss"]}, {"feeds": ["kein link"]},
+                       {"feeds": ["https://a.de/%d" % i for i in range(11)]}):
+            with self.assertRaises(ValueError):
+                hub.einstellungen_aendern({"news": falsch})
+        self.assertEqual(news.einstellungen({"quellen": {"logo": True}}), {"feeds": []}, "alter Stand wird still verworfen")
+        hub.einstellungen_aendern({"news": {"feeds": ["https://www.beispiel.de/feed", "https://www.beispiel.de/feed"]}})
+        self.assertEqual(hub.news.fuer_eltern(), {"feeds": ["https://www.beispiel.de/feed"]}, "doppelte fallen weg")
         self.assertIn("spiel-news", [k["id"] for k in hub.kacheln()])
         l = hub.news.liste()
-        self.assertEqual(geholt, ["https://www.zdf.de/rss/zdf/kinder/logo"], "nur die freigeschaltete Quelle")
+        self.assertEqual(geholt, ["https://www.beispiel.de/feed"])
         self.assertEqual(l["eintraege"][0]["titel"], "Neue & gute Nachricht")
         self.assertEqual(l["eintraege"][0]["text"], "Text mit Link", "ohne HTML und ohne Links")
         self.assertEqual(l["eintraege"][0]["datum"], "22.11.")

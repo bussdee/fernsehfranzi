@@ -1,6 +1,6 @@
 # FernsehFranzi – Entwickler-Dokumentation
 
-Stand: Version 5.0.0 (November 2026). Diese Datei beschreibt, wie FernsehFranzi aufgebaut ist, nach welchen Grundsätzen
+Stand: Version 6.0.0 (November 2026). Diese Datei beschreibt, wie FernsehFranzi aufgebaut ist, nach welchen Grundsätzen
 es gebaut wurde und wie man es weiterentwickelt, testet und ausliefert. Die Bedienung für Eltern und Kinder steht in den
 Anleitungen (`docs/anleitung/`, als PDF in `web/`), die Änderungen je Version im [CHANGELOG](../CHANGELOG.md).
 
@@ -189,7 +189,8 @@ Kiosk-Server auf `127.0.0.1:8765`, bei Bedarf den LAN-Server für die Eltern-Sei
 | `wetter.py` (5.0) | Open-Meteo (ohne Schlüssel) im Hintergrund höchstens alle 30 min; Regen-Satz aus Viertelstunden, Trockenfenster (≥ 1,5 h bei Tageslicht, 0,1 mm / 55 %) wie im Familien Dashboard, Anzieh-Tipp; Ortssuche für die Eltern-Seite |
 | `schule.py` (5.0) | Klassenkiste nur lesen (`/api/overview`, `/api/homework/mine`, `/api/messages`, `/api/timetable`) mit der Anmeldung des Kindes (`Hub.klassenkiste_json`); alle 15 min, Neues einmal melden (Merkliste in `schule.json`), Morgen-Check am Abend vor einem Schultag |
 | `kinderwelten.py` (5.0) | Öffentliche Schnittstelle der Familienfabrik (`familienfabrik.at/api`, nur lesen, 30 min Zwischenspeicher); HTML wird zu schlichten Absätzen, Bilder nur von `familienfabrik.at/bilder/` über `/api/kinderwelten/bild` |
-| `news.py` (5.0) | Kinder-News: feste Liste von RSS-Quellen, jede einzeln von den Eltern freizuschalten (ab Werk aus), reiner Text |
+| `news.py` (5.0, 6.0) | Kinder-News: nur RSS-Adressen, die die Eltern selbst eintragen (höchstens 10, ab Werk keine), reiner Text |
+| `klaenge.py` (5.2) | Klang-Archiv: Rezepte aus Tönen mit Klangfarbe und Hüllkurve, daraus WAV (22 kHz, mono, deterministisch), beim Start im Hintergrund vorgerechnet; `system.gong(klang)` spielt sie mit pw-play, `/api/klang?id=` liefert sie zum Probehören |
 | `pin.py` | PBKDF2-SHA256 mit Salz, Vergleich in konstanter Zeit, wachsende Sperre nach Fehlversuchen |
 | `familie.py` | Nachrichten ans TV, Erinnerungen, Schlafenszeit, Sticker, Bass-Tagebuch |
 | `gutschein.py` | Gutschein-Codes (normal: +Minuten, besonders: alles frei), Schutz gegen Raten |
@@ -229,15 +230,20 @@ Startseite schreibt (`__FF_TOKEN__`). Eltern-Aufrufe brauchen eine PIN-Sitzung (
 - `web/index.html` + `web/js/start.js`: Startseite, Navigation, Kacheln, Restzeit, Meldungen, Spielzimmer.
 - `web/js/spiele/*.js`: je Spiel ein ES-Modul (Snake, Memory, Drei gewinnt, Echo, Duell, Malen, Musik, Bass,
   Lernen, Sticker, Witze, Gutschein, Wecker, Nachrichten). Gemeinsames in `spiele/kern.js`.
+  6.0: `spiele/stimme.js` (Stimmlinie, Stimmgerät, Pegel) für Singen, Ton-Treffer, Rakete und Stimmgerät.
+  `gemeinsam.js`: `bild(emoji)` liefert das 3D-Bild aus `web/icons/` (Fluent Emoji, MIT), sonst das Emoji als Text;
+  `franzi(stimmung)` zeichnet das Maskottchen (froh, jubel, staunen, schlaf) als festes SVG. Die Hintergrund-Motive
+  `web/hintergrund/*.svg` erzeugt `werkzeuge/hintergruende.py`. Bewegung nur mit transform/opacity (Pi 3).
   5.0: Seiten mit Inhalten von außen (`wetter.js`, `schule.js`, `kinderwelten.js`, `news.js`) nutzen die Bausteine aus
   `spiele/seite.js` (Reiter, Liste, Lesefenster); Texte immer als Text, nie als HTML. Farben und Ansichten der Startseite
   setzt `designZeigen()` (`gestalten.js`) als `body[data-thema]`, Klasse `hell` und `body[data-ansicht]`; die hellen
   Designs überschreiben nur die Farb-Variablen von `main`, die Ansichten nur das Layout (Navigation in `markiere()`).
 - `web/js/eltern.js`: Elternbereich am TV (PIN). `web/eltern.html` + `eltern-seite.js` + `eltern-handy.js`:
-  Eltern-Seite fürs Handy. 4.5: Leiste Heute · Menü · Statistik; `GRUPPEN` ordnet die Bereiche aus `bereiche()`
-  (je Bereich Symbol, Titel, Status-Chip, Karten), Adresse `#bereich` mit `history.pushState`, damit die Zurück-Taste
-  des Handys ins Menü führt; `ALTE_SEITEN` leitet alte Reiter-Adressen um. Neue Einstellungen als Karte in den
-  passenden Bereich hängen, nicht als neue Seite.
+  Eltern-Seite fürs Handy. 6.0: fünf Reiter (`LEISTE`, `REITER`: Heute · Zeit · Inhalte · Familie · Gerät); jeder
+  Reiter zeigt seine Bereiche aus `bereiche()` (Symbol, Titel, Status-Chip, Karten) als aufklappbare Zeilen. Adresse
+  `#reiter/bereich` mit `history.pushState`, damit die Zurück-Taste des Handys zuklappt; ein einzelner Bereichsname und
+  `ALTE_SEITEN` führen alte Lesezeichen weiter. `hilfe()` klappt lange Erklärungen hinter „ℹ️“ ein. Neue Einstellungen
+  als Karte in den passenden Bereich hängen, nicht als neue Seite.
 - `web/js/youtube.js`, `video.js`, `hoerbuch.js`: eigene Player.
 - `web/retro.html`: Platzhalter-Seite, falls Chromium während eines Spiels nicht beendet werden konnte.
 - `web/fonts/emoji.ttf`: Ausschnitt aus Noto Color Emoji (das Gerät hat keine Emoji-Schrift). Nach neuen Emojis im Code
@@ -357,7 +363,8 @@ Alle Befehle laufen am PC im Projektordner. `config/pi.mk` enthält `PI_HOST` (K
 |---|---|
 | `make v3-plan` | Trockenlauf: was übertragen würde (ändert nichts) |
 | `make v3-deploy` | `check` + `test`, zwei Rückfragen, Sicherung, Code per rsync, `install/install.sh` als root über das Admin-Konto, Protokoll in `.local/` |
-| `make v3-pruefen` | Nachprüfung nach dem Neustart: Dienste, Ports, Version, Kiosk-Härtung (ändert nichts) |
+| `make v3-pruefen` | Nachprüfung nach dem Neustart: Dienste, Ports, Version, Kiosk-Härtung; grün = Wartungsmodus aus (löscht nur `wartung.json`) |
+| `make v3-wartung-aus` | 5.3: Wartungsmodus am Fernseher von Hand beenden |
 | `make v3-rollback SICHERUNG=/var/backups/fernsehfranzi/v3-…` | Zurück auf den Stand vor einem Deploy |
 | `make pi-check-vor` / `pi-check-nach` | Zustand lesen und vergleichen (ändert nichts) |
 | `make admin-plan` / `admin-einrichten` / `admin-zurueck` | Admin-Konto anlegen, volles sudo des Kiosk-Benutzers entfernen bzw. zurückgeben |
@@ -366,7 +373,7 @@ Alle Befehle laufen am PC im Projektordner. `config/pi.mk` enthält `PI_HOST` (K
 | `make amiga-bibliothek-plan` / `amiga-bibliothek` | Fehlende Bibliothek für Amiberry (apt) |
 
 Ablauf: `make v3-deploy` → Gerät sauber neu starten (`sudo systemctl reboot`, nicht den Strom ziehen) →
-`make v3-pruefen` → am Fernseher kurz durchklicken. Während des Deploys kein Retro-Spiel laufen lassen.
+`make v3-pruefen` → am Fernseher kurz durchklicken. Während des Deploys kein Retro-Spiel laufen lassen. Seit 5.3 setzt der Deploy nach der zweiten Bestätigung `wartung.json` in den Datenordner (`ab` = jetzt + 10 s Vorwarnung, `bis` = + 45 min): Countdown in der Ecke, danach Warnbildschirm ohne Tasten; `make v3-pruefen` löscht die Datei, wenn es grün ist.
 
 `install/install.sh` ist wiederholbar und sichert alles, was es ersetzt, nach `/var/backups/fernsehfranzi/v3-<zeit>/`.
 `install/rollback.sh` stellt das wieder her. Die Daten in `~/fernsehfranzi-daten` werden nie übertragen und nie gelöscht.
@@ -426,7 +433,7 @@ Jede dieser Lehren hat einmal einen Fehlschlag gekostet.
 - Handy-Spiele: Handy-Mikrofone gehen im Heimnetz ohne HTTPS nicht; bei vielen Handys auf dem Pi 3 noch ungemessen.
 - Wetter, Schule, Kinderwelten und Kinder-News brauchen Internet am Pi. Ohne Netz bleibt der letzte Stand stehen; die
   Schul-Seite braucht zusätzlich die Anmeldung in der Klassenkiste-Kachel (Cookie aus dem Kiosk-Profil, nur im Speicher).
-- Die Kinder-News bringen nur RSS-Quellen aus der festen Liste in `news.py`; neue Quellen erst nach Prüfung durch die Eltern.
+- Die Kinder-News bringen keine eigenen Quellen mit, nur die RSS-Adressen der Eltern (http/https, höchstens 10).
 
 **Ideen für später**
 

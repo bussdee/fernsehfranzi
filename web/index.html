@@ -12,11 +12,11 @@
 <body>
 <main>
   <header>
-    <div>
+    <div class="kopf-links"><div id="franzi-kopf"></div><div>
       <div class="eyebrow" id="untertitel">Home Entertainment</div>
       <h1>FernsehFranzi</h1>
       <div id="gruss">Hallo!</div>
-    </div>
+    </div></div>
     <div class="kopf-rechts">
       <div class="uhr-zeile"><span id="glocke" hidden></span><span id="uhr">--:--</span></div>
       <div id="datum"></div>
@@ -25,13 +25,16 @@
     </div>
   </header>
 
-  <!-- 3.5: Bereiche wie bei einer Spielkonsole - oben die Leiste, darunter groß die gewählte Kachel, dann je Bereich eine Reihe -->
-  <nav id="bereiche" aria-label="Bereiche"></nav>
-  <div id="held"><div id="held-name"></div><div id="held-info"></div></div>
+  <!-- 6.0: „Zuhause + Ordner“ - Lieblinge, Weiter, Bereiche; ein Bereich öffnet sein Raster -->
+  <div id="pfad"></div>
   <div id="reihen-fenster"><div id="reihen"></div></div>
+  <div id="held"><span id="held-name"></span><span id="held-info"></span></div>
 
   <footer>
-    <span id="hilfe">← → Wählen · ↑ ↓ Bereich · OK Öffnen · EXIT Zur Startseite · ROT/GRÜN Ton · BLAU Eltern</span>
+    <span id="hilfe" class="tasten">
+      <span><b>← ↑ ↓ →</b> Wählen</span><span><b>OK</b> Öffnen</span><span><b>STOP</b> Zurück</span>
+      <span><b class="rot">●</b><b class="gruen">●</b> Ton</span><span><b class="blau">●</b> Eltern</span>
+    </span>
     <span id="version">FERNSEHFRANZI</span>
   </footer>
 </main>
@@ -39,11 +42,22 @@
 <div id="hinweis" role="status" aria-live="polite"></div>
 
 <section id="sperre" hidden>
-  <div class="gross">🌙</div>
+  <div class="gross" id="sperre-symbol">🌙</div>
   <div class="text" id="sperre-text">Der Fernseher macht jetzt Pause.</div>
-  <div class="klein">Mama oder Papa können ihn wieder freigeben.</div>
+  <div id="sperre-uhr" hidden></div>
+  <div class="klein" id="sperre-klein">Mama oder Papa können ihn wieder freigeben.</div>
 </section>
 
 <div id="overlay-wurzel"></div>
+
+<!-- 5.3: Vorwarnung vor dem Wartungsmodus - Countdown in der Ecke, alles geht noch -->
+<div id="wartung-bald" hidden><span>🛠️ Gleich kommt ein Update – schnell speichern!</span><b id="wartung-bald-zahl">10</b></div>
+<!-- 5.3: Wartungsmodus beim Ausliefern - über allem, keine Taste wirkt -->
+<section id="wartung" hidden>
+  <div class="gross">🛠️</div>
+  <div class="text">Der Fernseher wird gerade aktualisiert.</div>
+  <div class="hinweis-gross">Bitte jetzt nichts drücken und nicht ausschalten!</div>
+  <div class="klein">Gleich geht es von selbst weiter.</div>
+</section>
 </body>
 </html>

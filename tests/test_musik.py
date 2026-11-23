@@ -80,6 +80,7 @@ class AkademieImBrowser(unittest.TestCase):
         self.fehler = []
         seite.on("pageerror", lambda e: self.fehler.append(str(e)))
         seite.goto("http://127.0.0.1:8765/")
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-bass')")
         seite.click(".kachel[data-id=spiel-bass]")
         seite.wait_for_selector("text=Was möchtest du heute machen?")
         return seite

@@ -107,6 +107,7 @@ class BassMikro(unittest.TestCase):
 
     def test_nachspielen_hoert_das_mikrofon(self):
         seite = self.seite()
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-bass')")
         seite.locator("[data-id=spiel-bass]").click()
         seite.wait_for_selector(".knopfreihe")
         seite.keyboard.press("Enter")                                   # 3.5 Musik-Akademie: erst „Bass“

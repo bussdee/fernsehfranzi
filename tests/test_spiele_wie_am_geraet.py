@@ -111,6 +111,7 @@ class WieAmGeraet(unittest.TestCase):
         return falsch
 
     def rundgang(self, seite, kachel, tasten, foto, warten=400):
+        seite.wait_for_function("k => window.FernsehFranzi && FernsehFranzi.zeige(k)", arg=kachel)
         seite.locator("[data-id=%s]" % kachel).click()
         seite.wait_for_selector(".overlay")
         for taste in tasten:
@@ -164,6 +165,7 @@ class WieAmGeraet(unittest.TestCase):
 
     def test_memory_bilder_sichtbar(self):
         seite = self.seite()
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-memory')")
         seite.locator("[data-id=spiel-memory]").click()
         seite.keyboard.press("Enter")                       # Klein, allein
         seite.wait_for_selector(".karte")
@@ -175,6 +177,7 @@ class WieAmGeraet(unittest.TestCase):
 
     def test_drei_gewinnt_x_und_o_sichtbar(self):
         seite = self.seite()
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-drei')")
         seite.locator("[data-id=spiel-drei]").click()
         seite.keyboard.press("Enter")                       # Fernseher leicht
         seite.wait_for_selector(".drei-feld .zelle")
@@ -186,7 +189,14 @@ class WieAmGeraet(unittest.TestCase):
     def test_kachel_symbole_und_sticker_sichtbar(self):
         seite = self.seite()
         seite.screenshot(path=os.path.join(FOTOS, "startseite-wie-am-geraet.png"))
-        self.assertIn("Noto Color Emoji", self.schriften(".kachel .symbol"))
+        # 6.0: Kachel-Symbole sind 3D-Bilder (web/icons); jedes muss wirklich geladen sein, sonst Emoji-Schrift
+        kaputt = seite.evaluate("""() => [...document.querySelectorAll('.kachel .symbol img.icon')]
+            .filter(i => !i.complete || i.naturalWidth === 0).map(i => i.src)""")
+        self.assertEqual(kaputt, [])
+        self.assertGreater(seite.locator(".kachel .symbol img.icon").count(), 5)
+        if seite.locator(".kachel .symbol .als-text").count():
+            self.assertIn("Noto Color Emoji", self.schriften(".kachel .symbol .als-text"))
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-sticker')")
         seite.locator("[data-id=spiel-sticker]").click()
         seite.wait_for_selector(".karte")
         self.assertEqual(self.schriften(".karte span"), {"Noto Color Emoji"})

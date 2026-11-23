@@ -220,3 +220,39 @@ details > summary { cursor: pointer; }
 .eh-reihe.eh-suche { flex-wrap: nowrap; }
 .eh-reihe.eh-suche input { flex: 1; min-width: 0; }
 .eh-reihe.eh-suche .eh-knopf { flex: none; }
+
+/* 5.1: Auszeit auf „Heute“ */
+.eh-auszeit { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--linie, rgba(255,255,255,.12)); }
+.eh-auszeit h4 { margin: 0 0 4px; }
+
+/* 5.2: Klang wählen (Auswahl + ▶ Handy + 📺 Fernseher) */
+.eh-klang { display: inline-flex; align-items: center; gap: 6px; }
+.eh-klang select { max-width: 38vw; }
+.eh-klang .eh-knopf.rund { flex: none; }
+
+/* ---------------------------------------------------------------- 6.0: fünf Reiter, Bereiche zum Aufklappen */
+.eh-reiter-titel { margin: 6px 2px 4px; font-size: 24px; }
+.eh-abschnitt { border-radius: 18px; background: var(--flaeche); border: 1px solid var(--linie); overflow: hidden; }
+.eh-abschnitt.offen { border-color: color-mix(in srgb, var(--akzent) 55%, transparent); }
+.eh-abschnitt-kopf { width: 100%; display: grid; grid-template-columns: 46px 1fr auto; grid-template-rows: auto auto; align-items: center;
+  gap: 2px 12px; padding: 12px 14px; background: none; border: 0; color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.eh-abschnitt-kopf .eh-kachel-symbol { width: 46px; height: 46px; font-size: 26px; }
+.eh-abschnitt-kopf .eh-kachel-text { padding-right: 0; }
+.eh-abschnitt-kopf .eh-kachel-text small { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.eh-abschnitt.offen .eh-abschnitt-kopf .eh-kachel-text small { -webkit-line-clamp: unset; }
+.eh-abschnitt-kopf .eh-kachel-status { grid-column: 2; grid-row: 2; }
+.eh-abschnitt-kopf .eh-pfeil { grid-column: 3; grid-row: 1 / span 2; font-size: 22px; color: var(--leise); }
+.eh-abschnitt-inhalt { display: flex; flex-direction: column; gap: 12px; padding: 0 10px 12px; }
+.eh-abschnitt-inhalt > .eh-karte { background: var(--flaeche-2); }
+.eh-inhalt { gap: 12px; }
+/* Erklärungen eingeklappt */
+.eh-info { margin: 4px 0; }
+.eh-info > summary { cursor: pointer; color: var(--leise); font-size: 14px; list-style: none; line-height: 1.4; }
+.eh-info > summary::-webkit-details-marker { display: none; }
+.eh-info[open] > summary { color: var(--akzent); }
+.eh-knopf.an { outline: 2px solid var(--akzent); }
+.eh-leiste a { max-width: 110px; }
+.eh-leiste a span { font-size: 22px; }
+/* 6.0: Reihenfolge mit ↑ ↓ */
+.eh-pfeile { display: inline-flex; gap: 6px; flex: none; }
+.eh-pfeile .eh-knopf.aus { opacity: .3; pointer-events: none; }

@@ -369,11 +369,6 @@ header { margin-bottom: 1.6vh; }
 .overlay.sonne { background: #000; transition: background 2s linear; cursor: none; }
 
 /* 4.0: Startseite gestalten - Hintergründe und Lieblinge */
-body[data-thema="ozean"] { background: radial-gradient(ellipse at 20% 0%, #0d4a6b 0, transparent 55%), #04121c; }
-body[data-thema="wald"] { background: radial-gradient(ellipse at 20% 0%, #1f5a2c 0, transparent 55%), #06130a; }
-body[data-thema="sonne"] { background: radial-gradient(ellipse at 20% 0%, #8a3a12 0, transparent 55%), radial-gradient(ellipse at 90% 100%, #4a1236 0, transparent 50%), #140808; }
-body[data-thema="bonbon"] { background: radial-gradient(ellipse at 20% 0%, #7a2a72 0, transparent 55%), radial-gradient(ellipse at 90% 100%, #1f4a8a 0, transparent 50%), #140a18; }
-body[data-thema="nacht"] { background: #030408; }
 .kachel .liebling { position: absolute; left: 8px; top: 6px; font-size: 14px; }
 .gestalten { width: min(900px, 90vw); display: flex; flex-direction: column; gap: 10px; }
 .gestalten-zeile { display: flex; justify-content: space-between; align-items: center; padding: 1.4vh 2vw; border-radius: 16px;
@@ -529,13 +524,6 @@ audio.medium-gross { width: 50vw; }
 
 /* ------------------------------------------------------------ 5.0: helle Designs
    Nur die Startseite (main) und der Hinweis werden hell. Spiele, Player, Elternbereich und Sperre bleiben dunkel. */
-body[data-thema="himmel"] { background: linear-gradient(170deg, #9fd4ff 0, #d9efff 45%, #f4fbff 100%); }
-body[data-thema="zuckerwatte"] { background: radial-gradient(ellipse at 15% 0%, #ffc6e4 0, transparent 55%),
-  radial-gradient(ellipse at 95% 100%, #d4c8ff 0, transparent 55%), #fff1f8; }
-body[data-thema="wiese"] { background: radial-gradient(ellipse at 85% 0%, #fff3a8 0, transparent 45%),
-  linear-gradient(175deg, #e8f8d8 0, #c8edb0 100%); }
-body[data-thema="regenbogen"] { background: linear-gradient(120deg, #ffd6d6 0, #ffe9c7 20%, #fffac4 38%, #d6f5d1 56%,
-  #d2ecff 74%, #e6d8ff 100%); }
 body.hell main, body.hell #hinweis {
   --bg: #f4f7fc; --flaeche: #ffffff; --flaeche-2: #eef3fb; --text: #1b2333; --leise: #4b5870; --linie: rgba(25, 40, 80, .16);
   --fokus: #1b2333; --kopf-leise: #3a5c9e; --gruss: #3a5c9e; --held-info: #33405a; --fuss: #56637c;
@@ -665,3 +653,329 @@ body[data-ansicht="karussell"] #reihen-fenster { order: 1; }
 body[data-ansicht="karussell"] footer { order: 3; }
 body[data-ansicht="seitenleiste"] #bereiche .bereich { text-align: left; }
 body[data-ansicht="karussell"] #reihen-fenster { margin: 0 -6vw; }
+
+/* 5.1: Auszeit - nur ein großer Countdown */
+#sperre-uhr { font-size: clamp(90px, 16vw, 260px); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; color: #b9c4ff; }
+#sperre.auszeit .text { font-size: clamp(20px, 2.4vw, 36px); color: var(--leise); }
+
+/* 5.3: Wartungsmodus beim Ausliefern - über allem (auch Schoner, Pause, Nachrichten) */
+#wartung { position: fixed; inset: 0; z-index: 200; background: #1a1205; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3vh; text-align: center; cursor: none;
+  background-image: repeating-linear-gradient(45deg, rgba(255, 201, 90, .08) 0 40px, transparent 40px 80px); }
+#wartung .gross { font-size: clamp(60px, 9vw, 140px); }
+#wartung .text { font-size: clamp(26px, 3.4vw, 52px); font-weight: 800; max-width: 85vw; }
+#wartung .hinweis-gross { font-size: clamp(24px, 3vw, 46px); font-weight: 800; color: #ffc95a; max-width: 85vw; }
+#wartung .klein { color: var(--leise); font-size: clamp(14px, 1.5vw, 22px); }
+#wartung-bald { position: fixed; top: 2.5vh; right: 2vw; z-index: 190; display: flex; align-items: center; gap: 1vw;
+  background: #3a2706; border: 3px solid #ffc95a; border-radius: 18px; padding: 1.2vh 1.4vw; color: #fff;
+  font-size: clamp(15px, 1.5vw, 24px); font-weight: 800; box-shadow: 0 8px 30px rgba(0, 0, 0, .5); }
+#wartung-bald b { font-size: clamp(30px, 3.4vw, 56px); color: #ffc95a; font-variant-numeric: tabular-nums; min-width: 1.4em; text-align: center; }
+
+
+/* ------------------------------------------------------------ 6.0: klare Farben (je Farbe Hintergrund, Akzent, Rahmen, Kacheln)
+   Die Variablen hängen an [data-thema] - so nutzt sie die Startseite (body) und die kleine Vorschau in „Gestalten“. */
+[data-thema] { --bg-bild: radial-gradient(ellipse at 15% 0%, #16233d 0, transparent 45%), #090d14; }
+[data-thema="blau"] { --bg-bild: radial-gradient(ellipse at 20% 0%, #24519c 0, transparent 55%), radial-gradient(ellipse at 95% 100%, #13306a 0, transparent 50%), #071022;
+  --akzent: #6ea8ff; --fokus: #a9ccff; --kachel-anfang: #13213d; --chip-an: rgba(110, 168, 255, .25); --gruss: #9cc0ff; --kopf-leise: #8fb2f0; }
+[data-thema="gruen"] { --bg-bild: radial-gradient(ellipse at 20% 0%, #1f6b3c 0, transparent 55%), radial-gradient(ellipse at 95% 100%, #0f4a2a 0, transparent 50%), #06140b;
+  --akzent: #5fd38a; --fokus: #a2f5c2; --kachel-anfang: #0f2618; --chip-an: rgba(95, 211, 138, .25); --gruss: #93e6b3; --kopf-leise: #7fd3a1; }
+[data-thema="lila"] { --bg-bild: radial-gradient(ellipse at 20% 0%, #5c2f92 0, transparent 55%), radial-gradient(ellipse at 95% 100%, #3a1d66 0, transparent 50%), #0f0818;
+  --akzent: #b98aff; --fokus: #dcc2ff; --kachel-anfang: #1f1433; --chip-an: rgba(185, 138, 255, .25); --gruss: #cfb0ff; --kopf-leise: #b99ae8; }
+[data-thema="rot"] { --bg-bild: radial-gradient(ellipse at 20% 0%, #8f3320 0, transparent 55%), radial-gradient(ellipse at 95% 100%, #5c1d24 0, transparent 50%), #160806;
+  --akzent: #ff8a6e; --fokus: #ffc0b0; --kachel-anfang: #2c120e; --chip-an: rgba(255, 138, 110, .25); --gruss: #ffb19e; --kopf-leise: #f09a86; }
+[data-thema="schwarz"] { --bg-bild: #000; --akzent: #e8e8e8; --fokus: #ffffff; --kachel-anfang: #141414; --chip-an: rgba(255, 255, 255, .18);
+  --gruss: #cfcfcf; --kopf-leise: #a8a8a8; }
+[data-thema="hellblau"] { --bg-bild: linear-gradient(170deg, #9fd2ff 0, #d6ecff 50%, #f2f9ff 100%); --akzent-hell: #1d64c8; }
+[data-thema="mint"] { --bg-bild: linear-gradient(170deg, #a8ecc9 0, #d9f8e8 50%, #f3fff9 100%); --akzent-hell: #12804f; }
+[data-thema="rosa"] { --bg-bild: linear-gradient(170deg, #ffbfe0 0, #ffe0ef 50%, #fff4fa 100%); --akzent-hell: #b8306f; }
+[data-thema="gelb"] { --bg-bild: linear-gradient(170deg, #ffd96b 0, #fff0b8 50%, #fffbea 100%); --akzent-hell: #a85d00; }
+[data-thema="weiss"] { --bg-bild: linear-gradient(170deg, #dde3ec 0, #f2f4f8 50%, #ffffff 100%); --akzent-hell: #33405a; }
+body[data-thema] { background: var(--bg-bild); }
+body.hell main { --gruss: var(--akzent-hell); --kopf-leise: var(--akzent-hell); --fokus: var(--akzent-hell);
+  --chip-an: color-mix(in srgb, var(--akzent-hell) 18%, transparent); }
+body.hell .kachel.gewaehlt { border-color: var(--akzent-hell); }
+#bereiche .bereich.an { color: var(--text); }
+
+/* Vorschau in „Gestalten“: kleine Startseite in der gewählten Farbe */
+.gestalten-oben { display: flex; gap: 2vw; align-items: stretch; }
+.gestalten-oben .gestalten { flex: 1; }
+.farb-vorschau { width: clamp(220px, 22vw, 360px); border-radius: 18px; background: var(--bg-bild); padding: 2vh 1.2vw;
+  display: flex; flex-direction: column; gap: 1.2vh; border: 3px solid rgba(255, 255, 255, .25); flex: none; align-self: flex-start; }
+.farb-vorschau .fv-titel { font-weight: 800; font-size: clamp(14px, 1.4vw, 22px); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.farb-vorschau.hell .fv-titel { color: #1b2333; text-shadow: none; }
+.farb-vorschau .fv-kacheln { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6vw; }
+.farb-vorschau .fv-kachel { aspect-ratio: 1; border-radius: 10px; border: 2px solid rgba(255, 255, 255, .5); }
+.farb-vorschau .fv-kachel.an { border-color: var(--fokus, #fff); border-width: 3px; }
+.farb-vorschau.hell .fv-kachel.an { border-color: var(--akzent-hell); }
+.farb-vorschau .fv-text { font-size: clamp(12px, 1.1vw, 16px); color: #fff; opacity: .9; }
+.farb-vorschau.hell .fv-text { color: #33405a; }
+
+/* ------------------------------------------------------------ 6.0: Spiele und Seiten einheitlicher und am Fernseher lesbar */
+.overlay-kopf { gap: 2vw; padding-bottom: 1.2vh; border-bottom: 1px solid var(--linie); }
+.overlay-kopf h2 { white-space: nowrap; }
+.overlay-kopf .punkte { flex: 1; text-align: center; }
+.overlay-kopf .hilfe { font-size: clamp(14px, 1.3vw, 20px); color: #c3cee2; background: rgba(255, 255, 255, .07);
+  border-radius: 999px; padding: .45em 1.1em; max-width: 46vw; text-align: center; line-height: 1.35; }
+/* Auswahl in Spielen („Wie schnell?“, „Gegen wen?“ …): große Karten statt kleiner Knöpfe */
+.knopfreihe.gross { gap: 1.4vw; max-width: 86vw; }
+.knopfreihe.gross .knopf { font-size: clamp(20px, 2.1vw, 34px); padding: 2.6vh 2.6vw; min-width: 13vw; border-radius: 22px;
+  border-width: 4px; background: var(--flaeche-2); }
+.knopfreihe.gross .knopf.gewaehlt { background: color-mix(in srgb, var(--akzent) 30%, var(--flaeche-2)); border-color: var(--fokus); transform: scale(1.06); }
+p.punkte:has(+ .knopfreihe.gross), div.punkte:has(+ .knopfreihe.gross) { font-size: clamp(26px, 3vw, 46px); margin: 0 0 4vh; }
+
+/* 6.0: Gutschein am Fernseher größer (Felder und Ziffernblock wachsen mit dem Bildschirm) */
+.gutschein-feld span { width: clamp(64px, 5.6vw, 104px); height: clamp(80px, 7vw, 128px); font-size: clamp(42px, 4vw, 72px); }
+.gutschein-tasten { grid-template-columns: repeat(3, clamp(110px, 9.5vw, 180px)); gap: clamp(10px, 1vw, 18px); }
+.gutschein-tasten .knopf { font-size: clamp(22px, 2.2vw, 38px); padding: 1.8vh 0; }
+.gutschein p, .gutschein .leise { font-size: clamp(18px, 1.8vw, 28px); }
+
+/* ------------------------------------------------------------ 6.0: Startseite „Zuhause + Ordner“ */
+#bereiche { display: none; }
+#pfad { font-size: clamp(16px, 1.7vw, 26px); font-weight: 800; color: var(--gruss); min-height: 1.2em; margin: 0 0 1.4vh; letter-spacing: .02em; }
+#reihen-fenster { flex: 1; min-height: 0; overflow: hidden; padding: 6px 4px 0; }
+#reihen { transition: transform .25s ease; }
+.zeile { margin-bottom: 2.6vh; }
+.zeile .reihe-titel { margin: 0 0 1.2vh; }
+.zeile-kacheln { display: grid; gap: 1.4vw; }
+.zeile-kacheln.lieblinge, .zeile-kacheln.raster { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.zeile-kacheln.zuletzt { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.zeile-kacheln.bereiche { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.zeile-kacheln .kachel { height: clamp(120px, 21vh, 220px); padding: clamp(12px, 1.3vw, 22px); display: flex; flex-direction: column;
+  justify-content: space-between; align-items: flex-start; text-align: left; width: auto; }
+.zeile-kacheln.zuletzt .kachel { height: clamp(90px, 14vh, 150px); }
+.zeile-kacheln.bereiche .kachel { height: clamp(120px, 19vh, 200px); }
+.zeile-kacheln .kachel .symbol { font-size: clamp(34px, 4vw, 68px); }
+.zeile-kacheln.zuletzt .kachel .symbol { font-size: clamp(26px, 2.8vw, 46px); }
+.zeile-kacheln .kachel .name { font-size: clamp(15px, 1.5vw, 25px); }
+.zeile-kacheln .kachel .zusatz { font-size: clamp(12px, 1.1vw, 17px); opacity: .85; font-weight: 700; margin-top: .3vh; }
+.zeile-kacheln .kachel.gewaehlt { transform: scale(1.05); border-color: var(--fokus); box-shadow: 0 10px 28px rgba(0, 0, 0, .35); }
+.zeile-kacheln .kachel .taste { display: block; }
+.ordner-kachel .symbol { font-size: clamp(40px, 4.6vw, 76px) !important; }
+.ordner-kachel::after { content: "›"; position: absolute; right: 6%; top: 50%; transform: translateY(-50%); font-size: clamp(28px, 3vw, 52px);
+  opacity: .55; z-index: 1; }
+/* gesperrt: am Ende, abgedunkelt, mit Grund auf der Kachel */
+.zeile-kacheln .kachel.gesperrt .grund { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: .6vh .8vw;
+  background: rgba(0, 0, 0, .55); color: #ffd7a0; font-size: clamp(12px, 1.1vw, 17px); font-weight: 800; text-align: left; }
+.zeile-kacheln .kachel.gesperrt .sperr-symbol { bottom: auto; top: 8%; }
+.zeile-kacheln .kachel.gesperrt .unten { margin-bottom: 2.6vh; }
+.kachel-hinweis { position: absolute; top: 8%; right: 6%; z-index: 2; background: #ffc95a; color: #2a1d00; font-weight: 800;
+  border-radius: 999px; padding: .2em .7em; font-size: clamp(12px, 1.1vw, 17px); }
+/* Info-Zeile unten: Name und ein Satz zur gewählten Kachel */
+#held { min-height: 0; margin: 1vh 0 0; display: flex; gap: 1em; align-items: baseline; }
+#held-name { font-size: clamp(18px, 1.9vw, 30px); font-weight: 800; letter-spacing: 0; line-height: 1.2; }
+#held-info { font-size: clamp(14px, 1.4vw, 22px); margin: 0; color: var(--held-info); }
+/* Restzeit als Balken */
+#restzeit { display: inline-flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 13em; text-align: center; }
+#restzeit .balken { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .18); overflow: hidden; }
+#restzeit .balken span { display: block; height: 100%; background: currentColor; border-radius: 4px; transition: width .6s ease; }
+body.hell #restzeit .balken { background: rgba(0, 0, 0, .12); }
+/* Tastenleiste mit Symbolen */
+footer .tasten { display: flex; flex-wrap: wrap; gap: 1.6vw; align-items: center; }
+footer .tasten > span { display: inline-flex; align-items: center; gap: .45em; }
+footer .tasten b { display: inline-block; min-width: 1.8em; padding: .15em .5em; border-radius: 8px; background: rgba(255, 255, 255, .12);
+  color: var(--text); text-align: center; font-weight: 800; }
+body.hell footer .tasten b { background: rgba(0, 0, 0, .08); }
+footer .tasten b.rot { color: #ff5a5a; } footer .tasten b.gruen { color: #4ccf6f; } footer .tasten b.blau { color: #4f8dff; }
+footer .tasten b.rot, footer .tasten b.gruen, footer .tasten b.blau { min-width: 0; padding: .15em .25em; background: none; font-size: 1.3em; }
+/* 6.0: kompakter Kopf - der Gruß ist die Überschrift, alles passt auf einen Bildschirm */
+header { margin-bottom: 1.2vh; align-items: center; }
+header .eyebrow { display: none; }
+header h1 { font-size: clamp(16px, 1.5vw, 24px); letter-spacing: .02em; color: var(--kopf-leise); margin: 0; }
+#gruss { font-size: clamp(26px, 3vw, 48px); color: var(--text); margin-top: 2px; font-weight: 800; }
+.kopf-rechts { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+#uhr { font-size: clamp(22px, 2.4vw, 38px); }
+#datum { margin-top: 0; }
+#restzeit { margin-top: 4px; padding: 4px 14px; }
+main { padding-top: 3vh; }
+.zeile { margin-bottom: 2vh; }
+.zeile .reihe-titel { margin-bottom: .9vh; }
+.zeile-kacheln .kachel { height: clamp(110px, 18vh, 190px); }
+.zeile-kacheln.zuletzt .kachel { height: clamp(80px, 11.5vh, 125px); flex-direction: row; align-items: center; justify-content: flex-start; gap: 1vw; }
+.zeile-kacheln.bereiche .kachel { height: clamp(100px, 15.5vh, 170px); }
+.zeile-kacheln .kachel .taste { display: none; }
+.zeile.aktiv .zeile-kacheln .kachel .taste { display: block; }
+.zeile-kacheln .ordner-kachel { flex-direction: row; align-items: center; justify-content: flex-start; gap: 1vw; padding-right: 3.2vw; }
+.zeile-kacheln .ordner-kachel .symbol { font-size: clamp(36px, 3.8vw, 64px) !important; }
+.zeile-kacheln .ordner-kachel .name { font-size: clamp(16px, 1.55vw, 26px); }
+.zeile-kacheln .kachel .name { hyphens: manual; overflow-wrap: normal; word-break: normal; }
+.zeile-kacheln .ordner-kachel .symbol { font-size: clamp(30px, 3vw, 52px) !important; }
+.zeile-kacheln .ordner-kachel .name { font-size: clamp(15px, 1.45vw, 24px); }
+.zeile-kacheln.zuletzt .kachel .name { font-size: clamp(14px, 1.35vw, 22px); }
+.zeile-kacheln.zuletzt { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 66%; }
+.zeile-kacheln.zuletzt { max-width: 82%; }
+.zeile-kacheln.zuletzt .kachel .unten { min-width: 0; flex: 1; }
+.zeile-kacheln.zuletzt .kachel .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.zeile-kacheln.bereiche { grid-template-columns: repeat(6, minmax(0, 1fr)); }   /* 6.0: Filme und Musik getrennt */
+
+/* ------------------------------------------------------------ 6.0: 3D-Bilder statt Emojis (Größe folgt der Schriftgröße) */
+img.icon { width: 1.15em; height: 1.15em; object-fit: contain; vertical-align: -0.2em; display: inline-block; }
+.kachel .symbol img.icon { width: 1.25em; height: 1.25em; display: block; }
+.overlay-kopf h2 img.kopf-icon { width: 1.25em; height: 1.25em; vertical-align: -0.28em; margin-right: .1em; }
+#sperre .gross img.icon, #wartung .gross img.icon { width: 1.4em; height: 1.4em; }
+.meldungen-symbol img.icon, .wetter-gross img.icon, .seite-leer-symbol img.icon { width: 1.2em; height: 1.2em; }
+#wetter-kopf img.wk-icon { width: 1.5em; height: 1.5em; vertical-align: -0.45em; }
+/* 6.0: sechs Bereiche - hochkant (Bild oben, Name unten), Pfeil klein unten rechts, Hinweis oben rechts */
+.zeile-kacheln .ordner-kachel { flex-direction: column; align-items: flex-start; justify-content: space-between; gap: .4vh; padding-right: clamp(12px, 1.3vw, 22px); }
+.zeile-kacheln .ordner-kachel .symbol { font-size: clamp(34px, 3.4vw, 58px) !important; }
+.ordner-kachel::after { top: auto; bottom: 8%; transform: none; font-size: clamp(22px, 2.2vw, 38px); }
+.zeile-kacheln .ordner-kachel .name { font-size: clamp(16px, 1.55vw, 26px); padding-right: 1.2em; }
+.zeile-kacheln.zuletzt { max-width: none; }
+/* 6.0: Bereichsnamen einzeilig („Mein Zimmer“ passt auch bei 6 Bereichen) */
+.zeile-kacheln .ordner-kachel .name { font-size: clamp(14px, 1.32vw, 23px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%; padding-right: .9em; box-sizing: border-box; }
+.zeile-kacheln .ordner-kachel::after { right: 5%; font-size: clamp(18px, 1.8vw, 30px); }
+
+/* 6.0: Hintergrund mit Motiv je Farbe (werkzeuge/hintergruende.py, ruhig - keine Bewegung) */
+[data-thema] { --motiv: none; }
+[data-thema="blau"] { --motiv: url("/hintergrund/blau.svg"); }
+[data-thema="gruen"] { --motiv: url("/hintergrund/gruen.svg"); }
+[data-thema="lila"] { --motiv: url("/hintergrund/lila.svg"); }
+[data-thema="rot"] { --motiv: url("/hintergrund/rot.svg"); }
+[data-thema="schwarz"] { --motiv: url("/hintergrund/schwarz.svg"); }
+[data-thema="hellblau"] { --motiv: url("/hintergrund/hellblau.svg"); }
+[data-thema="mint"] { --motiv: url("/hintergrund/mint.svg"); }
+[data-thema="rosa"] { --motiv: url("/hintergrund/rosa.svg"); }
+[data-thema="gelb"] { --motiv: url("/hintergrund/gelb.svg"); }
+[data-thema="weiss"] { --motiv: url("/hintergrund/weiss.svg"); }
+body[data-thema], .farb-vorschau { background: var(--motiv) center bottom / cover no-repeat, var(--bg-bild); }
+
+/* 6.0: Maskottchen „Franzi“ und Bewegung - nur transform/opacity (läuft auf dem Pi 3 über die Grafikkarte) */
+.kopf-links { display: flex; align-items: center; gap: 1.1vw; }
+.franzi { display: inline-block; line-height: 0; }
+.franzi svg { width: 100%; height: auto; overflow: visible; }
+#franzi-kopf .franzi { width: clamp(64px, 6.4vw, 110px); }
+.franzi .f-koerper { transform-box: fill-box; transform-origin: 50% 100%; }
+.franzi-froh .f-koerper { animation: f-hallo 1.1s ease-out .3s 1 both; }
+.franzi .f-winken { transform-box: fill-box; transform-origin: 0% 100%; animation: f-winken .5s ease-in-out .6s 4 alternate; }
+.franzi .f-augen { transform-box: fill-box; transform-origin: 50% 50%; animation: f-blinzeln 6s infinite 2s; }
+.franzi-schlaf .f-koerper { animation: f-atmen 4s ease-in-out infinite; }
+.franzi-schlaf .f-zzz { animation: f-zzz 3s ease-in-out infinite; }
+.franzi-sperre { width: clamp(150px, 16vw, 280px); }
+.franzi-leer { width: clamp(90px, 9vw, 150px); margin-bottom: 1.4vh; }
+.seite-leer .franzi-leer + div { font-size: inherit; }
+.franzi-jubel { position: fixed; right: 4vw; bottom: 3vh; width: clamp(120px, 13vw, 220px); z-index: 36; pointer-events: none;
+  animation: f-jubel 2.6s ease-out both; }
+@keyframes f-hallo { 0% { transform: translateY(30%) scale(.6); opacity: 0; } 60% { transform: translateY(-6%) scale(1.04); opacity: 1; }
+  100% { transform: none; opacity: 1; } }
+@keyframes f-winken { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
+@keyframes f-blinzeln { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+@keyframes f-atmen { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03, .98); } }
+@keyframes f-zzz { 0% { transform: translate(0, 6px); opacity: 0; } 40% { opacity: 1; } 100% { transform: translate(6px, -8px); opacity: 0; } }
+@keyframes f-jubel { 0% { transform: translateY(120%); } 18% { transform: translateY(-8%); } 26% { transform: none; }
+  36% { transform: translateY(-10%); } 46% { transform: none; } 85% { transform: none; opacity: 1; } 100% { transform: translateY(120%); opacity: 0; } }
+
+/* Kacheln gleiten beim Seitenwechsel nacheinander herein */
+#reihen.rein .zeile-kacheln > .kachel { animation: k-rein .38s cubic-bezier(.2, .8, .3, 1) both; animation-delay: calc(var(--i, 0) * 28ms); }
+@keyframes k-rein { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+/* das Bild der gewählten Kachel hüpft einmal kurz */
+.kachel.gewaehlt img.icon { animation: k-huepf .42s ease-out 1; }
+@keyframes k-huepf { 0% { transform: none; } 40% { transform: translateY(-10%) scale(1.08); } 100% { transform: none; } }
+.kachel { transition: transform .16s ease-out, border-color .16s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .franzi *, .franzi, #reihen.rein .kachel, .kachel.gewaehlt img.icon { animation: none !important; }
+}
+/* „🔔 neu“ sitzt oben rechts auf der Kachel (.kachel > * macht sonst alles relativ) */
+.kachel > .kachel-hinweis:not(.bg) { position: absolute; top: 7%; right: 6%; z-index: 3; }
+
+/* ===================================================================== 6.0: Mikro-Spiele neu */
+/* Stimmlinie (Singen, Ton-Treffer) */
+.stimm-box { position: relative; display: inline-block; border-radius: 22px; padding: 1.2vh 1vw;
+  background: linear-gradient(180deg, rgba(10, 16, 34, .85), rgba(20, 30, 60, .85)); border: 3px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .35); }
+.stimm-spur { display: block; width: min(56vw, 860px) !important; height: auto !important; }
+.stimm-ring { position: absolute; right: -2.6vw; top: 50%; width: 5.6vw; height: 5.6vw; min-width: 56px; min-height: 56px; transform: translateY(-50%);
+  border-radius: 50%; background: conic-gradient(#4ccf8f calc(var(--anteil, 0) * 360deg), rgba(255, 255, 255, .12) 0);
+  opacity: .35; transition: opacity .15s; }
+.stimm-ring span { position: absolute; inset: 18%; border-radius: 50%; background: #121a30; }
+.stimm-ring.an { opacity: 1; }
+.stimm-pfeil { position: absolute; left: 50%; top: -1.8vh; transform: translate(-50%, -100%); font-weight: 800;
+  font-size: clamp(16px, 1.8vw, 30px); color: #ffc95a; white-space: nowrap; }
+.stimm-pfeil.nah { color: #4ccf8f; }
+/* Singen: Kopf mit Tonname und Sternen */
+.sing-saeule { width: auto; height: auto; border: 0; background: none; border-radius: 0; margin-top: 3vh; }
+.sing-kopf { display: flex; align-items: center; gap: 2vw; }
+.sing-ton { min-width: 2.2em; border-radius: 26px; padding: .1em .5em; background: rgba(255, 255, 255, .08); transition: transform .2s, background .2s; }
+.sing-ton.geschafft { background: #2f9a5c; transform: scale(1.12); }
+.sing-sterne { font-size: clamp(26px, 3vw, 48px); color: #ffd54f; letter-spacing: .1em; }
+.sing-sterne span { opacity: .22; } .sing-sterne span.an { opacity: 1; }
+/* Ton-Treffer: farbige Notenblasen in einer Treppe */
+.hs-note { background: linear-gradient(180deg, hsl(calc(200 + var(--hoehe) * 22) 70% 55%), hsl(calc(200 + var(--hoehe) * 22) 60% 38%));
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .3); font-size: clamp(16px, 1.8vw, 28px); font-weight: 800; color: #fff; padding-top: 1vh;
+  justify-content: center; transition: transform .15s, filter .15s; }
+.hs-note.klingt { background: linear-gradient(180deg, #7fb6ff, #3f74d9); transform: translateY(-1.6vh) scale(1.06); }
+.hs-note.jetzt { background: linear-gradient(180deg, #ffe27a, #f2c230); color: #1d2433; transform: translateY(-1.6vh) scale(1.06); }
+.hs-note.treffer { background: linear-gradient(180deg, #6fe0a0, #2f9a5c); } .hs-note.daneben { background: linear-gradient(180deg, #b0505a, #7a2f2f); filter: saturate(.7); }
+.hs-pegel { width: auto; height: auto; background: none; border-radius: 0; margin-top: 2.4vh; }
+/* Rakete: Himmel bis zum Mond */
+.rk-buehne { display: flex; align-items: stretch; gap: 2vw; }
+.hs-himmel { width: 34vw; height: 56vh; background: linear-gradient(180deg, #2b5bb8 0%, #5d9be8 55%, #a9d8ff 100%);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .4); border: 3px solid rgba(255, 255, 255, .18); }
+.rk-all { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+  background: radial-gradient(circle at 20% 15%, #fff 0 1.5px, transparent 2px), radial-gradient(circle at 70% 30%, #fff 0 1px, transparent 1.5px),
+    radial-gradient(circle at 40% 55%, #fff 0 1.2px, transparent 2px), radial-gradient(circle at 85% 70%, #fff 0 1.5px, transparent 2px),
+    linear-gradient(180deg, #050816 0%, #12204a 70%, rgba(18, 32, 74, 0) 100%); transition: opacity .2s; }
+.rk-marke { position: absolute; left: 4%; display: flex; align-items: center; gap: .5vw; color: rgba(255, 255, 255, .85);
+  font-size: clamp(11px, 1vw, 16px); font-weight: 700; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.rk-marke-bild { width: clamp(26px, 2.6vw, 44px); height: auto; }
+.rk-boden { position: absolute; left: -5%; right: -5%; bottom: -3vh; height: 8vh; border-radius: 50% 50% 0 0; background: #3f9a55; }
+.hs-rekord { z-index: 1; }
+.rk-rakete { position: absolute; left: 58%; bottom: 4%; z-index: 2; transition: transform .1s linear; will-change: transform; }
+.rk-bild { display: block; width: clamp(60px, 6.5vw, 110px); height: auto; transform: rotate(-45deg); }
+.rk-flamme { position: absolute; left: 50%; top: 82%; width: 38%; height: 70%; transform-origin: 50% 0; transform: translateX(-50%) scaleY(.25);
+  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%; background: radial-gradient(ellipse at 50% 20%, #fff7c2 0, #ffb300 40%, #ff5722 75%, rgba(255, 87, 34, 0) 100%);
+  transition: transform .08s linear, opacity .1s; }
+.rk-seite { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 1.4vh; min-width: 12vw; }
+.rk-zahl { font-size: clamp(32px, 4.4vw, 76px); font-weight: 900; font-variant-numeric: tabular-nums; }
+.rk-pegel { position: relative; width: 4vw; min-width: 40px; height: 34vh; border-radius: 99px; overflow: hidden; background: rgba(255, 255, 255, .1);
+  border: 3px solid rgba(255, 255, 255, .18); }
+.rk-pegel span { position: absolute; inset: 0; transform-origin: 50% 100%; transform: scaleY(0); transition: transform .06s linear;
+  background: linear-gradient(0deg, #3bb36b 0%, #f2c230 60%, #e4574b 100%); }
+.rk-pegel-text { font-weight: 700; color: var(--leise); }
+.rk-countdown { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.6); font-size: 26vh; font-weight: 900; color: #fff;
+  text-shadow: 0 8px 30px rgba(0, 0, 0, .5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .25s; z-index: 5; }
+.rk-countdown.an { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* Klatschen: Spur mit Taktlinie */
+.hs-takt { display: block; min-height: 0; font-size: inherit; width: min(70vw, 1100px); }
+.kl-bahn { position: relative; height: 22vh; border-radius: 24px; background: rgba(10, 16, 34, .6); border: 3px solid rgba(255, 255, 255, .14); }
+.kl-linie { position: absolute; left: 4%; right: 4%; top: 42%; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .2); }
+.kl-kopf { position: absolute; left: 6%; top: 8%; bottom: 8%; width: 4px; margin-left: -2px; border-radius: 2px; background: #ffd54f;
+  box-shadow: 0 0 12px #ffd54f; will-change: transform; }
+.hs-schlag { position: absolute; top: 42%; transform: translate(-50%, -50%); opacity: .45; transition: opacity .1s, transform .12s; }
+.kl-bild { width: clamp(44px, 4.6vw, 80px); height: auto; display: block; }
+.hs-schlag.klingt { opacity: 1; transform: translate(-50%, -50%) scale(1.35); }
+.hs-schlag.treffer { opacity: 1; filter: drop-shadow(0 0 1vh #3bb36b); }
+.hs-schlag.daneben { opacity: .8; filter: drop-shadow(0 0 1vh #e4574b); }
+.kl-ich-reihe { position: absolute; left: 0; right: 0; bottom: 12%; height: 3vh; }
+.kl-ich { position: absolute; top: 0; width: 2.4vh; height: 2.4vh; margin-left: -1.2vh; border-radius: 50%; background: #ffc95a;
+  animation: k-huepf .3s ease-out; }
+.kl-ich.passt { background: #4ccf8f; box-shadow: 0 0 10px #4ccf8f; }
+.kl-ring { width: 14vh; height: 14vh; border-radius: 50%; display: grid; place-items: center; font-size: 6vh;
+  background: radial-gradient(circle, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04)); border: 4px solid rgba(255, 255, 255, .2);
+  transition: transform .05s linear, border-color .2s; }
+.kl-ring.hoert { border-color: #ffd54f; box-shadow: 0 0 26px rgba(255, 213, 79, .5); }
+/* Stimmgerät */
+.su-ansicht { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1vh; }
+.stimm-uhr { display: flex; flex-direction: column; align-items: center; gap: .6vh; }
+.su-bogen { position: relative; width: min(46vw, 640px); aspect-ratio: 2 / 1; overflow: hidden; border-radius: 999px 999px 0 0;
+  background: radial-gradient(circle at 50% 100%, #1d2a48 0 58%, transparent 58.5%),
+    conic-gradient(from -70deg at 50% 100%, #e4574b 0deg, #f2c230 50deg, #3bb36b 65deg 75deg, #f2c230 90deg, #e4574b 140deg, transparent 140deg); }
+.su-strich { position: absolute; left: 50%; bottom: 0; width: 3px; height: 96%; margin-left: -1.5px; transform-origin: 50% 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .7) 0 8%, transparent 8%); }
+.su-strich.mitte { width: 5px; margin-left: -2.5px; background: linear-gradient(180deg, #fff 0 12%, transparent 12%); }
+.su-zeiger { position: absolute; left: 50%; bottom: 0; width: 8px; height: 88%; margin-left: -4px; border-radius: 4px; transform-origin: 50% 100%;
+  background: linear-gradient(180deg, #fff, #c9d6f0); box-shadow: 0 0 10px rgba(0, 0, 0, .5); transition: transform .12s ease-out; }
+.su-name { font-size: clamp(70px, 11vw, 170px); font-weight: 900; line-height: 1; margin-top: -1vh; transition: color .15s, text-shadow .15s; }
+.stimm-uhr.genau .su-name { color: #4ccf8f; text-shadow: 0 0 30px rgba(76, 207, 143, .6); }
+.stimm-uhr.nah .su-name { color: #f2c230; }
+.su-info { font-size: clamp(16px, 1.8vw, 28px); font-weight: 700; }
+.su-hz { font-variant-numeric: tabular-nums; }
+/* Bildgrößen in den Mikro-Spielen (img.icon ist sonst nur schriftgroß) */
+.rk-rakete img.rk-bild { width: clamp(60px, 6.5vw, 110px); height: auto; display: block; vertical-align: 0; }
+.rk-marke img.rk-marke-bild { width: clamp(26px, 2.6vw, 44px); height: auto; }
+.hs-schlag img.kl-bild { width: clamp(44px, 4.6vw, 80px); height: auto; display: block; }
+.hs-ton { gap: 1.4vh; }
+.hs-leiter { height: 26vh; }
+.hs-pegel .stimm-spur { width: min(44vw, 680px) !important; }
+.stimm-pfeil { top: 1vh; left: 1.2vw; transform: none; font-size: clamp(14px, 1.5vw, 24px); }

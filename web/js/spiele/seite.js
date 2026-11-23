@@ -5,7 +5,7 @@
  * - leser(): Lesefenster für lange Texte; ↑ ↓ blättern seitenweise (Pfeile = Navigation, kein Cursor)
  * Alle Texte werden als Text gesetzt (el(..., {text})), nie als HTML.
  */
-import { el } from "../gemeinsam.js";
+import { el, bild, franzi } from "../gemeinsam.js";
 
 export function reiter(namen, aktiv) {
   return el("div", { class: "seite-reiter" }, ...namen.map((n, i) =>
@@ -14,11 +14,11 @@ export function reiter(namen, aktiv) {
 
 /** eintraege: [{titel, zeile?, rechts?, symbol?, neu?}] */
 export function liste(eintraege, wahl, { sichtbar = 6, leer = "Hier ist gerade nichts.", markieren = true } = {}) {
-  if (!eintraege.length) return el("div", { class: "seite-leer", text: leer });
+  if (!eintraege.length) return el("div", { class: "seite-leer" }, franzi("staunen", "franzi-leer"), el("div", { text: leer }));
   const oben = Math.max(0, Math.min(wahl - Math.floor(sichtbar / 2), eintraege.length - sichtbar));
   const teile = eintraege.slice(oben, oben + sichtbar).map((e, i) =>
     el("div", { class: "seite-eintrag" + (markieren && oben + i === wahl ? " gewaehlt" : "") + (e.neu ? " neu" : "") + (e.aus ? " aus" : "") },
-      e.bild ? el("img", { class: "seite-bild", src: e.bild, alt: "", loading: "lazy" }) : e.symbol ? el("div", { class: "seite-symbol", text: e.symbol }) : null,
+      e.bild ? el("img", { class: "seite-bild", src: e.bild, alt: "", loading: "lazy" }) : e.symbol ? el("div", { class: "seite-symbol" }, bild(e.symbol)) : null,
       el("div", { class: "seite-eintrag-text" },
         el("div", { class: "seite-titel", text: e.titel }),
         e.zeile ? el("div", { class: "seite-zeile", text: e.zeile }) : null),
@@ -61,5 +61,5 @@ export function leser(titel, bloecke, { bild = null, unten = "" } = {}) {
 
 /** Fehler oder Laden als große, freundliche Zeile */
 export function hinweisZeile(text, symbol = "⏳") {
-  return el("div", { class: "seite-leer" }, el("div", { class: "seite-leer-symbol", text: symbol }), el("div", { text }));
+  return el("div", { class: "seite-leer" }, el("div", { class: "seite-leer-symbol" }, bild(symbol)), el("div", { text }));
 }

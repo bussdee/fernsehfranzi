@@ -74,14 +74,14 @@
 
 <!-- ======================================================================= Titelei -->
 <section class="titelei">
-  <p><b>FernsehFranzi – Das Handbuch</b><br>für Version 5.0 · November 2026</p>
+  <p><b>FernsehFranzi – Das Handbuch</b><br>für Version 6.0 · November 2026</p>
   <p>Dieses Handbuch beschreibt FernsehFranzi so, wie es auf dem Raspberry Pi am Fernseher läuft: vom ersten
   Einschalten über die Bedienung mit Fernbedienung, Controller und Tastatur bis zu den Einstellungen der Eltern und dem
   technischen Betrieb. Die Bilder zeigen Beispieldaten.</p>
   <p>Eine Kurzanleitung zum Ausdrucken für neben den Fernseher gibt es als eigenes Blatt (<i>kurzanleitung.pdf</i>),
   die Anleitung für Kinder als <i>kinder-anleitung.pdf</i>. Alle liegen auf der Eltern-Seite unter „Mehr“.</p>
   <p>FernsehFranzi ist freie Software unter der MIT-Lizenz. Die Emoji-Schrift stammt aus Noto Color Emoji
-  (SIL Open Font License 1.1). Quellcode und alle Versionen: github.com/bussdee/fernsehfranzi</p>
+  (SIL Open Font License 1.1), die 3D-Bilder auf den Kacheln aus Fluent Emoji von Microsoft (MIT-Lizenz). Quellcode und alle Versionen: github.com/bussdee/fernsehfranzi</p>
 </section>
 
 <section class="kapitel" style="break-before:page">
@@ -223,15 +223,24 @@
 
 <section class="kapitel">
   <div class="kapitel-kopf"><div class="kapitel-nr">Kapitel 3</div><h1>Die Startseite<span class="marke">@@k04@@</span></h1></div>
-  <p class="einleitung">Bereiche statt Menüs: Mit ↑ ↓ wechselt man den Bereich, mit ← → die Kachel.</p>
-  <p>Oben liegt eine Leiste mit den sechs Bereichen. Darunter steht groß der Name der gewählten Kachel und eine kurze
-  Beschreibung. Jeder Bereich ist eine Reihe: Die gerade gewählte Reihe ist groß, die anderen sind klein. Die Ziffern
-  öffnen eine Kachel der gewählten Reihe direkt.</p>
-  <figure><img src="../bilder/startseite-spiele.png" alt=""><figcaption>Der Bereich „Spiele“ ist gewählt: Seine Kacheln
-  sind groß, darunter klein der Bereich „Lernen“.</figcaption></figure>
+  <p class="einleitung">„Zuhause“ zeigt nur wenig auf einmal: die Lieblinge, „Weiter, wo du warst“ und die Bereiche. Ein
+  Bereich öffnet sein eigenes Raster.</p>
+  <p>Ganz oben steht der Gruß mit Uhrzeit, Wetter und der Restzeit als Balken. Darunter liegen drei Reihen:
+  <b>⭐ Meine Lieblinge</b> (bis zu sechs, ausgesucht unter „Gestalten“), <b>▶ Weiter, wo du warst</b> (die zuletzt
+  benutzten Apps und Spiele) und die <b>Bereiche</b> 🎮 Spiele · 🎬 Filme · 🎵 Musik · 🎓 Lernen · 📨 Mein Zimmer · 🕹️ Retro.
+  <span class="taste">OK</span> auf einen Bereich öffnet sein Raster mit großen Kacheln, <span class="taste">STOP</span> führt
+  zurück nach „Zuhause“. Die Pfeile bewegen in alle Richtungen, die Ziffern öffnen eine Kachel der gewählten Reihe direkt.
+  Unten stehen der Name der gewählten Kachel mit einem kurzen Satz und die wichtigsten Tasten.</p>
+  <p>Oben links winkt <b>Franzi</b>, ein kleiner Fernseher mit Gesicht – das Maskottchen. Franzi schläft, wenn der Fernseher
+  Pause macht, jubelt bei gewonnenen Spielen und staunt, wenn eine Seite leer ist. Jede Farbe hat ihr eigenes ruhiges
+  Hintergrundbild (Weltraum, Wald, Zaubernacht, Berge im Abendrot, Himmel, Wiese, Zuckerwatte, Strand, Winter); Schwarz
+  bleibt fast schlicht. Beim Öffnen eines Bereichs gleiten die Kacheln kurz herein.</p>
+  <figure><img src="../bilder/startseite.png" alt=""><figcaption>„Zuhause“: Lieblinge, Weiter, Bereiche.</figcaption></figure>
+  <figure><img src="../bilder/startseite-spiele.png" alt=""><figcaption>Der Bereich „Spiele“ als Raster.</figcaption></figure>
   <h2>Restzeit und graue Kacheln</h2>
-  <p>Oben rechts steht, wie viel Spielzeit heute noch übrig ist, zum Beispiel „Noch 90 Minuten“. Ist eine Kachel gerade
-  gesperrt, ist sie grau und zeigt ein Symbol. Den genauen Grund sagt ein Hinweis, sobald man die Kachel anwählt.</p>
+  <p>Oben rechts steht, wie viel Spielzeit heute noch übrig ist, zum Beispiel „Noch 90 Minuten“, darunter als Balken.
+  Gesperrte Kacheln stehen am Ende eines Bereichs, abgedunkelt, mit Symbol und einem kurzen Grund auf der Kachel
+  („Zeit um“, „Nachtruhe“, „Schulzeit“). Ganz unten steht beim Anwählen der genaue Grund.</p>
   <table>
     <tr><th style="width:14%">Symbol</th><th>Bedeutung</th></tr>
     <tr><td>⏳</td><td>Die Spielzeit für heute ist aufgebraucht</td></tr>
@@ -244,15 +253,15 @@
   </table>
   <h2>Gestalten und Bildschirmschoner</h2>
   <p>In der Kachel <b>🎨 Gestalten</b> sucht sich das Kind seine Lieblinge aus (⭐, sie stehen dann vorne im Bereich
-  „Start“) und wählt mit <span class="taste">←</span> <span class="taste">→</span> die Farben und die Ansicht (Kapitel 11). Nach fünf
+  „Start“) und wählt mit <span class="taste">←</span> <span class="taste">→</span> die Farbe (Kapitel 11). Nach fünf
   Minuten ohne Tastendruck zeigt der Fernseher die selbst gemalten Bilder als Bildschirmschoner.</p>
-  <figure class="klein"><img src="../bilder/buch/gestalten.png" alt=""><figcaption>Gestalten: Farben, Ansicht und Lieblinge.</figcaption></figure>
+  <figure class="klein"><img src="../bilder/buch/gestalten.png" alt=""><figcaption>Gestalten: Farbe mit Vorschau und Lieblinge.</figcaption></figure>
   <h2>Fotoalbum</h2>
   <p>Haben die Eltern es erlaubt, gibt es die Kachel <b>🖼️ Fotoalbum</b>. Oben stehen drei Quellen: <b>📁 Fotos</b> aus dem
   Ordner der Eltern, <b>📷 Mein Album</b> mit Fotos aus Nachrichten und <b>🎨 Meine Bilder</b> mit den Zeichnungen. Mit
   <span class="taste">OK</span> bekommt ein Bild einen ⭐. Mit dem Knopf <b>„Bildschirmschoner“</b> zeigt der Fernseher die
   ausgesuchten Bilder statt der Zeichnungen, wenn eine Weile keine Taste gedrückt wird – schön, wenn Freunde zu Besuch
-  sind. Bilder aus dem Album und Zeichnungen lassen sich hier auch schicken oder löschen.</p>
+  sind. <b>„▶ Diashow jetzt“</b> startet sie sofort. Bilder aus dem Album und Zeichnungen lassen sich hier auch schicken oder löschen.</p>
   <figure class="klein"><img src="../bilder/buch/fotoalbum.png" alt=""><figcaption>Das Fotoalbum: ⭐ markiert die Bilder für den Bildschirmschoner.</figcaption></figure>
 </section>
 
@@ -350,11 +359,13 @@
   <h2>Die Musik-Akademie</h2>
   <table>
     <tr><th style="width:24%">Bereich</th><th>Was es gibt</th></tr>
-    <tr><td>🎸 Bass</td><td>Stimmen mit Referenztönen, Stimmgerät (mit USB-Mikrofon), Metronom, Tempo-Trainer, Rhythmus-Spiel,
+    <tr><td>🎸 Bass</td><td>Stimmen mit Referenztönen, Stimmgerät mit großem Zeiger (mit USB-Mikrofon, grün = genau), Metronom, Tempo-Trainer, Rhythmus-Spiel,
         Griffbrett-Trainer (auch mit dem echten Bass – das Mikrofon erkennt den Ton), Nachspielen, Gehörbildung, Tabs lesen.</td></tr>
     <tr><td>🪕 Gitarre</td><td>Stimmgerät, Akkord-Bilder (<span class="taste">←</span> <span class="taste">→</span> blättern, <span class="taste">OK</span> anschlagen), Akkordwechsel-Trainer.</td></tr>
     <tr><td>🎹 Keyboard</td><td>Frei spielen, Akkorde zeigen, Töne nachspielen.</td></tr>
-    <tr><td>🎤 Singen</td><td>Der Fernseher spielt einen Ton, das Kind singt ihn nach. Der Punkt zeigt höher oder tiefer, grün heißt getroffen.</td></tr>
+    <tr><td>🎤 Singen</td><td>Der Fernseher spielt einen Ton, das Kind singt ihn nach. Die eigene Stimme läuft als Linie über den
+        Bildschirm, das grüne Band ist der Zielton. Wer den Ton knapp eine Sekunde hält, füllt den Ring und bekommt einen Stern;
+        bei „Tonleiter singen“ gibt es acht Sterne zu sammeln.</td></tr>
     <tr><td>🎙️ Aufnehmen</td><td><span class="taste">OK</span> startet und stoppt, <span class="taste">▶</span> spielt vor. Bleibt nur am Fernseher.</td></tr>
     <tr><td>🔎 Song-Suche</td><td>Song oder Band eintippen: Akkorde und Tabs für alle Instrumente.</td></tr>
     <tr><td>📺 Meine Songs</td><td>Songs der Eltern mit Erklärvideo, Tabs und Backing Track; dazu Plex-Playlisten für Unterricht und Backing Tracks.</td></tr>
@@ -426,8 +437,9 @@
   bleibt stehen, bis jemand <span class="taste">OK</span> drückt. Bis dahin kommt sie alle fünf Minuten wieder. Die
   Eltern sehen auf der Eltern-Seite, wann sie gesehen wurde.</p>
   <figure class="halb"><img src="../bilder/buch/nachricht.png" alt=""><figcaption>Eine Nachricht bleibt stehen, bis jemand OK drückt.</figcaption></figure>
-  <p>Jede Nachricht zeigt, von wem sie kommt: Telegram-Kontakte mit ihrem Symbol und Namen (zum Beispiel „🦄 Lena“),
-  Nachrichten von der Eltern-Seite als „Nachricht von Mama oder Papa“.</p>
+  <p>Jede Nachricht zeigt, von wem sie kommt: Telegram-Kontakte mit ihrem Symbol und Namen (zum Beispiel „🦄 Lena“).
+  Auf der Eltern-Seite wählt man über dem Nachrichtenfeld bei „Von“ den eigenen Namen aus den Eltern-Kontakten (das Handy
+  merkt ihn sich); ohne Wahl steht „Nachricht von Mama oder Papa“ da.</p>
   <figure class="klein"><img src="../bilder/buch/nachrichten.png" alt=""><figcaption>Die Kachel Nachrichten mit alten und neuen Nachrichten.</figcaption></figure>
   <p>Die Kachel <b>🔔 Nachrichten</b> zeigt alle neuen und alten Nachrichten und Erinnerungen; oben rechts zeigt eine
   Glocke die Zahl der neuen. Ist Telegram eingerichtet, kann das Kind antworten: <span class="taste">OK</span> auf einer
@@ -475,7 +487,7 @@
 <section class="kapitel">
   <div class="kapitel-kopf"><div class="kapitel-nr">Kapitel 10</div><h1>Mit Handys spielen<span class="marke">@@k21@@</span></h1></div>
   <p class="einleitung">Der Fernseher wird zur Spieltafel, jedes Handy zum Controller – für die ganze Familie und Freunde.</p>
-  <p>Wenn die Eltern es erlaubt haben (Eltern-Seite → Menü → Spiele, Gutscheine & Sticker → Handy-Spiele), gibt es im Bereich „Spiele“ die Kachel
+  <p>Wenn die Eltern es erlaubt haben (Eltern-Seite → Inhalte → Spiele, Gutscheine & Sticker → Handy-Spiele), gibt es im Bereich „Spiele“ die Kachel
   <b>📱 Mit Handys spielen</b>. Sie öffnet den <b>Spielraum</b>: Der Fernseher zeigt einen großen QR-Code, darunter eine
   Adresse und einen Raumcode aus vier Buchstaben.</p>
   <figure><img src="../bilder/buch/handys-lobby.png" alt=""><figcaption>Der Spielraum: QR-Code, Mitspieler und die fünf Spiele.</figcaption></figure>
@@ -505,12 +517,14 @@
         passende Regel findet, liest sie vor – wer den Schalter hat, drückt ihn. Acht Reparaturen retten das Schiff, drei
         Fehler lassen es notlanden.</td></tr>
     <tr><td>🎤 Ton-Treffer</td><td>Der Fernseher spielt eine kurze Tonfolge (do, re, mi …), der Spieler am Zug singt sie ins
-        USB-Mikrofon am Fernseher. Jeder getroffene Ton zählt, die anderen geben am Handy einen Daumen hoch. Die Folgen
-        werden von Runde zu Runde länger.</td></tr>
-    <tr><td>📣 Lautstärke-Rakete</td><td>Nach einem Countdown so laut und so lange wie möglich ins Mikro rufen – die Rakete steigt.
-        Wer schafft den Rekord?</td></tr>
-    <tr><td>👏 Klatsch-Rhythmus</td><td>Der Fernseher klopft einen Rhythmus vor, der Spieler klatscht ihn nach. Jeder Klatscher im
-        Takt zählt.</td></tr>
+        USB-Mikrofon am Fernseher. Unter den Notenblasen läuft die Stimme als Linie mit, das grüne Band ist der richtige Ton.
+        Jeder getroffene Ton zählt, die anderen geben am Handy einen Daumen hoch. Die Folgen werden von Runde zu Runde
+        länger.</td></tr>
+    <tr><td>📣 Lautstärke-Rakete</td><td>Nach einem großen Countdown so laut und so lange wie möglich ins Mikro rufen – die Rakete
+        steigt mit Flamme an Wolken, Flugzeug und Sternen vorbei bis zum Mond, daneben zeigt ein Balken die Lautstärke. Wer
+        schafft den Rekord?</td></tr>
+    <tr><td>👏 Klatsch-Rhythmus</td><td>Der Fernseher klopft einen Rhythmus vor, eine Linie läuft über die Klatsch-Hände. Dann
+        klatscht der Spieler nach; jeder eigene Klatscher erscheint als Punkt darunter, grün heißt im Takt.</td></tr>
   </table>
   <figure><img src="../bilder/handyspiele-handy.png" alt=""><figcaption>Am Handy: Buzzer, Quiz-Antworten, Schalter und Handbuch der Raumschiff-Rettung.</figcaption></figure>
   <div class="zwei">
@@ -527,25 +541,17 @@
 <section class="kapitel">
   <div class="kapitel-kopf"><div class="kapitel-nr">Kapitel 11</div><h1>Wetter, Schule, Geschichten und Designs<span class="marke">@@k22@@</span></h1></div>
   <p class="einleitung">Seit Version 5.0 holt der Fernseher Wetter, Schule und Geschichten auf eigene Seiten, und die Startseite
-  gibt es in vielen Farben und drei Aufteilungen. Alles startet ausgeschaltet; die Eltern schalten es auf der Eltern-Seite
-  unter <b>Menü → Aussehen, Wetter &amp; Schule</b> ein.</p>
-  <h2>Farben und Ansichten</h2>
-  <p>In <b>🎨 Gestalten</b> stehen oben zwei Zeilen. Bei <b>Farben</b> gibt es dunkle Designs (Weltall, Ozean, Wald,
-  Sonnenuntergang, Bonbon, Nacht) und helle Designs (Sonnentag, Zuckerwatte, Blumenwiese, Regenbogen). Bei <b>Ansicht</b>
-  wählt das Kind die Aufteilung der Startseite:</p>
-  <table>
-    <tr><th>Ansicht</th><th>So sieht sie aus</th></tr>
-    <tr><td>🎮 Konsole</td><td>Bereiche oben, darunter je Bereich eine Reihe Kacheln (wie bisher).</td></tr>
-    <tr><td>📋 Seitenleiste</td><td>Die Bereiche stehen links untereinander, rechts liegen die Kacheln des Bereichs als großes Raster.</td></tr>
-    <tr><td>🎠 Karussell</td><td>Nur der gewählte Bereich ist zu sehen; die gewählte Kachel steht groß in der Mitte.</td></tr>
-  </table>
-  <p>Bedient wird jede Ansicht gleich: <span class="taste">↑</span> <span class="taste">↓</span> wechselt den Bereich,
-  <span class="taste">←</span> <span class="taste">→</span> die Kachel. Die Eltern legen unter <b>Menü → Designs</b> fest, welche
-  Farben und Ansichten es gibt. Mit der <b>Abend-Automatik</b> wird die Startseite ab einer Uhrzeit von selbst dunkel und am
-  Morgen wieder so, wie das Kind sie gewählt hat. Spiele, Player und der Elternbereich bleiben immer dunkel.</p>
-  <figure><img src="../bilder/buch/startseite-hell.png" alt=""><figcaption>Helle Farben („Sonnentag“) mit dem Wetter oben rechts.</figcaption></figure>
-  <figure class="klein"><img src="../bilder/buch/ansicht-seitenleiste.png" alt=""><figcaption>Ansicht „Seitenleiste“ mit den Farben „Blumenwiese“.</figcaption></figure>
-  <figure class="klein"><img src="../bilder/buch/ansicht-karussell.png" alt=""><figcaption>Ansicht „Karussell“ mit den Farben „Zuckerwatte“.</figcaption></figure>
+  gibt es in zehn klaren Farben. Alles startet ausgeschaltet; die Eltern schalten es auf der Eltern-Seite
+  unter <b>Inhalte</b> ein.</p>
+  <h2>Farben</h2>
+  <p>In <b>🎨 Gestalten</b> wählt das Kind oben die Farbe, rechts zeigt eine kleine Vorschau, wie die Startseite aussieht.
+  Es gibt fünf Paare aus einer dunklen und einer hellen Farbe: Blau und Hellblau, Grün und Mint, Lila und Rosa, Rot und
+  Sonnengelb, Schwarz und Weiß. Jede Farbe färbt Hintergrund, Rahmen und Kacheln. Darunter sucht das Kind bis zu sechs
+  Lieblinge aus. Die Eltern legen unter <b>Inhalte → Farben</b> fest, welche Farben es gibt. Mit der
+  <b>Abend-Automatik</b> wird eine helle Farbe ab einer Uhrzeit zu ihrer dunklen Schwester (Hellblau → Blau) und am Morgen
+  wieder hell; eine dunkle Wahl bleibt, wie sie ist. „Gestalten“ sagt das dazu. Spiele, Player und der Elternbereich
+  bleiben immer dunkel.</p>
+  <figure><img src="../bilder/buch/startseite-hell.png" alt=""><figcaption>Die Farbe „Hellblau“ mit dem Wetter oben rechts.</figcaption></figure>
   <h2>🌤️ Wetter</h2>
   <p>Oben rechts steht in einer Zeile das Wetter: Symbol, Temperatur und ein Satz wie „Regen ab 16:15“ oder „Es regnet –
   trocken ab 18:00“. Die Kachel <b>Wetter</b> zeigt dazu die nächsten zwölf Stunden, fünf Tage, unter <b>„Wann können wir
@@ -553,7 +559,7 @@
   draußen aus den Kinderwelten vor.</p>
   <p>Die Vorhersage kommt von Open-Meteo, ohne Konto und ohne Schlüssel. Gerechnet wird wie im Familien Dashboard: Ab 0,1 mm
   ist es nass (wo möglich in Viertelstunden), ein trockenes Fenster dauert mindestens anderthalb Stunden bei Tageslicht und
-  hat unter 55 % Regenwahrscheinlichkeit. Der Fernseher fragt höchstens alle 30 Minuten nach. Einrichten: <b>Menü → Wetter</b>,
+  hat unter 55 % Regenwahrscheinlichkeit. Der Fernseher fragt höchstens alle 30 Minuten nach. Einrichten: <b>Inhalte → Wetter</b>,
   Ort oder Postleitzahl suchen, den richtigen Treffer antippen, „Wetter einschalten“.</p>
   <figure><img src="../bilder/buch/wetter.png" alt=""><figcaption>Die Wetter-Seite (Beispieldaten).</figcaption></figure>
   <h2>🏫 Schule</h2>
@@ -566,21 +572,21 @@
   als Nachricht am Fernseher und auf Wunsch per Telegram an die Eltern. Am Abend vor einem Schultag (Vorgabe 18 Uhr) kommt
   der <b>Morgen-Check</b>: erste Stunde und die Hausaufgaben bis morgen. In den eingetragenen Ferien bleibt er still.
   Voraussetzung ist die eingerichtete Kachel „Klassenkiste“, in der das Kind am Fernseher einmal angemeldet ist.
-  Einschalten: <b>Menü → Schule (Klassenkiste)</b>.</p>
+  Einschalten: <b>Inhalte → Schule (Klassenkiste)</b>.</p>
   <figure><img src="../bilder/buch/schule.png" alt=""><figcaption>Die Schul-Seite: heutige Stunden mit Änderung und Ausfall.</figcaption></figure>
   <h2>📖 Geschichten &amp; Rätsel</h2>
   <p>Die Kachel <b>Geschichten &amp; Rätsel</b> holt Inhalte aus den Kinderwelten der Familienfabrik: Geschichten und frei
   lesbare Bücher in großer Schrift zum Selberlesen (<span class="taste">↓</span> blättert, im Buch springt
   <span class="taste">←</span> <span class="taste">→</span> ein Kapitel und das letzte Kapitel merkt sich der Fernseher),
   die Kinder-News der Familienfabrik, Spiele für draußen und das <b>Rätsel des Tages</b> (OK zeigt die Lösung). Welche Reiter
-  es gibt, legen die Eltern unter <b>Menü → Kinderwelten &amp; Kinder-News</b> fest. Die Kachel „Kinderwelten“ mit der ganzen
+  es gibt, legen die Eltern unter <b>Inhalte → Kinderwelten &amp; Kinder-News</b> fest. Die Kachel „Kinderwelten“ mit der ganzen
   App bleibt daneben bestehen.</p>
   <figure class="klein"><img src="../bilder/buch/geschichten.png" alt=""><figcaption>Geschichten zur Auswahl (Beispiele).</figcaption></figure>
   <figure class="klein"><img src="../bilder/buch/lesen.png" alt=""><figcaption>Lesen in großer Schrift.</figcaption></figure>
   <h2>📰 Kinder-News</h2>
-  <p>Die Kachel <b>Kinder-News</b> gibt es erst, wenn die Eltern mindestens eine Quelle einschalten: logo! (ZDF), Duda.news,
-  Kruschel oder Kleine Kinderzeitung. Ab Werk ist jede aus. Gezeigt werden Überschrift, ein kurzer Text und das Datum, ohne
-  Links und ohne Bilder.</p>
+  <p>Die Kachel <b>Kinder-News</b> gibt es erst, wenn die Eltern unter <b>Inhalte → Kinderwelten &amp; Kinder-News</b> mindestens
+  eine RSS-Adresse eintragen (eine pro Zeile, höchstens 10). FernsehFranzi bringt selbst keine Quellen mit: Was gelesen wird,
+  sucht ihr aus. Gezeigt werden Überschrift, ein kurzer Text und das Datum, ohne Links und ohne Bilder.</p>
 </section>
 
 <!-- ======================================================================= TEIL II -->
@@ -614,20 +620,20 @@
   <h2>3. Apps einrichten</h2>
   <p>Auf der Eltern-Seite unter <b>Apps</b> bekommen Plex, Bücher, Gute Nacht und die Video-Ordner ihre Adressen im
   Heimnetz. Für Hörbücher, Video-Ordner und Wecktöne gibt man im FileBrowser einen Ordner frei („Teilen“, unbefristet,
-  ohne Passwort) und fügt den Link ein. Unter <b>Menü → YouTube-Videos</b> werden Videos und Playlisten gespeichert.
+  ohne Passwort) und fügt den Link ein. Unter <b>Inhalte → YouTube-Videos</b> werden Videos und Playlisten gespeichert.
   Kapitel 16 beschreibt jede Aufgabe Schritt für Schritt.</p>
 </section>
 
 <section class="kapitel">
   <div class="kapitel-kopf"><div class="kapitel-nr">Kapitel 13</div><h1>Zeit und Regeln<span class="marke">@@k12@@</span></h1></div>
   <p class="einleitung">Bildschirmzeit und Gaming-Zeit für den Tag, Grenzen je App und Sperrzeiten – gezählt wird auf dem Gerät, nicht im Browser.</p>
-  <figure class="mittel"><img src="../bilder/eltern-seite.png" alt=""><figcaption>Die Regeln stehen auf der Eltern-Seite: Heute, Menü und Statistik.</figcaption></figure>
+  <figure class="mittel"><img src="../bilder/eltern-seite.png" alt=""><figcaption>Die Eltern-Seite: Heute und die Reiter Zeit, Inhalte, Familie, Gerät.</figcaption></figure>
   <h2>Bildschirmzeit und Gaming-Zeit</h2>
   <p>Die <b>Bildschirmzeit</b> ist die Zeit des Tages für alles zusammen, zum Beispiel 90 Minuten an Schultagen und 150
   Minuten am Wochenende und in den Ferien. Die <b>Gaming-Zeit</b> ist ein Teil davon, zum Beispiel höchstens 45 Minuten
   Spiele. Ist sie aufgebraucht, gehen Spiele nicht mehr – Filme, Lernen und Malen aber schon, solange Bildschirmzeit übrig
   ist. +15 / +30 Minuten der Eltern und der Lernbonus gelten für beide.</p>
-  <p>Jede App und jedes eingebaute Spiel bekommt unter <b>Menü → Apps &amp; Kacheln</b> eine von vier Zeitarten:</p>
+  <p>Jede App und jedes eingebaute Spiel bekommt unter <b>Inhalte → Apps &amp; Kacheln</b> eine von vier Zeitarten:</p>
   <table>
     <tr><th style="width:26%">Zeitart</th><th>Bedeutung</th></tr>
     <tr><td>Bildschirmzeit</td><td>zieht von der Bildschirmzeit ab (z. B. YouTube, Videos)</td></tr>
@@ -651,12 +657,12 @@
         ein kleiner Alarm, nach 30 Minuten ein Countdown, dann geht der Fernseher aus.</li>
   </ul>
   <h2>Bewegungspause und Lernbonus</h2>
-  <p>Unter <b>Menü → Erinnerungen &amp; Pausen</b> lassen sich die Bewegungspause (nach wie vielen Minuten am Stück, wie
+  <p>Unter <b>Zeit → Erinnerungen &amp; Pausen</b> lassen sich die Bewegungspause (nach wie vielen Minuten am Stück, wie
   lange, bei welchen Angeboten) und der Lernbonus (wie viel Lernzeit wie viel Spielzeit bringt, Tageshöchstwert)
   einstellen. Für jedes Angebot gibt es einen eigenen Schalter: So unterbricht die Pause etwa Spiele, aber keinen Film.
   Nur aktive Lernminuten zählen; der Lern-Check am Fernseher bestätigt sie.</p>
   <h2>Ferien und Feiertage</h2>
-  <p>Unter <b>Menü → Spielzeit &amp; Sperrzeiten → Ferien und freie Tage</b> das Bundesland wählen und „📅 Ferien
+  <p>Unter <b>Zeit → Spielzeit &amp; Sperrzeiten → Ferien und freie Tage</b> das Bundesland wählen und „📅 Ferien
   eintragen“ tippen: Die amtlichen Ferien (Tabellen der Kultusministerkonferenz) und auf Wunsch die gesetzlichen
   Feiertage stehen dann für die kommenden Schuljahre drin. Mit „jedes Jahr automatisch“ kommen neue Schuljahre von selbst
   dazu, sobald sie mit einem Update kommen. Bewegliche Ferientage der Schule trägt man mit „+ eigene freie Tage“ ein; sie
@@ -665,6 +671,16 @@
   <h2>Erinnerungen</h2>
   <p>Erinnerungen („Zähneputzen!“) bekommen Uhrzeit, Text, Wochentage und eine von drei Einstellungen: <b>immer</b>,
   <b>nicht in den Ferien</b> (z. B. „Sportsachen einpacken!“ oder Trainingstermine) oder <b>nur in den Ferien</b>.</p>
+  <h2>Klänge</h2>
+  <p>Jede Erinnerung, jeder Telegram-Kontakt, die Nachrichten von Mama oder Papa und die Meldungen der Schule
+  (Klassenkiste, Morgen-Check) können einen eigenen Klang bekommen. So hört das Kind schon am Ton, woher eine Nachricht kommt.
+  Im Archiv stehen 15 Klänge, die der Fernseher selbst erzeugt: Gong, Glöckchen, Xylophon, Harfe, Spieluhr, Fanfare,
+  Vogelzwitschern, Wassertropfen, Fahrradklingel, Sternschnuppe, Marimba, Level geschafft, Trommelwirbel, Ufo und Sanft,
+  dazu „Ohne Ton“. Neben jeder Auswahl spielt <b>▶</b> den Klang am Handy und <b>📺</b> am Fernseher. Ohne Wahl bleibt es beim Gong.</p>
+  <p><b>Eigene Klänge:</b> Unter <b>Zeit → Erinnerungen &amp; Pausen → 🎵 Eigene Klänge</b> trägt man den Freigabelink eines
+  FileBrowser-Ordners mit kurzen Tönen ein (mp3, ogg, wav …; es darf auch der Ordner der Wecktöne sein). Seine Dateien stehen
+  dann in jeder Klang-Auswahl unter „🎵 Eigene Klänge“. Am Fernseher spielt ein eigener Klang höchstens 10 Sekunden, jede
+  Datei darf höchstens 4 MB groß sein; ist der Ordner nicht erreichbar, kommt der Gong.</p>
 </section>
 
 <section class="kapitel">
@@ -681,6 +697,7 @@
   <table>
     <tr><th style="width:24%">Reihe</th><th>Knöpfe</th></tr>
     <tr><td>Zeit</td><td>+15 Minuten, +30 Minuten, Heute ohne Limit, Fernseher jetzt sperren</td></tr>
+    <tr><td>Auszeit</td><td>5, 10, 15 oder 30 Minuten Auszeit mit Countdown; während einer Auszeit „Auszeit verlängern“</td></tr>
     <tr><td>Fernseher</td><td>Ton über Fernseher oder Klinke (und Kopfhörer, wenn einer verbunden ist), leiser, lauter, Gute Nacht starten, Fernseher aus</td></tr>
     <tr><td>Einstellungen</td><td>Eltern-Seite ein/aus, PIN ändern, Linux-Desktop (für Wartung)</td></tr>
     <tr><td>Gerät</td><td>Neustart, Ausschalten, Schließen</td></tr>
@@ -692,41 +709,37 @@
 <section class="kapitel">
   <div class="kapitel-kopf"><div class="kapitel-nr">Kapitel 15</div><h1>Die Eltern-Seite am Handy<span class="marke">@@k14@@</span></h1></div>
   <p class="einleitung">Alles einstellen, ohne aufzustehen – im Heimnetz, mit derselben PIN.</p>
-  <p>Unten liegen nur drei Knöpfe: <b>🏠 Heute</b> für das, was man jeden Tag braucht, <b>⚙️ Menü</b> für alle
-  Einstellungen und <b>📊 Statistik</b>. Im Menü sind die Einstellungen nach Themen sortiert; ein Tipp auf eine Kachel
-  öffnet den Bereich, „‹ Menü“ oben (oder die Zurück-Taste des Handys) führt wieder hinaus. Kleine Hinweise auf den
-  Kacheln zeigen den Stand, orange heißt: Hier fehlt etwas. Es gibt keine Speichern-Knöpfe: Jede Änderung wird kurz nach
-  der Eingabe gespeichert, unten erscheint „Gespeichert ✔“. Stimmt ein Wert nicht, wird das Feld rot und unten steht,
-  warum. Nach 15 Minuten ohne Aktion meldet sich die Seite ab. Sie ist nur im Heimnetz erreichbar, nicht von unterwegs.</p>
+  <p>Unten liegen fünf Reiter: <b>🏠 Heute</b> für das, was man jeden Tag braucht, und <b>⏰ Zeit</b>, <b>🧩 Inhalte</b>,
+  <b>💬 Familie</b> und <b>🔧 Gerät</b> für die Einstellungen. Jeder Reiter zeigt seine Bereiche als kurze Zeilen mit dem
+  Stand (orange heißt: Hier fehlt etwas); ein Tipp klappt einen Bereich auf, ein zweiter Tipp oder die Zurück-Taste des
+  Handys klappt ihn wieder zu. Längere Erklärungen stehen eingeklappt hinter „ℹ️“. Es gibt keine Speichern-Knöpfe: Jede
+  Änderung wird kurz nach der Eingabe gespeichert, unten erscheint „Gespeichert ✔“. Stimmt ein Wert nicht, wird das Feld
+  rot und unten steht, warum. Nach 15 Minuten ohne Aktion meldet sich die Seite ab. Sie ist nur im Heimnetz erreichbar.</p>
   <table>
-    <tr><th style="width:24%">Wo</th><th>Inhalt</th></tr>
-    <tr><td>🏠 Heute</td><td>Restzeit, +15/+30 Minuten, ohne Limit, sperren, Nachricht an den Fernseher, Ton und Lautstärke,
-        „📷 Was läuft gerade?“, Gute Nacht starten, Fernseher aus, Lernzeit</td></tr>
-    <tr><td>Menü · Alltag</td><td><b>Spielzeit &amp; Sperrzeiten</b> (Bildschirm- und Gaming-Zeit, Sperrzeiten, Ferien) ·
-        <b>Gute Nacht &amp; Wecker</b> · <b>Erinnerungen &amp; Pausen</b> (Erinnerungen, Bewegungspause, Lernbonus)</td></tr>
-    <tr><td>Menü · Familie und Kontakte</td><td><b>Telegram &amp; Kontakte</b> (Kontakte, Grenzen, Sperrzeiten, Verlauf) ·
+    <tr><th style="width:22%">Reiter</th><th>Inhalt</th></tr>
+    <tr><td>🏠 Heute</td><td>Restzeit, +15/+30 Minuten, ohne Limit, 🔒 Sperren und ⏳ Auszeit nebeneinander, Nachricht an den
+        Fernseher (mit Absender), Ton und Lautstärke, „📷 Was läuft gerade?“, Gute Nacht, Fernseher aus, Lernzeit, unten 📊 Statistik</td></tr>
+    <tr><td>⏰ Zeit</td><td><b>Spielzeit &amp; Sperrzeiten</b> (Bildschirm- und Gaming-Zeit, Sperrzeiten, Ferien) ·
+        <b>Gute Nacht &amp; Wecker</b> · <b>Erinnerungen &amp; Pausen</b> (Erinnerungen mit Klang, eigene Klänge, Bewegungspause, Lernbonus)</td></tr>
+    <tr><td>🧩 Inhalte</td><td><b>Apps &amp; Kacheln</b> · <b>YouTube-Videos</b> (Kategorien auch vorübergehend aus) ·
+        <b>Musik &amp; Bass</b> · <b>Spiele, Gutscheine &amp; Sticker</b> · <b>Kinderwelten &amp; Kinder-News</b> ·
+        <b>Schule (Klassenkiste)</b> · <b>Wetter</b> · <b>Farben</b></td></tr>
+    <tr><td>💬 Familie</td><td><b>Telegram &amp; Kontakte</b> (Kontakte, Grenzen, Klang je Kontakt, Verlauf) ·
         <b>Bilder &amp; Fotoalbum</b> (Foto-Ordner, Speicherlimit, Bilder des Kindes)</td></tr>
-    <tr><td>Menü · Was es am Fernseher gibt</td><td><b>Apps &amp; Kacheln</b> (Zeitart, Grenzen, neue App, Hörbuch- und
-        Video-Ordner) · <b>YouTube-Videos</b> · <b>Musik &amp; Bass</b> (Songs, Plex-Playlisten, Übungs-Tagebuch) · <b>Spiele, Gutscheine &amp; Sticker</b>
-        (Handy-Spiele, Gutscheine, Quizfragen, Witze, Sticker)</td></tr>
-    <tr><td>Menü · Aussehen, Wetter &amp; Schule</td><td><b>Designs</b> (Farben, Ansichten, Abend-Automatik) · <b>Wetter</b>
-        (Ort, Kopfzeile, Draußen-Spiele) · <b>Schule (Klassenkiste)</b> (Meldungen, Morgen-Check) · <b>Kinderwelten &amp;
-        Kinder-News</b> (Teile, Quellen)</td></tr>
-    <tr><td>Menü · Technik und Hilfe</td><td><b>Internetseiten</b> (Seiten, Whitelist) · <b>Gerät &amp; Ton</b> (Lautstärke,
-        Bluetooth, Retro-Bilder, Sicherung, Neustart) · <b>Hilfe &amp; Anleitungen</b></td></tr>
-    <tr><td>📊 Statistik</td><td>Was wann wie lange lief: heute, 7 oder 30 Tage, meistgenutzte Apps, Tageszeit, Zeitstrahl</td></tr>
+    <tr><td>🔧 Gerät</td><td><b>Gerät &amp; Ton</b> (Name, Lautstärke, Bluetooth, Retro-Bilder, Sicherung, Neustart) ·
+        <b>Internetseiten</b> (Seiten, Whitelist) · <b>Hilfe &amp; Anleitungen</b></td></tr>
   </table>
   <div class="zwei">
-    <figure><img src="../bilder/buch/eltern-menue.png" alt=""><figcaption>Das Menü</figcaption></figure>
-    <figure><img src="../bilder/buch/eltern-zeit.png" alt=""><figcaption>Spielzeit &amp; Sperrzeiten</figcaption></figure>
-    <figure><img src="../bilder/buch/eltern-telegram.png" alt=""><figcaption>Telegram &amp; Kontakte</figcaption></figure>
-    <figure><img src="../bilder/buch/eltern-apps.png" alt=""><figcaption>Apps &amp; Kacheln</figcaption></figure>
+    <figure><img src="../bilder/buch/eltern-menue.png" alt=""><figcaption>Heute</figcaption></figure>
+    <figure><img src="../bilder/buch/eltern-zeit.png" alt=""><figcaption>Zeit: Spielzeit &amp; Sperrzeiten</figcaption></figure>
+    <figure><img src="../bilder/buch/eltern-telegram.png" alt=""><figcaption>Familie: Telegram</figcaption></figure>
+    <figure><img src="../bilder/buch/eltern-apps.png" alt=""><figcaption>Inhalte: Apps &amp; Kacheln</figcaption></figure>
   </div>
   <h2>Das Bild vom Fernseher</h2>
   <p>„📷 Was läuft gerade?“ zeigt ein Bild des Fernsehers. Am Fernseher erscheint dann kurz „📷 Mama oder Papa haben
   kurz geschaut“, damit niemand heimlich zuschaut. Von Retro-Spielen gibt es kein Bild.</p>
   <h2>Telegram: Kontakte und Mitlesen</h2>
-  <p>Unter „Menü → Telegram & Kontakte“ hat jeder Kontakt ein Symbol, einen Namen und Schalter: <b>Eltern</b> (darf alles),
+  <p>Unter „Familie → Telegram & Kontakte“ hat jeder Kontakt ein Symbol, einen Namen und Schalter: <b>Eltern</b> (darf alles),
   <b>Kind darf schreiben</b>, <b>eigene Texte erlaubt</b> und <b>Nachrichten nur außerhalb der Sperrzeiten</b> (sie warten
   dann bis danach). Neue Kontakte wie eine Freundin starten streng: Sie können schreiben, das Kind ihnen aber erst nach
   eurer Freigabe. Weitere Schalter: <b>Fotos, Sprachnachrichten und Videos erlaubt</b>, und je Elternteil, welche
@@ -740,16 +753,17 @@
     <tr><td><code>/status</code></td><td>Restzeit, was gerade läuft, ob gesperrt ist</td></tr>
     <tr><td><code>/zeit 15</code> · <code>/zeit 30</code> · <code>/zeit frei</code></td><td>Mehr Zeit bzw. heute ohne Limit</td></tr>
     <tr><td><code>/sperren</code> · <code>/freigeben</code></td><td>Fernseher sperren (mit Text) oder freigeben</td></tr>
+    <tr><td><code>/auszeit 15</code></td><td>Auszeit mit Countdown für 15 Minuten (1 bis 240); nochmal schicken verlängert, <code>/freigeben</code> beendet früher</td></tr>
     <tr><td><code>/gutenacht</code> · <code>/aus</code></td><td>Gute Nacht starten, Fernseher ausschalten</td></tr>
     <tr><td><code>/foto</code></td><td>Bild vom Fernseher aufs Handy (am Fernseher erscheint 📷)</td></tr>
     <tr><td><code>/bericht</code> · <code>/hilfe</code></td><td>Tagesbericht jetzt, alle Befehle</td></tr>
   </table>
   <h2>Fotoalbum und Speicherplatz</h2>
-  <p>Unter „Menü → Bilder & Fotoalbum“: Fotoalbum erlauben, den Foto-Ordner (FileBrowser-Freigabelink) eintragen
+  <p>Unter „Familie → Bilder & Fotoalbum“: Fotoalbum erlauben, den Foto-Ordner (FileBrowser-Freigabelink) eintragen
   und festlegen, wie viel Platz Zeichnungen und Album belegen dürfen. Ist der Speicher voll, kann das Kind nichts Neues
   speichern, bis es alte Bilder löscht.</p>
   <h2>Sicherung</h2>
-  <p>Unter „Menü → Gerät & Ton → Sicherung“ lässt sich alles als ZIP-Datei herunterladen und wieder einspielen: Einstellungen,
+  <p>Unter „Gerät → Gerät & Ton → Sicherung“ lässt sich alles als ZIP-Datei herunterladen und wieder einspielen: Einstellungen,
   Zeitkonto, Statistik, Gutscheine, Nachrichten, Sticker, Hörbuch-Stände und Bilder. PIN und Telegram-Token sind nicht
   enthalten, ebenso nicht der Telegram-Verlauf. Vor dem Einspielen sichert das Gerät den alten Stand selbst.</p>
 </section>
@@ -758,34 +772,36 @@
   <div class="kapitel-kopf"><div class="kapitel-nr">Kapitel 16</div><h1>Häufige Aufgaben von A bis Z<span class="marke">@@k15@@</span></h1></div>
   <table class="lang" style="font-size:8.7pt">
     <tr><th style="width:31%">Ich möchte …</th><th>So geht's</th></tr>
-    <tr><td>Bass-Song hinzufügen</td><td>Menü → Musik & Bass → „+ Song“: Titel, Erklärvideo, Tabs, Backing Track (Felder dürfen leer bleiben).</td></tr>
-    <tr><td>Bilder des Kindes ansehen</td><td>Menü → Bilder & Fotoalbum. Neue Bilder sind markiert.</td></tr>
-    <tr><td>Bilder für neue Retro-Spiele holen</td><td>Menü → Gerät & Ton → „Retro-Spiele: Bilder“ → „Bilder für neue Spiele holen“. Retro darf dabei nicht laufen. Läuft auch jede Nacht um 4 Uhr.</td></tr>
-    <tr><td>Bluetooth-Gerät koppeln</td><td>Menü → Gerät & Ton → Bluetooth → Suchen, Gerät antippen → Koppeln.</td></tr>
-    <tr><td>Ferien eintragen</td><td>Menü → Spielzeit & Sperrzeiten → Ferien und freie Tage: Bundesland wählen → „📅 Ferien eintragen“. Eigene freie Tage mit „+ eigene freie Tage“.</td></tr>
-    <tr><td>Erinnerung nicht in den Ferien</td><td>Menü → Erinnerungen & Pausen → Erinnerung → „nicht in den Ferien“.</td></tr>
-    <tr><td>Gaming-Zeit einstellen</td><td>Menü → Spielzeit & Sperrzeiten → „davon höchstens Gaming“. Welche App dazu zählt: Menü → Apps & Kacheln → App → „Gaming-Zeit“.</td></tr>
-    <tr><td>Kachel ausblenden</td><td>Menü → Apps & Kacheln → Schalter rechts neben der App oder dem eingebauten Spiel.</td></tr>
-    <tr><td>Bewegungspause nur bei Spielen</td><td>Menü → Erinnerungen & Pausen → Bewegungspause → „Bei welchen Angeboten?“.</td></tr>
+    <tr><td>Bass-Song hinzufügen</td><td>Inhalte → Musik & Bass → „+ Song“: Titel, Erklärvideo, Tabs, Backing Track (Felder dürfen leer bleiben).</td></tr>
+    <tr><td>Bilder des Kindes ansehen</td><td>Familie → Bilder & Fotoalbum. Neue Bilder sind markiert.</td></tr>
+    <tr><td>Bilder für neue Retro-Spiele holen</td><td>Gerät → Gerät & Ton → „Retro-Spiele: Bilder“ → „Bilder für neue Spiele holen“. Retro darf dabei nicht laufen. Läuft auch jede Nacht um 4 Uhr.</td></tr>
+    <tr><td>Bluetooth-Gerät koppeln</td><td>Gerät → Gerät & Ton → Bluetooth → Suchen, Gerät antippen → Koppeln.</td></tr>
+    <tr><td>Ferien eintragen</td><td>Zeit → Spielzeit & Sperrzeiten → Ferien und freie Tage: Bundesland wählen → „📅 Ferien eintragen“. Eigene freie Tage mit „+ eigene freie Tage“.</td></tr>
+    <tr><td>Erinnerung nicht in den Ferien</td><td>Zeit → Erinnerungen & Pausen → Erinnerung → „nicht in den Ferien“.</td></tr>
+    <tr><td>Gaming-Zeit einstellen</td><td>Zeit → Spielzeit & Sperrzeiten → „davon höchstens Gaming“. Welche App dazu zählt: Inhalte → Apps & Kacheln → App → „Gaming-Zeit“.</td></tr>
+    <tr><td>Kachel ausblenden</td><td>Inhalte → Apps & Kacheln → Schalter rechts neben der App oder dem eingebauten Spiel.</td></tr>
+    <tr><td>Bewegungspause nur bei Spielen</td><td>Zeit → Erinnerungen & Pausen → Bewegungspause → „Bei welchen Angeboten?“.</td></tr>
     <tr><td>Fernseher sofort sperren</td><td>Heute → „Jetzt sperren“ (Fernseher: Elternbereich → „Fernseher jetzt sperren“).</td></tr>
-    <tr><td>Gute Nacht automatisch zur Nachtruhe</td><td>Menü → Gute Nacht & Wecker → „Zur Nachtruhe automatisch öffnen“.</td></tr>
-    <tr><td>Gutscheine drucken</td><td>Menü → Spiele, Gutscheine & Sticker → Gutscheine: Art, Minuten, Anzahl → „Gutscheine erstellen“ → „🖨️ Offene drucken“.</td></tr>
-    <tr><td>Fotoalbum einrichten</td><td>Menü → Bilder & Fotoalbum: erlauben, Foto-Ordner (FileBrowser-Freigabelink) eintragen.</td></tr>
-    <tr><td>Freundin bei Telegram freigeben</td><td>Sie schreibt dem Bot „Hallo“, dann Menü → Telegram & Kontakte → „Erlauben“. Danach je Kontakt: Kind darf schreiben, eigene Texte, nur außerhalb der Sperrzeiten.</td></tr>
-    <tr><td>Handy-Spiele erlauben</td><td>Menü → Spiele, Gutscheine & Sticker → Handy-Spiele → „Handy-Spiele erlauben“. Am Fernseher erscheint die Kachel „Mit Handys spielen“.</td></tr>
-    <tr><td>Hörbücher einrichten</td><td>FileBrowser: Ordner → „Teilen“, unbefristet, ohne Passwort → Link kopieren. Menü → Apps & Kacheln → Gute Nacht → Link einfügen.</td></tr>
-    <tr><td>Internetseite lädt nicht richtig</td><td>Menü → Internetseiten: blockierte Einträge oben → „Erlauben“. Seite neu öffnen.</td></tr>
-    <tr><td>Lernseite als neue App</td><td>Menü → Apps & Kacheln → „➕ Neue App anlegen“: Art, Name, Adresse, Symbol, „Lernangebot“.</td></tr>
+    <tr><td>Auszeit geben</td><td>Heute → „⏳ Auszeit“ → Minuten antippen (oder eintragen, „Auszeit starten“). Am Fernseher läuft nur noch ein großer Countdown, danach ist er von selbst wieder frei. „Auszeit beenden“ hört früher auf, „+5 min“ verlängert. Auch per Telegram: <code>/auszeit 15</code>.</td></tr>
+    <tr><td>Gute Nacht automatisch zur Nachtruhe</td><td>Zeit → Gute Nacht & Wecker → „Zur Nachtruhe automatisch öffnen“.</td></tr>
+    <tr><td>Gutscheine drucken</td><td>Inhalte → Spiele, Gutscheine & Sticker → Gutscheine: Art, Minuten, Anzahl → „Gutscheine erstellen“ → „🖨️ Offene drucken“.</td></tr>
+    <tr><td>Fotoalbum einrichten</td><td>Familie → Bilder & Fotoalbum: erlauben, Foto-Ordner (FileBrowser-Freigabelink) eintragen.</td></tr>
+    <tr><td>Freundin bei Telegram freigeben</td><td>Sie schreibt dem Bot „Hallo“, dann Familie → Telegram & Kontakte → „Erlauben“. Danach je Kontakt: Kind darf schreiben, eigene Texte, nur außerhalb der Sperrzeiten.</td></tr>
+    <tr><td>Handy-Spiele erlauben</td><td>Inhalte → Spiele, Gutscheine & Sticker → Handy-Spiele → „Handy-Spiele erlauben“. Am Fernseher erscheint die Kachel „Mit Handys spielen“.</td></tr>
+    <tr><td>Hörbücher einrichten</td><td>FileBrowser: Ordner → „Teilen“, unbefristet, ohne Passwort → Link kopieren. Inhalte → Apps & Kacheln → Gute Nacht → Link einfügen.</td></tr>
+    <tr><td>Internetseite lädt nicht richtig</td><td>Gerät → Internetseiten: blockierte Einträge oben → „Erlauben“. Seite neu öffnen.</td></tr>
+    <tr><td>Lernseite als neue App</td><td>Inhalte → Apps & Kacheln → „➕ Neue App anlegen“: Art, Name, Adresse, Symbol, „Lernangebot“.</td></tr>
     <tr><td>Mehr Spielzeit geben</td><td>Heute → +15 / +30 / ohne Limit (auch im Elternbereich).</td></tr>
     <tr><td>Nachricht schicken</td><td>Heute → Nachricht → Text oder Schnellknopf („Essen ist fertig!“).</td></tr>
-    <tr><td>Plex tagsüber frei, nachts aus</td><td>Menü → Apps & Kacheln → Plex → „Kein Limit“, Erlaubt in Sperrzeiten: nur „Schule“.</td></tr>
-    <tr><td>Sperrzeiten einstellen</td><td>Menü → Spielzeit & Sperrzeiten: Name, von–bis, Tage, „nicht in den Ferien“, „Nachtruhe“.</td></tr>
-    <tr><td>Speicherplatz ändern</td><td>Menü → Bilder & Fotoalbum → „Speicherplatz für das Kind (MB)“.</td></tr>
-    <tr><td>Telegram einrichten</td><td>Bot bei @BotFather anlegen, Token unter Menü → Telegram & Kontakte eintragen, einschalten. Jeder schreibt dem Bot einmal „Hallo“ und wird mit „Erlauben“ freigegeben.</td></tr>
+    <tr><td>Plex tagsüber frei, nachts aus</td><td>Inhalte → Apps & Kacheln → Plex → „Kein Limit“, Erlaubt in Sperrzeiten: nur „Schule“.</td></tr>
+    <tr><td>Sperrzeiten einstellen</td><td>Zeit → Spielzeit & Sperrzeiten: Name, von–bis, Tage, „nicht in den Ferien“, „Nachtruhe“.</td></tr>
+    <tr><td>Speicherplatz ändern</td><td>Familie → Bilder & Fotoalbum → „Speicherplatz für das Kind (MB)“.</td></tr>
+    <tr><td>Telegram einrichten</td><td>Bot bei @BotFather anlegen, Token unter Familie → Telegram & Kontakte eintragen, einschalten. Jeder schreibt dem Bot einmal „Hallo“ und wird mit „Erlauben“ freigegeben.</td></tr>
     <tr><td>Ton über Fernseher oder Anlage</td><td><span class="taste rot">ROT</span> = Fernseher, <span class="taste gruen">GRÜN</span> = Klinke. Die Wahl bleibt gespeichert.</td></tr>
-    <tr><td>Bluetooth-Kopfhörer nutzen</td><td>Einmal koppeln (Menü → Gerät & Ton → Bluetooth). Verbindet er sich, kommt der Ton von selbst dorthin, danach zurück. Abschalten: Menü → Gerät & Ton → „Ton automatisch in den Bluetooth-Kopfhörer“.</td></tr>
-    <tr><td>Wecker erlauben</td><td>Menü → Gute Nacht & Wecker: frühestens, höchste Lautstärke, Weckton-Ordner.</td></tr>
-    <tr><td>YouTube-Videos speichern</td><td>Menü → YouTube-Videos: Kategorie wählen, Link einfügen → Hinzufügen.</td></tr>
+    <tr><td>Bluetooth-Kopfhörer nutzen</td><td>Einmal koppeln (Gerät → Gerät & Ton → Bluetooth). Verbindet er sich, kommt der Ton von selbst dorthin, danach zurück. Abschalten: Gerät → Gerät & Ton → „Ton automatisch in den Bluetooth-Kopfhörer“.</td></tr>
+    <tr><td>Wecker erlauben</td><td>Zeit → Gute Nacht & Wecker: frühestens, höchste Lautstärke, Weckton-Ordner.</td></tr>
+    <tr><td>YouTube-Videos speichern</td><td>Inhalte → YouTube-Videos: Kategorie wählen, Link einfügen → Hinzufügen.</td></tr>
+    <tr><td>YouTube-Reihenfolge ändern</td><td>Inhalte → YouTube-Videos: Kategorie aufklappen, mit ↑ ↓ die Kategorie oder einzelne Videos verschieben.</td></tr>
   </table>
 </section>
 
@@ -796,7 +812,7 @@
     <tr><td>Fernbedienung reagiert nicht</td><td>Am Fernseher den richtigen HDMI-Eingang wählen. Sonst Elternbereich → Neustart.</td></tr>
     <tr><td>Man kommt nicht zurück</td><td><span class="taste">EXIT</span> (im Retro-Spiel lange) oder die Xbox-Taste.</td></tr>
     <tr><td>Kein Ton oder zu leise</td><td><span class="taste rot">ROT</span> oder <span class="taste gruen">GRÜN</span> passend zum Lautsprecher, dann <span class="taste gelb">GELB</span> + <span class="taste">↑</span>. Sonst die Höchstlautstärke auf der Eltern-Seite prüfen.</td></tr>
-    <tr><td>Video oder Seite bleibt schwarz</td><td>Menü → Internetseiten: Blockiertes erlauben.</td></tr>
+    <tr><td>Video oder Seite bleibt schwarz</td><td>Gerät → Internetseiten: Blockiertes erlauben.</td></tr>
     <tr><td>YouTube-Video ruckelt oder puffert</td><td>Der Pi 3 bekommt höchstens 720p. Puffert es oft, hilft ein LAN-Kabel statt WLAN.</td></tr>
     <tr><td>Video in der Musik-Akademie „nicht verfügbar“</td><td>Der Kanal erlaubt das Abspielen außerhalb von YouTube nicht. Einen anderen Link eintragen.</td></tr>
     <tr><td>Schwarzer Bildschirm nach dem Einschalten</td><td>Ein bis zwei Minuten warten, dann Elternbereich → Neustart. Bleibt es schwarz: Kapitel 18.</td></tr>
@@ -843,6 +859,10 @@
     <tr><td><code>make bildschirmfotos</code></td><td>Die Bilder für Handbuch und README neu erzeugen</td></tr>
   </table>
   <h2>Ausliefern</h2>
+  <p>Seit 5.3 kündigt der Deploy sich am Fernseher an: Nach der zweiten Bestätigung läuft oben rechts 10 Sekunden ein
+  Countdown („schnell speichern“), danach steht ein Warnbildschirm, und keine Taste wirkt. Ist <code>make v3-pruefen</code>
+  grün, ist der Fernseher sofort wieder frei. Bei Rot bleibt der Warnbildschirm (von Hand: <code>make v3-wartung-aus</code>),
+  spätestens nach 45 Minuten endet er von selbst.</p>
   <ol>
     <li><code>make v3-deploy</code>, beide Rückfragen mit „ja“ beantworten, beim Systemschritt das Admin-Passwort eingeben.
         Während des Deploys kein Retro-Spiel laufen lassen.</li>

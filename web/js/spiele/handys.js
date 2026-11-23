@@ -5,9 +5,10 @@
  * STOP: im Spiel zurück zur Auswahl, in der Auswahl den Raum schließen.
  * Der Spielstand liegt auf dem Server (raum.py); diese Seite fragt ihn alle 0,4 s ab und zeichnet.
  * Ton-Treffer: Der Fernseher spielt die Tonfolge und hört über das USB-Mikro zu (Tonerkennung aus der Bass-Ecke). */
-import { el } from "../gemeinsam.js";
+import { el, bild } from "../gemeinsam.js";
 import { kopf, ton, konfetti } from "./kern.js";
 import { ctx, tonhoehe } from "./bass.js";
+import { stimmSpur, centZu, pegel } from "./stimme.js";
 
 const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
 const SPIEL_SYMBOL = { buzzer: "🔔", quiz: "🏁", malen: "🎨", raumschiff: "🚀", ton: "🎤", rakete: "📣", klatsch: "👏" };
@@ -21,7 +22,7 @@ export default {
     box.classList.add("handys");
     const { inhalt, punkte, hilfe } = kopf(box, "📱 Mit Handys spielen", "");
     let z = null, wahl = 0, unter = null, tvWahl = 0, strichAb = 0, malRunde = null, abfrage = null, offen = true;
-    let tonSchluessel = "", mikro = null, singt = false, letzteZeichnung = "", holt = false, nochmal = false;
+    let tonSchluessel = "", mikro = null, singt = false, tonSpur = null, feierSchluessel = "", letzteZeichnung = "", holt = false, nochmal = false;
     const ansicht = el("div", { class: "hs-ansicht" });
     inhalt.append(ansicht);
 
@@ -190,9 +191,10 @@ export default {
       const schluessel = `${t.runde}|${t.saenger}|${t.folge.map((n) => n.midi).join(",")}`;
       if (!ansicht.querySelector(".hs-ton") || ansicht.dataset.ton !== schluessel) {
         ansicht.dataset.ton = schluessel;
+        tonSpur = stimmSpur({ breite: 640, hoehe: 200, punkte: 50 });
         setze(ansicht, spielerLeiste(), el("div", { class: "hs-ton" },
           el("h3", { class: "hs-saenger" }), el("div", { class: "hs-leiter" }, ...t.folge.map((n, i) => el("div", { class: "hs-note", "data-i": i, style: `--hoehe:${n.stufe}` },
-            el("span", { text: n.silbe })))), el("div", { class: "hs-status hs-ton-status" }), el("div", { class: "hs-pegel" }, el("span"))), el("div", { class: "hs-tv-box" }));
+            el("span", { text: n.silbe })))), el("div", { class: "hs-status hs-ton-status" }), el("div", { class: "hs-pegel" }, tonSpur.knoten)), el("div", { class: "hs-tv-box" }));
       }
       ansicht.querySelector(".hs-saenger").textContent = `🎤 ${t.saenger} · Runde ${t.runde} von ${t.runden}`;
       ansicht.querySelector(".hs-spielerleiste")?.replaceWith(spielerLeiste());   /* Punkte aktuell halten */
@@ -202,14 +204,29 @@ export default {
         const n = (t.treffer || []).filter(Boolean).length;
         status.textContent = `${n} von ${t.folge.length} Tönen getroffen${t.daumen ? ` · ${t.daumen}× 👍` : ""}`;
         (t.treffer || []).forEach((ok, i) => ansicht.querySelector(`.hs-note[data-i="${i}"]`)?.classList.add(ok ? "treffer" : "daneben"));
+        if (n === t.folge.length && feierSchluessel !== schluessel) { feierSchluessel = schluessel; konfetti(box); ton("sieg"); }
       }
       ansicht.querySelector(".hs-tv-box").replaceChildren(tvSpielerPanel() || "");
       if (t.phase === "vorspielen" && tonSchluessel !== schluessel + "v") { tonSchluessel = schluessel + "v"; vorspielen(t); }
       if (t.phase === "singen" && tonSchluessel !== schluessel + "s" && !singt) { tonSchluessel = schluessel + "s"; singen(t, status); }
     }
 
-    /* ------------------------------------------------ 4.4: Lautstärke-Rakete */
+    /* ------------------------------------------------ Lautstärke-Rakete (6.0: Himmel bis zum Mond, Flamme und Pegel) */
     let raketeSchluessel = "";
+    const MARKEN = [[150, "☁️", "Wolken"], [400, "✈️", "Flugzeug"], [700, "⭐", "Weltall"], [1000, "🌙", "Mond"]];
+    function raketeHoehe(hoehe, laut = 0) {
+      const himmel = ansicht.querySelector(".hs-himmel");
+      if (!himmel) return;
+      const weg = himmel.clientHeight * 0.8;
+      himmel.querySelector(".rk-rakete").style.transform = `translate(-50%, ${-Math.round(hoehe / 1000 * weg)}px)`;
+      himmel.querySelector(".rk-all").style.opacity = String(Math.min(1, hoehe / 800));
+      himmel.querySelector(".rk-flamme").style.transform = `translateX(-50%) scaleY(${(0.25 + laut * 1.5).toFixed(2)})`;
+      himmel.querySelector(".rk-flamme").style.opacity = String(laut > 0.02 ? 1 : 0.3);
+      const pegelSpan = ansicht.querySelector(".rk-pegel span");
+      if (pegelSpan) pegelSpan.style.transform = `scaleY(${laut.toFixed(2)})`;
+      const zahl = ansicht.querySelector(".rk-zahl");
+      if (zahl) zahl.textContent = `${Math.round(hoehe)} m`;
+    }
     function zeichneRakete() {
       const t = z.tv;
       hilfe.textContent = "So laut und so lange wie möglich ins Mikro am Fernseher! · STOP: zur Auswahl";
@@ -217,18 +234,33 @@ export default {
       if (!ansicht.querySelector(".hs-rakete") || ansicht.dataset.rakete !== schluessel) {
         ansicht.dataset.rakete = schluessel;
         setze(ansicht, spielerLeiste(), el("div", { class: "hs-rakete" },
-          el("h3", { class: "hs-saenger" }), el("div", { class: "hs-himmel" }, el("div", { class: "hs-rekord" }), el("span", { class: "hs-rakete-bild", text: "🚀" })),
-          el("div", { class: "hs-status hs-rakete-status" })), el("div", { class: "hs-tv-box" }));
+          el("h3", { class: "hs-saenger" }),
+          el("div", { class: "rk-buehne" },
+            el("div", { class: "hs-himmel" }, el("div", { class: "rk-all" }),
+              ...MARKEN.map(([m, sym, text]) => el("div", { class: "rk-marke", style: `bottom:${4 + m / 1000 * 80}%` },
+                bild(sym, "icon rk-marke-bild"), el("span", { text: `${text} · ${m} m` }))),
+              el("div", { class: "hs-rekord" }), el("div", { class: "rk-boden" }),
+              el("div", { class: "rk-rakete" }, el("div", { class: "rk-flamme" }), bild("🚀", "icon rk-bild"))),
+            el("div", { class: "rk-seite" }, el("div", { class: "rk-zahl", text: "0 m" }),
+              el("div", { class: "rk-pegel" }, el("span")), el("div", { class: "rk-pegel-text", text: "📣 Lautstärke" }))),
+          el("div", { class: "hs-status hs-rakete-status" }), el("div", { class: "rk-countdown" })), el("div", { class: "hs-tv-box" }));
+        raketeHoehe(0);
       }
       ansicht.querySelector(".hs-saenger").textContent = `📣 ${t.dran} · Runde ${t.runde} von ${t.runden}`;
       ansicht.querySelector(".hs-spielerleiste")?.replaceWith(spielerLeiste());   /* Punkte aktuell halten */
-      ansicht.querySelector(".hs-rekord").style.bottom = `${Math.min(92, t.rekord / 1000 * 92)}%`;
-      ansicht.querySelector(".hs-rekord").textContent = t.rekord ? `Rekord ${t.rekord} m` : "";
+      const rekord = ansicht.querySelector(".hs-rekord");
+      rekord.style.bottom = `${4 + Math.min(1000, t.rekord) / 1000 * 80}%`;
+      rekord.textContent = t.rekord ? `🏆 Rekord ${t.rekord} m` : "";
+      rekord.hidden = !t.rekord;
       const status = ansicht.querySelector(".hs-rakete-status");
-      if (t.phase === "countdown") status.textContent = `Gleich geht's los … ${t.rest}`;
+      const countdown = ansicht.querySelector(".rk-countdown");
+      countdown.textContent = t.phase === "countdown" ? String(Math.max(1, t.rest)) : "";
+      countdown.classList.toggle("an", t.phase === "countdown");
+      if (t.phase === "countdown") status.textContent = "Tief Luft holen …";
       if (t.phase === "daumen") {
         status.textContent = `${t.ergebnis.text}${t.ergebnis.rekord ? " 🏆 Neuer Rekord!" : ""}${t.daumen ? ` · ${t.daumen}× 👍` : ""}`;
-        ansicht.querySelector(".hs-rakete-bild").style.bottom = `${t.ergebnis.hoehe / 1000 * 88}%`;
+        raketeHoehe(t.ergebnis.hoehe);
+        if (t.ergebnis.rekord && feierSchluessel !== "r" + schluessel) { feierSchluessel = "r" + schluessel; konfetti(box); ton("sieg"); }
       }
       ansicht.querySelector(".hs-tv-box").replaceChildren(tvSpielerPanel() || "");
       if (t.phase === "messen" && raketeSchluessel !== schluessel) { raketeSchluessel = schluessel; laut(t, status); }
@@ -237,41 +269,63 @@ export default {
     async function laut(t, status) {
       const m = await mikroHolen();
       if (!m) { api.hinweis("Kein Mikrofon gefunden – das Spiel braucht das USB-Mikro am Fernseher.", 6000); return tvAktion({ art: "kein_mikro" }); }
-      const bild = ansicht.querySelector(".hs-rakete-bild");
       let hoehe = 0;
       const ende = Date.now() + t.messen_s * 1000, schritt = 1000 / (t.messen_s * 20);
       status.textContent = "AAAAAH! 📣";
       while (offen && Date.now() < ende) {
         m.analyse.getFloatTimeDomainData(m.puffer);
-        let summe = 0;
-        for (const wert of m.puffer) summe += wert * wert;
-        const pegel = Math.max(0, Math.min(1, (Math.sqrt(summe / m.puffer.length) - 0.02) * 4));
-        hoehe = Math.min(1000, hoehe + pegel * schritt);
-        if (bild) bild.style.bottom = `${hoehe / 1000 * 88}%`;
-        status.textContent = `${Math.round(hoehe)} m`;
+        const laut = pegel(m.puffer);
+        hoehe = Math.min(1000, hoehe + laut * schritt);
+        raketeHoehe(hoehe, laut);
         await new Promise((f) => setTimeout(f, 50));
       }
+      raketeHoehe(hoehe, 0);
       if (offen) tvAktion({ art: "ergebnis", hoehe: Math.round(hoehe) });
     }
 
-    /* ------------------------------------------------ 4.4: Klatsch-Rhythmus */
+    /* ------------------------------------------------ Klatsch-Rhythmus (6.0: Spur mit Taktlinie, eigene Klatscher darunter) */
     let klatschSchluessel = "";
+    const schlagStellen = (t) => {
+      const summe = t.abstaende.reduce((a, b) => a + b, 0) || 1;
+      let bis = 0;
+      return [0, ...t.abstaende].map((a) => { bis += a; return bis / summe; });
+    };
+    const links = (anteil) => `${6 + Math.max(0, Math.min(1, anteil)) * 88}%`;
+    function kopfLaufen(ms) {
+      const bahn = ansicht.querySelector(".kl-bahn"), kopfLinie = ansicht.querySelector(".kl-kopf");
+      if (!bahn || !kopfLinie) return;
+      kopfLinie.style.transition = "none";
+      kopfLinie.style.transform = "translateX(0)";
+      kopfLinie.getBoundingClientRect();                        /* neu ansetzen, dann laufen lassen */
+      kopfLinie.style.transition = `transform ${ms}ms linear`;
+      kopfLinie.style.transform = `translateX(${Math.round(bahn.clientWidth * 0.88)}px)`;
+    }
     function zeichneKlatsch() {
       const t = z.tv;
       hilfe.textContent = "Hör zu und klatsch den Rhythmus nach – nah am Mikro · STOP: zur Auswahl";
       const schluessel = `${t.runde}|${t.dran}|${t.abstaende.join(",")}`;
       if (!ansicht.querySelector(".hs-klatsch") || ansicht.dataset.klatsch !== schluessel) {
         ansicht.dataset.klatsch = schluessel;
-        const punkteReihe = [0, ...t.abstaende];
+        const stellen = schlagStellen(t);
         setze(ansicht, spielerLeiste(), el("div", { class: "hs-klatsch" }, el("h3", { class: "hs-saenger" }),
-          el("div", { class: "hs-takt" }, ...punkteReihe.map((a, i) => el("span", { class: "hs-schlag", "data-i": i, style: `margin-left:${a * 3}vw` }, "👏"))),
+          el("div", { class: "hs-takt" }, el("div", { class: "kl-bahn" },
+            el("div", { class: "kl-linie" }), el("div", { class: "kl-kopf" }),
+            ...stellen.map((s, i) => el("span", { class: "hs-schlag", "data-i": i, style: `left:${links(s)}` }, bild("👏", "icon kl-bild"))),
+            el("div", { class: "kl-ich-reihe" }))),
+          el("div", { class: "kl-ring" }, el("span", { class: "kl-ring-text", text: "👂" })),
           el("div", { class: "hs-status hs-klatsch-status" })), el("div", { class: "hs-tv-box" }));
       }
       ansicht.querySelector(".hs-saenger").textContent = `👏 ${t.dran} · Runde ${t.runde} von ${t.runden}`;
       ansicht.querySelector(".hs-spielerleiste")?.replaceWith(spielerLeiste());   /* Punkte aktuell halten */
       const status = ansicht.querySelector(".hs-klatsch-status");
       if (t.phase === "vorspielen") status.textContent = "👂 Gut zuhören …";
-      if (t.phase === "daumen") status.textContent = `${t.ergebnis.text}${t.daumen ? ` · ${t.daumen}× 👍` : ""}`;
+      if (t.phase === "daumen") {
+        status.textContent = `${t.ergebnis.text}${t.daumen ? ` · ${t.daumen}× 👍` : ""}`;
+        ansicht.querySelector(".kl-ring-text").textContent = "✔";
+        if (t.ergebnis.treffer >= t.abstaende.length + 1 && feierSchluessel !== "k" + schluessel) {
+          feierSchluessel = "k" + schluessel; konfetti(box); ton("sieg");
+        }
+      }
       ansicht.querySelector(".hs-tv-box").replaceChildren(tvSpielerPanel() || "");
       if (t.phase === "vorspielen" && klatschSchluessel !== schluessel + "v") { klatschSchluessel = schluessel + "v"; klopfen(t); }
       if (t.phase === "messen" && klatschSchluessel !== schluessel + "m") { klatschSchluessel = schluessel + "m"; klatschenHoeren(t, status); }
@@ -286,12 +340,13 @@ export default {
 
     async function klopfen(t) {
       const reihe = [0, ...t.abstaende];
+      kopfLaufen(t.abstaende.reduce((a, b) => a + b, 0) * t.einheit_ms);
       for (let i = 0; i < reihe.length && offen; i++) {
         if (i) await new Promise((f) => setTimeout(f, reihe[i] * t.einheit_ms));
         klick();
         const s = ansicht.querySelector(`.hs-schlag[data-i="${i}"]`);
         s?.classList.add("klingt");
-        setTimeout(() => s?.classList.remove("klingt"), 150);
+        setTimeout(() => s?.classList.remove("klingt"), 220);
       }
       await new Promise((f) => setTimeout(f, 700));
       if (offen) tvAktion({ art: "bereit" });
@@ -301,8 +356,13 @@ export default {
       const m = await mikroHolen();
       if (!m) { api.hinweis("Kein Mikrofon gefunden – das Spiel braucht das USB-Mikro am Fernseher.", 6000); return tvAktion({ art: "kein_mikro" }); }
       status.textContent = "👏 Jetzt du!";
+      const ring = ansicht.querySelector(".kl-ring"), ringText = ansicht.querySelector(".kl-ring-text");
+      ring?.classList.add("hoert");
+      if (ringText) ringText.textContent = "👏";
+      const ichReihe = ansicht.querySelector(".kl-ich-reihe");
       const erwartet = t.abstaende.length + 1;
       const dauer = t.abstaende.reduce((a, b) => a + b, 0) * t.einheit_ms;
+      const stellen = schlagStellen(t);
       const zeiten = [];
       let mittel = 0.01, zuletzt = 0, start = Date.now(), erster = 0;
       while (offen && Date.now() - start < 8000) {
@@ -310,15 +370,22 @@ export default {
         let spitze = 0;
         for (const wert of m.puffer) spitze = Math.max(spitze, Math.abs(wert));
         const jetzt = Date.now();
+        if (ring) ring.style.transform = `scale(${(1 + Math.min(1, spitze) * 0.35).toFixed(2)})`;
         if (spitze > 0.25 && spitze > mittel * 4 && jetzt - zuletzt > 120) {
+          if (!erster) kopfLaufen(dauer);
           zeiten.push(jetzt); zuletzt = jetzt; erster = erster || jetzt;
-          ansicht.querySelector(`.hs-schlag[data-i="${zeiten.length - 1}"]`)?.classList.add("treffer");
+          const i = zeiten.length - 1, anteil = dauer ? (jetzt - erster) / dauer : 0;
+          const passt = i < stellen.length && Math.abs(anteil - stellen[i]) * dauer <= Math.max(160, t.einheit_ms * 0.35);
+          ichReihe?.append(el("span", { class: "kl-ich" + (passt ? " passt" : ""), style: `left:${links(anteil)}` }));
+          ansicht.querySelector(`.hs-schlag[data-i="${i}"]`)?.classList.add(passt ? "treffer" : "daneben");
           ton("punkt");
         }
         mittel = mittel * 0.95 + spitze * 0.05;
         if (erster && (zeiten.length >= erwartet || jetzt - erster > dauer + 1500)) break;
         await new Promise((f) => setTimeout(f, 15));
       }
+      ring?.classList.remove("hoert");
+      if (ring) ring.style.transform = "";
       /* Vergleich der Abstände: ±35 % gilt als im Takt; der erste Klatscher zählt, wenn es überhaupt einen gab */
       let treffer = zeiten.length ? 1 : 0;
       t.abstaende.forEach((a, i) => {
@@ -369,22 +436,26 @@ export default {
       singt = true;
       const treffer = [];
       const proNote = Math.max(4000, t.singen_s * 1000 / t.folge.length);
-      const pegel = ansicht.querySelector(".hs-pegel span");
+      const HALTEN_MS = 350;
       for (let i = 0; i < t.folge.length && offen; i++) {
         const note = ansicht.querySelector(`.hs-note[data-i="${i}"]`);
         note?.classList.add("jetzt");
         status.textContent = `🎤 Sing: ${t.folge[i].silbe}`;
+        tonSpur?.leeren();
         const ziel = t.folge[i].midi, start = Date.now();
         let haltSeit = 0, ok = false;
         while (offen && Date.now() - start < proNote) {
           m.analyse.getFloatTimeDomainData(m.puffer);
           const f = tonhoehe(m.puffer, ctx().sampleRate);
           if (f) {
-            let cent = 1200 * Math.log2(f / hz(ziel));
-            cent = ((cent % 1200) + 1800) % 1200 - 600;           /* Oktave egal - Kinderstimmen singen oft höher */
-            if (pegel) pegel.style.left = `${50 + Math.max(-50, Math.min(50, cent / 6))}%`;
-            if (Math.abs(cent) <= 60) { haltSeit = haltSeit || Date.now(); if (Date.now() - haltSeit > 350) { ok = true; break; } } else haltSeit = 0;
-          } else haltSeit = 0;
+            const cent = centZu(f, hz(ziel));
+            tonSpur?.zeige(cent);
+            if (Math.abs(cent) <= 60) {
+              haltSeit = haltSeit || Date.now();
+              tonSpur?.halten((Date.now() - haltSeit) / HALTEN_MS);
+              if (Date.now() - haltSeit > HALTEN_MS) { ok = true; break; }
+            } else { haltSeit = 0; tonSpur?.halten(0); }
+          } else { haltSeit = 0; tonSpur?.zeige(null); tonSpur?.halten(0); }
           await new Promise((f2) => setTimeout(f2, 80));
         }
         note?.classList.remove("jetzt");

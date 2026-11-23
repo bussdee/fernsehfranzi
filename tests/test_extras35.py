@@ -74,6 +74,7 @@ class NachrichtenKachel(unittest.TestCase):
             self.assertEqual(seite.inner_text("#glocke"), "🔔 1")
             seite.keyboard.press("Escape")                              # Meldungs-Fenster wegdrücken (= gesehen)
             seite.wait_for_selector("#meldungen", state="detached")
+            seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-nachrichten')")
             seite.click(".kachel[data-id=spiel-nachrichten]")
             seite.wait_for_selector(".nachricht")
             texte = seite.locator(".nachricht-text").all_inner_texts()
@@ -163,6 +164,7 @@ class MemoryEigeneBilder(unittest.TestCase):
             fehler = []
             seite.on("pageerror", lambda e: fehler.append(str(e)))
             seite.goto("http://127.0.0.1:8765/")
+            seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-memory')")
             seite.click(".kachel[data-id=spiel-memory]")
             seite.wait_for_selector("text=Mit meinen Bildern")
             seite.click("text=Mit meinen Bildern")

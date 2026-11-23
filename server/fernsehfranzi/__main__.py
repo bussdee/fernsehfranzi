@@ -4,7 +4,7 @@ import os
 import threading
 import time
 
-from . import daten, kern, system, web
+from . import daten, kern, klaenge, system, web
 
 CODE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -104,6 +104,7 @@ def main():
                 log.exception("Fehler im Zeitkonto-Takt")
     lan_abgleichen()
     threading.Thread(target=hub.richtlinie_aktualisieren, daemon=True).start()
+    threading.Thread(target=klaenge.alle_vorbereiten, daemon=True, name="klaenge").start()   # 5.2: Klang-Archiv vorrechnen
     threading.Thread(target=takt, daemon=True).start()
     threading.Thread(target=raum_wache, daemon=True).start()
     try:

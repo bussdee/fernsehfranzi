@@ -14,13 +14,14 @@ import threading
 import time
 from datetime import datetime, timedelta
 
-from . import daten, zeitkonto
+from . import daten, klaenge, zeitkonto
 
 log = logging.getLogger("fernsehfranzi.schule")
 
 ABFRAGE_S = 15 * 60
 FEHLER_PAUSE_S = 5 * 60
-VORGABE = {"aktiv": False, "tv_hinweis": True, "telegram": True, "morgen_check": True, "morgen_check_um": "18:00"}
+VORGABE = {"aktiv": False, "tv_hinweis": True, "telegram": True, "morgen_check": True, "morgen_check_um": "18:00",
+           "klang": None, "klang_morgen": None}        # 5.2: Klänge für Neues aus der Schule und den Morgen-Check
 FELDER = set(VORGABE)
 UHRZEIT = re.compile(r"([01][0-9]|2[0-3]):[0-5][0-9]\Z")
 TEXT_MAX = 600
@@ -40,6 +41,8 @@ def pruefe(roh):
             raise ValueError("Schule: %s ja oder nein." % feld)
     if not isinstance(s["morgen_check_um"], str) or not UHRZEIT.match(s["morgen_check_um"]):
         raise ValueError("Schule: Uhrzeit des Morgen-Checks als HH:MM.")
+    klaenge.pruefe(s["klang"], "Schule")
+    klaenge.pruefe(s["klang_morgen"], "Morgen-Check")
     return s
 
 
@@ -288,7 +291,7 @@ class Schule:
         text = " · ".join(texte)
         if s["tv_hinweis"]:
             try:
-                self.hub.familie.nachricht(text, quelle="Klassenkiste", bleibt=True, symbol="🏫")
+                self.hub.familie.nachricht(text, quelle="Klassenkiste", bleibt=True, symbol="🏫", klang=s["klang"])
             except ValueError:
                 pass
         if s["telegram"]:
@@ -333,7 +336,7 @@ class Schule:
         self.zustand["morgen_check"] = heute
         daten.schreibe_json(self.pfad, self.zustand)
         try:
-            self.hub.familie.nachricht(m["satz"], quelle="Morgen-Check", bleibt=True, symbol="🎒")
+            self.hub.familie.nachricht(m["satz"], quelle="Morgen-Check", bleibt=True, symbol="🎒", klang=s["klang_morgen"])
         except ValueError:
             pass
         if s["telegram"]:

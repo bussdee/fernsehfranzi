@@ -326,7 +326,9 @@ class PlayerImBrowser(unittest.TestCase):
         seite.on("pageerror", lambda e: fehler.append(str(e)))
         seite.add_init_script("window.__ffHoerbuch = { schwarzS: 2, minuteMs: 3000 };")
         seite.goto("http://127.0.0.1:%d/" % self.server.server_address[1])
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('gute-nacht')")
         seite.wait_for_selector(".kachel[data-id=gute-nacht]")
+        seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('gute-nacht')")
         seite.click(".kachel[data-id=gute-nacht]")
         seite.wait_for_selector(".hb-eintrag")
         seite.wait_for_selector(".hb-eintrag img.hb-cover")                     # Bibi hat ein Cover, die drei ??? nicht

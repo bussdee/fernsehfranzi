@@ -1,12 +1,13 @@
-"""FernsehFranzi 5.0 - Kinder-News: nur Quellen, die die Eltern einzeln freigeschaltet haben.
+"""FernsehFranzi - Kinder-News: nur RSS-Adressen, die die Eltern selbst eintragen.
 
-Die Liste der Quellen steht fest im Code (keine freien Adressen). Ab Werk ist jede Quelle aus (Grundsatz 6). Gezeigt
-werden Überschrift, ein kurzer Text und das Datum - als reiner Text, ohne Links, Bilder oder fremdes HTML.
+Ab Werk steht keine Adresse drin, also gibt es keine Kachel (Grundsatz 6). Gezeigt werden Überschrift, ein kurzer Text und
+das Datum - als reiner Text, ohne Links, Bilder oder fremdes HTML.
 """
 import logging
 import re
 import threading
 import time
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
@@ -14,33 +15,45 @@ from html import unescape
 
 log = logging.getLogger("fernsehfranzi.news")
 
-QUELLEN = (
-    {"id": "logo", "name": "logo! (ZDF)", "url": "https://www.zdf.de/rss/zdf/kinder/logo",
-     "info": "Kindernachrichten von ZDF und KiKA, für 8 bis 12 Jahre."},
-    {"id": "duda", "name": "Duda.news", "url": "https://www.duda.news/feed/",
-     "info": "Kinderseite des Kölner Stadt-Anzeigers."},
-    {"id": "kruschel", "name": "Kruschel", "url": "https://www.kruschel.de/rss",
-     "info": "Kinderzeitung der VRM (Mainz), ab 7 Jahren."},
-    {"id": "kleine", "name": "Kleine Kinderzeitung", "url": "https://kinderzeitung.kleinezeitung.at/feed/",
-     "info": "Kinderzeitung der Kleinen Zeitung (Österreich)."},
-)
-IDS = tuple(q["id"] for q in QUELLEN)
+MAX_FEEDS = 10
+MAX_LAENGE = 500
 CACHE_S = 60 * 60
 MAX_BYTES = 2 * 1024 * 1024
 JE_QUELLE = 15
 
 
+def _gueltig(url):
+    if not isinstance(url, str) or not url.strip() or len(url) > MAX_LAENGE:
+        return False
+    teile = urllib.parse.urlsplit(url.strip())
+    return teile.scheme in ("http", "https") and bool(teile.hostname) and not re.search(r"\s", url.strip())
+
+
 def einstellungen(roh):
+    """Ältere Stände (feste Quellen-Liste) werden still verworfen: dann ist einfach keine Adresse eingetragen."""
     roh = roh or {}
-    quellen = roh.get("quellen") if isinstance(roh.get("quellen"), dict) else {}
-    return {"quellen": {i: bool(quellen.get(i, False)) for i in IDS}}
+    feeds = roh.get("feeds") if isinstance(roh.get("feeds"), list) else []
+    aus = []
+    for f in feeds:
+        if _gueltig(f) and f.strip() not in aus:
+            aus.append(f.strip())
+    return {"feeds": aus[:MAX_FEEDS]}
 
 
 def pruefe(roh):
-    if not isinstance(roh, dict) or set(roh) - {"quellen"} or not isinstance(roh.get("quellen", {}), dict) \
-            or set(roh.get("quellen", {})) - set(IDS) or not all(isinstance(v, bool) for v in roh.get("quellen", {}).values()):
-        raise ValueError("Kinder-News: nur die bekannten Quellen, je an oder aus.")
+    if not isinstance(roh, dict) or set(roh) - {"feeds"} or not isinstance(roh.get("feeds", []), list):
+        raise ValueError("Kinder-News: bitte nur eine Liste von RSS-Adressen.")
+    feeds = roh.get("feeds", [])
+    if len(feeds) > MAX_FEEDS:
+        raise ValueError(f"Kinder-News: höchstens {MAX_FEEDS} RSS-Adressen.")
+    falsch = [f for f in feeds if not _gueltig(f)]
+    if falsch:
+        raise ValueError(f"Kinder-News: keine gültige Adresse (http:// oder https://): {str(falsch[0])[:80]}")
     return einstellungen(roh)
+
+
+def _name(url):
+    return urllib.parse.urlsplit(url).hostname.removeprefix("www.")
 
 
 def _text(wert, n):
@@ -50,8 +63,11 @@ def _text(wert, n):
 
 
 def lies_feed(roh, quelle):
-    """RSS 2.0 -> [{titel, text, datum, quelle}] (höchstens JE_QUELLE)."""
+    """RSS 2.0 -> [{titel, text, datum, quelle}] (höchstens JE_QUELLE). Der Name kommt aus dem Kanal-Titel des Feeds."""
     wurzel = ET.fromstring(roh)
+    kanal = _text(wurzel.findtext("channel/title"), 60)
+    if kanal:
+        quelle = dict(quelle, name=kanal)
     aus = []
     for item in wurzel.iter("item"):
         titel = _text(item.findtext("title"), 160)
@@ -80,43 +96,41 @@ class News:
         return einstellungen(self.hub.einstellungen.get("news"))
 
     def aktiv(self):
-        return any(self.einstellungen()["quellen"].values())
+        return bool(self.einstellungen()["feeds"])
 
     def _netz(self, url):
         anfrage = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (FernsehFranzi)"})
         with urllib.request.urlopen(anfrage, timeout=15) as antwort:
             return antwort.read(MAX_BYTES)
 
-    def _quelle(self, q):
+    def _quelle(self, url):
         with self._lock:
-            treffer = self._cache.get(q["id"])
+            treffer = self._cache.get(url)
         if treffer and time.time() - treffer[0] < CACHE_S:
             return treffer[1]
         try:
-            eintraege = lies_feed(self._holer(q["url"]), q)
+            eintraege = lies_feed(self._holer(url), {"name": _name(url)})
         except (OSError, ValueError, ET.ParseError) as fehler:
-            log.warning("Kinder-News %s: %s", q["id"], fehler)
+            log.warning("Kinder-News %s: %s", _name(url), fehler)
             return treffer[1] if treffer else None
         with self._lock:
-            self._cache[q["id"]] = (time.time(), eintraege)
+            self._cache[url] = (time.time(), eintraege)
         return eintraege
 
     def liste(self):
-        an = self.einstellungen()["quellen"]
-        quellen = [q for q in QUELLEN if an[q["id"]]]
-        if not quellen:
+        feeds = self.einstellungen()["feeds"]
+        if not feeds:
             raise ValueError("Kinder-News sind ausgeschaltet.")
-        eintraege, fehlen = [], []
-        for q in quellen:
-            e = self._quelle(q)
+        eintraege, quellen, fehlen = [], [], []
+        for url in feeds:
+            e = self._quelle(url)
             if e is None:
-                fehlen.append(q["name"])
+                fehlen.append(_name(url))
             else:
                 eintraege.extend(e)
+                quellen.append(e[0]["quelle"] if e else _name(url))
         eintraege.sort(key=lambda e: -e["zeit"])
-        return {"eintraege": eintraege[:40], "quellen": [q["name"] for q in quellen],
-                "fehlen": fehlen}
+        return {"eintraege": eintraege[:40], "quellen": quellen, "fehlen": fehlen}
 
     def fuer_eltern(self):
-        an = self.einstellungen()["quellen"]
-        return [dict(q, an=an[q["id"]]) for q in QUELLEN]
+        return self.einstellungen()

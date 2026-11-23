@@ -121,6 +121,7 @@ class RaumImBrowser(unittest.TestCase):
             tv = browser.new_page(viewport={"width": 1600, "height": 900})
             tv.on("pageerror", lambda e: fehler.append("TV: " + str(e)))
             tv.goto("http://127.0.0.1:8765/")
+            tv.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-handys')")
             tv.click(".kachel[data-id=spiel-handys]")
             tv.wait_for_selector(".hs-qr svg")
             self.assertIn(hub.raum.code, tv.inner_text(".hs-adresse"))
@@ -173,6 +174,7 @@ class RaumImBrowser(unittest.TestCase):
             tv = browser.new_page(viewport={"width": 1600, "height": 900})
             tv.on("pageerror", lambda e: fehler.append("TV: " + str(e)))
             tv.goto("http://127.0.0.1:8765/")
+            tv.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('spiel-handys')")
             tv.click(".kachel[data-id=spiel-handys]")
             tv.wait_for_selector(".hs-qr svg")
             handys = []

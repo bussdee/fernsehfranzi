@@ -1,7 +1,7 @@
 /* FernsehFranzi 5.0 - Wetter: jetzt, die nächsten Stunden, fünf Tage, Trockenfenster („Wann können wir raus?“),
  * Anzieh-Tipp und - wenn es gerade trocken ist und die Eltern es erlauben - ein Spiel für draußen aus den Kinderwelten.
  * Die Daten holt der Server von Open-Meteo (Regeln wie im Familien Dashboard). STOP zurück. */
-import { el } from "../gemeinsam.js";
+import { el, bild } from "../gemeinsam.js";
 import { kopf } from "./kern.js";
 import { hinweisZeile } from "./seite.js";
 
@@ -16,7 +16,7 @@ export default {
       punkte.textContent = w.ort ? "📍 " + w.ort + (w.stand ? " · Stand " + w.stand : "") : "";
       if (!d) { inhalt.replaceChildren(hinweisZeile(w.fehler || "Das Wetter wird geholt …", "🌥️")); return; }
       const jetzt = el("div", { class: "wetter-jetzt" },
-        el("div", { class: "wetter-gross", text: d.symbol }),
+        el("div", { class: "wetter-gross" }, bild(d.symbol)),
         el("div", {},
           el("div", { class: "wetter-temp", text: `${d.temp}°` }),
           el("div", { class: "wetter-text", text: `${d.text} · fühlt sich an wie ${d.gefuehlt}°` }),
@@ -24,11 +24,11 @@ export default {
           el("div", { class: "wetter-anziehen", text: "👕 " + d.anziehen })));
       const stunden = el("div", { class: "wetter-stunden" }, ...d.stunden.map((s) =>
         el("div", { class: "wetter-stunde" + (s.nass ? " nass" : "") },
-          el("div", { class: "ws-uhr", text: s.uhr }), el("div", { class: "ws-symbol", text: s.symbol }),
+          el("div", { class: "ws-uhr", text: s.uhr }), el("div", { class: "ws-symbol" }, bild(s.symbol)),
           el("div", { class: "ws-temp", text: `${s.temp}°` }), el("div", { class: "ws-regen", text: s.prozent ? `${s.prozent} %` : "" }))));
       const tage = el("div", { class: "wetter-tage" }, ...d.tage.map((t) =>
         el("div", { class: "wetter-tag" },
-          el("div", { class: "wt-name", text: t.name }), el("div", { class: "wt-symbol", text: t.symbol }),
+          el("div", { class: "wt-name", text: t.name }), el("div", { class: "wt-symbol" }, bild(t.symbol)),
           el("div", { class: "wt-temp", text: `${t.max}° / ${t.min}°` }),
           el("div", { class: "wt-regen", text: t.regen ? `☔ ${t.regen} %` : "☀️ trocken" }))));
       const fenster = d.fenster.length

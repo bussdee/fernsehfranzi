@@ -21,7 +21,7 @@ import urllib.request
 from datetime import datetime, timedelta
 from urllib.parse import urlsplit
 
-from . import daten, design as design_mod, kinderwelten as kinderwelten_mod, news as news_mod, schule as schule_mod, wetter as wetter_mod, ferien as ferien_mod, qr, raum as raum_mod, system as system_mod, sicherung as sicherung_mod, telegram as telegram_mod, familie as familie_mod, gutschein as gutschein_mod, hoerbuch, nutzung as nutzung_mod, katalog as katalog_mod, wecker as wecker_mod, youtube as youtube_mod, pin as pin_mod, whitelist, zeitkonto
+from . import daten, design as design_mod, klaenge as klaenge_mod, kinderwelten as kinderwelten_mod, news as news_mod, schule as schule_mod, wetter as wetter_mod, ferien as ferien_mod, qr, raum as raum_mod, system as system_mod, sicherung as sicherung_mod, telegram as telegram_mod, familie as familie_mod, gutschein as gutschein_mod, hoerbuch, nutzung as nutzung_mod, katalog as katalog_mod, wecker as wecker_mod, youtube as youtube_mod, pin as pin_mod, whitelist, zeitkonto
 
 log = logging.getLogger("fernsehfranzi.hub")
 
@@ -77,7 +77,7 @@ EINSTELLUNGEN_FELDER = {"name": str, "untertitel": str, "geburtstage": list, "ze
                         "youtube": dict, "inhalte": dict, "sticker_eigen": list,
                         "startseite": dict, "telegram": dict, "handyspiele": dict, "speicher": dict, "fotoalbum": dict,
                         "spielzimmer": dict, "design": dict, "wetter": dict, "schule": dict, "kinderwelten": dict,
-                        "news": dict}
+                        "news": dict, "klaenge": dict}
 ROMS = os.path.expanduser("~/RetroPie/roms")
 GAMELISTS = [os.path.expanduser("~/.emulationstation/gamelists"),
              "/opt/retropie/configs/all/emulationstation/gamelists"]
@@ -101,6 +101,9 @@ class Hub:
         self.einstellungen.setdefault("desktop", {"befehle": []})
         self.einstellungen.setdefault("ton", {"ziel": None})
         self._retro_grenze_34 = self._uebernehme_34()
+        if design_mod.migriere(self.einstellungen):              # 6.0: klare Farbnamen
+            log.info("6.0: Farben der Startseite auf die neuen Namen umgestellt.")
+            daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
         self.katalog = self._lade_katalog()
         self.konto = zeitkonto.Zeitkonto(self._regeln(),
                                          daten.lies_json(self._pfad("zeitkonto.json"), {}) or {})
@@ -146,7 +149,7 @@ class Hub:
         self.wetter = wetter_mod.Wetter(self)                    # 5.0: Wetter und Regenzeiten
         self.schule = schule_mod.Schule(self)                    # 5.0: Klassenkiste (nur lesen)
         self.kinderwelten = kinderwelten_mod.Kinderwelten(self)  # 5.0: Familienfabrik (nur lesen)
-        self.news = news_mod.News(self)                          # 5.0: Kinder-News (nur freigeschaltete Quellen)
+        self.news = news_mod.News(self)                          # Kinder-News (nur RSS-Adressen der Eltern)
         self.wecker_laeuft = None                 # 3.5: {"nr", "ton", "laut", "seit", "vorher"} solange es klingelt
         self.raum = None                          # 4.3: offener Spielraum (Handy-Spiele) oder None
         self._kk = {"nr": 0, "cookie": None, "fehler": "", "zeit": 0.0}   # 4.4: Anmeldung der Klassenkiste (nur im Speicher)
@@ -444,7 +447,8 @@ class Hub:
                         log.warning("YouTube-Playlist %s: %s", e["id"], fehler)
         if geaendert:
             self.einstellungen_aendern({"youtube": y})
-        return y
+        # 6.0: ausgeschaltete Kategorien sieht das Kind nicht (sie bleiben gespeichert)
+        return dict(y, kategorien=[k for k in y["kategorien"] if k.get("aktiv", True)])
 
     def youtube_eintrag(self, kategorie, link):
         """Eltern: Link einfügen -> Video/Playlist mit Titel in die Kategorie (wird angelegt, wenn neu)."""
@@ -674,8 +678,9 @@ class Hub:
                  if self.aktuell else None),
                 "running": laeuft, "retropie_start": marke,
                 "rest_min": None if rest is None else rest // 60,
+                "budget_min": None if rest is None else self.konto.budget_s(jetzt) // 60,     # 6.0: für den Balken
                 "ton": self.ton["ziel"], "ton_nummer": self.ton["nr"], "kopfhoerer": bool(self.kopfhoerer),
-                "meldung": dict(self.meldung), "gesperrt": self.gesperrt,
+                "meldung": dict(self.meldung), "gesperrt": self.gesperrt_anzeige(jetzt), "wartung": self.wartung(),
                 "pin_gesetzt": bool(self.pin_daten.get("hash")),
                 "cec": dict(self.cec), "pause": self.familie.in_pause(),
                 "pause_rest": self.familie.pause_rest(jetzt),
@@ -715,6 +720,8 @@ class Hub:
             return False, "Diese App gibt es nicht."
         if app.get("aktiv", True) is False:
             return False, "%s ist gerade ausgeschaltet. Bitte Mama oder Papa fragen." % app["name"]
+        if (self.wartung() or {}).get("rest_s"):
+            return False, "Der Fernseher wird gerade aktualisiert. Bitte warten."
         if self.gesperrt:
             return False, self.gesperrt.get("text") or "Der Fernseher ist gerade gesperrt."
         ok, grund, _ = self.konto.darf_starten(app, self.uhr(), uhr_sicher=bool(self.uhr_sicher()))
@@ -733,8 +740,25 @@ class Hub:
         with self.lock:
             self.aktuell = app_id
             self.letzte_eingabe = self.monoton()
+        self._zuletzt_merken(app_id)
         log.info("Start: %s", app_id)
         return True, "%s startet ..." % app["name"]
+
+    # ------------------------------------------------------------ 6.0: „Weiter, wo du warst“ auf der Startseite
+    ZULETZT_MAX = 8
+    OHNE_ZULETZT = ("spiel-gestalten", "spiel-gutschein", "spiel-wecker", "spiel-nachrichten")
+
+    def _zuletzt_merken(self, app_id):
+        if app_id in self.OHNE_ZULETZT:
+            return
+        pfad = self._pfad("zuletzt.json")
+        liste = [x for x in (daten.lies_json(pfad, []) or []) if isinstance(x, str) and x != app_id]
+        daten.schreibe_json(pfad, ([app_id] + liste)[:self.ZULETZT_MAX])
+
+    def zuletzt(self):
+        """Zuletzt gestartete Apps und Spiele (neueste zuerst), nur solche, die es noch gibt."""
+        liste = daten.lies_json(self._pfad("zuletzt.json"), []) or []
+        return [x for x in liste if isinstance(x, str) and self.app(x) is not None][:self.ZULETZT_MAX]
 
     def ort(self, app_id):
         """Die Startseite meldet ein Spielzimmer-Spiel (oder None = zurück auf der Startseite)."""
@@ -1017,15 +1041,15 @@ class Hub:
 
     # ------------------------------------------------------------ 5.0: Designs der Startseite
     def startseite_anzeige(self):
-        st = self.einstellungen.get("startseite") or {"lieblinge": [], "thema": "weltall"}
+        st = self.einstellungen.get("startseite") or {"lieblinge": [], "thema": "blau"}
         return dict(st, design=design_mod.fuer_startseite(self.einstellungen.get("design"), st, self.uhr()))
 
     def startseite_setzen(self, d):
         """Vom Kind (Meine Startseite): Lieblinge und Design - nur ein Design, das die Eltern erlaubt haben."""
         if not isinstance(d, dict):
             raise ValueError("Startseite: ungültige Angaben.")
-        thema = d.get("thema", "weltall")
-        alt = (self.einstellungen.get("startseite") or {}).get("thema", "weltall")
+        thema = design_mod.neu(d.get("thema", "blau"))
+        alt = design_mod.neu((self.einstellungen.get("startseite") or {}).get("thema", "blau"))
         erlaubt = design_mod.einstellungen(self.einstellungen.get("design"))
         if thema != alt and thema not in erlaubt["erlaubt"]:
             raise ValueError("Dieses Design haben Mama oder Papa ausgeschaltet.")
@@ -1211,6 +1235,7 @@ class Hub:
     # ------------------------------------------------------------ Zeitkonto (alle 5 s)
     def tick(self, sekunden=TICK_S):
         jetzt = self.uhr()
+        self._auszeit_takt(jetzt)                  # 5.1: Auszeit vorbei -> frei
         if self.konto.zustand.get("datum") not in (None, jetzt.date().isoformat()):
             self.woche_fortschreiben()             # neuer Tag: gestern in die Wochenübersicht
             self.ferien_auffrischen()
@@ -1527,16 +1552,17 @@ class Hub:
                 "regeln": self._regeln(), "apps": copy.deepcopy(self.katalog),
                 "spielzimmer": copy.deepcopy(self.spielzimmer()),           # 4.6: eingebaute Spiele und Kacheln
                 "bundeslaender": ferien_mod.LAENDER, "ferien_bekannt_bis": ferien_mod.bekannt_bis(),
+                "klaenge": klaenge_mod.liste(),                          # 5.2: Klang-Archiv
                 # 5.0: Designs, Wetter, Schule, Kinderwelten, Kinder-News (vollständig, mit Vorgaben)
                 "design": dict(design_mod.einstellungen(einst.get("design")),
-                               alle=[{"id": k, "name": n, "hell": h} for k, n, h in design_mod.DESIGNS],
+                               alle=[{"id": k, "name": n, "hell": h, "abends": sw if h else k} for k, n, h, sw in design_mod.DESIGNS],
                                alle_ansichten=[{"id": k, "name": n} for k, n in design_mod.ANSICHTEN],
-                               dunkel=list(design_mod.DUNKEL)),
+                               ),
                 "wetter": dict(wetter_mod.einstellungen(einst.get("wetter")), jetzt=self.wetter.fuer_tv()),
                 "schule": dict(schule_mod.einstellungen(einst.get("schule")), eingerichtet=bool(self.klassenkiste_basis()),
                                stand=self.schule.fuer_tv()),
                 "kinderwelten": kinderwelten_mod.einstellungen(einst.get("kinderwelten")),
-                "news": {"quellen": self.news.fuer_eltern()},
+                "news": self.news.fuer_eltern(),
                 "heute": {"genutzt_min": z["genutzt_s"] // 60, "retropie_min": z["retropie_s"] // 60,
                           "apps_min": {k: v // 60 for k, v in z["app_s"].items()},
                           "bonus_min": z["bonus_min"], "ohne_limit": z["ohne_limit"],
@@ -1547,7 +1573,7 @@ class Hub:
                           else self.konto.rest_s(jetzt) // 60,
                           "tagesart": zeitkonto.tagesart(jetzt.date(), self._regeln())},
                 "woche": daten.lies_json(self._pfad("woche.json"), {}) or {},
-                "gesperrt": self.gesperrt,
+                "gesperrt": self.gesperrt_anzeige(jetzt),
                 "familie": self.familie.einstellungen(),
                 "bass_tagebuch": self.familie.bass_tagebuch(jetzt.date()),
                 "sticker": self.familie.album(),
@@ -1587,6 +1613,10 @@ class Hub:
                 youtube_mod.pruefe(neu["youtube"])
             _pruefe_inhalte(neu.get("inhalte") or {})
             _pruefe_startseite(neu.get("startseite") or {})
+            kl = neu.get("klaenge") or {}
+            if set(kl) - {"ordner"} or not isinstance(kl.get("ordner", ""), str) or \
+                    (kl.get("ordner") and hoerbuch.pruefe_freigabe(kl["ordner"])):
+                raise ValueError("Klang-Ordner " + (hoerbuch.pruefe_freigabe(kl.get("ordner", "")) or "ungültig."))
             for feld, pruefung in (("design", design_mod.pruefe), ("wetter", wetter_mod.pruefe), ("schule", schule_mod.pruefe),
                                    ("kinderwelten", kinderwelten_mod.pruefe), ("news", news_mod.pruefe)):
                 if feld in aenderungen:
@@ -1699,12 +1729,176 @@ class Hub:
             daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
         self.zurueck()
 
-    def entsperren(self):
+    # ------------------------------------------------------------ 5.3: Wartungsmodus beim Ausliefern
+    # make v3-deploy legt nach der zweiten Bestätigung wartung.json in den Datenordner ({"ab": …, "bis": …}, Unix-Zeit),
+    # make v3-pruefen löscht sie, wenn alles grün ist. Bis "ab" läuft eine Vorwarnung (Countdown in der Ecke, damit das Kind
+    # noch speichern kann), danach: Warnbildschirm über allem, keine Taste, kein Start. Sicherheit: höchstens bis "bis"
+    # (der Deploy setzt 45 Minuten), danach gilt die Datei nicht mehr.
+    WARTUNG_MAX_S = 2 * 3600
+    WARTUNG_VORWARNUNG_MAX_S = 60
+
+    def wartung(self):
+        """None, {"vorwarnung_s": …} (läuft noch, nichts gesperrt) oder {"rest_s": …} (gesperrt). Liest die Datei
+        höchstens alle 2 Sekunden."""
+        jetzt = time.time()
+        if jetzt - getattr(self, "_wartung_gelesen", 0) >= 2:
+            self._wartung_gelesen = jetzt
+            roh = daten.lies_json(self._pfad("wartung.json"), None)
+            roh = roh if isinstance(roh, dict) else {}
+            bis, ab = roh.get("bis"), roh.get("ab")
+            self._wartung_bis = min(float(bis), jetzt + self.WARTUNG_MAX_S) if isinstance(bis, (int, float)) else None
+            self._wartung_ab = min(float(ab), jetzt + self.WARTUNG_VORWARNUNG_MAX_S) if isinstance(ab, (int, float)) else None
+        bis, ab = getattr(self, "_wartung_bis", None), getattr(self, "_wartung_ab", None)
+        if not bis or jetzt >= bis:
+            self._wartung_gemeldet = False
+            return None
+        if ab and jetzt < ab:
+            if not getattr(self, "_wartung_gemeldet", False):          # einmal: auch im Retro-Spiel ankündigen
+                self._wartung_gemeldet = True
+                text = "Gleich kommt ein Update - jetzt schnell speichern!"
+                self.melde(text)
+                self.auftrag("hinweis", text=text)                     # auch über Plex und Webseiten
+                try:
+                    if self.system.retropie_zustand()[0]:
+                        self.system.retroarch("SHOW_MSG " + text)
+                except Exception:   # noqa: BLE001 - die Vorwarnung darf nichts stören
+                    log.exception("Vorwarnung")
+            return {"vorwarnung_s": int(ab - jetzt) + 1}
+        return {"rest_s": int(bis - jetzt)}
+
+    # ------------------------------------------------------------ 5.3: Nachricht von der Eltern-Seite mit Absender
+    def eltern_nachricht(self, text, von=None):
+        """von = Chat-Nummer eines Eltern-Kontakts aus Telegram: dann steht dessen Symbol und Name am Fernseher und es
+        klingt sein Klang. Ohne Absender wie bisher „Nachricht von Mama oder Papa“ mit dem Klang für Eltern-Nachrichten."""
+        if von not in (None, ""):
+            kontakt = next((c for c in self.telegram.einstellungen()["chats"] if c["id"] == von and c["eltern"]), None)
+            if not kontakt:
+                raise ValueError("Unbekannter Absender.")
+            return self.familie.nachricht(text, quelle=kontakt["name"], bleibt=True, symbol=kontakt["symbol"],
+                                          klang=kontakt.get("klang") or self.familie.einstellungen().get("klang_nachricht"))
+        return self.familie.nachricht(text, bleibt=True, klang=self.familie.einstellungen().get("klang_nachricht"))
+
+    # ------------------------------------------------------------ 5.2: Klang am Fernseher probehören
+    def klang_testen(self, klang):
+        if klang not in klaenge_mod.ARCHIV and not klaenge_mod.eigen_pfad(klang):
+            raise ValueError("Unbekannter Klang.")
+        self.klang_spielen(klang, warten=True)
+
+    # ------------------------------------------------------------ 6.0: eigene Klänge aus einem Ordner der Eltern
+    KLANG_MAX_BYTES = 4 * 1024 * 1024
+
+    def klaenge_ordner(self):
+        return str((self.einstellungen.get("klaenge") or {}).get("ordner") or "")
+
+    def klaenge_eigen(self):
+        """[{id, name}] der Audiodateien im Klang-Ordner (oberste Ebene)."""
+        link = self.klaenge_ordner()
+        if not link:
+            return []
+        try:
+            titel = hoerbuch.liste(link, "")["titel"]
+        except hoerbuch.HoerbuchFehler as fehler:
+            raise ValueError("Der Klang-Ordner ist gerade nicht erreichbar (%s)." % fehler) from None
+        return [{"id": klaenge_mod.EIGEN + t["pfad"], "name": t["name"].rsplit(".", 1)[0]} for t in titel
+                if t["name"].lower().endswith(klaenge_mod.EIGEN_ENDUNGEN)][:200]
+
+    def klang_eigen_adresse(self, klang):
+        pfad = klaenge_mod.eigen_pfad(klang)
+        link = self.klaenge_ordner()
+        if not pfad or not link:
+            raise ValueError("Unbekannter Klang.")
+        return hoerbuch.datei_adresse(link, pfad, endungen=klaenge_mod.EIGEN_ENDUNGEN)
+
+    def _eigene_klangdatei(self, klang):
+        """Lokale Kopie eines eigenen Klangs (einmal heruntergeladen, höchstens 4 MB)."""
+        import hashlib
+        adresse = self.klang_eigen_adresse(klang)
+        endung = os.path.splitext(klaenge_mod.eigen_pfad(klang))[1].lower()
+        ordner = self._pfad("klang-cache")
+        os.makedirs(ordner, exist_ok=True)
+        pfad = os.path.join(ordner, hashlib.sha1(adresse.encode()).hexdigest()[:20] + endung)
+        if not os.path.exists(pfad):
+            with urllib.request.urlopen(urllib.request.Request(adresse, headers={"User-Agent": "FernsehFranzi"}), timeout=15) as a:
+                inhalt = a.read(self.KLANG_MAX_BYTES + 1)
+            if len(inhalt) > self.KLANG_MAX_BYTES:
+                raise ValueError("Der Klang ist zu groß (höchstens 4 MB).")
+            with open(pfad + ".neu", "wb") as f:
+                f.write(inhalt)
+            os.replace(pfad + ".neu", pfad)
+        return pfad
+
+    def klang_spielen(self, klang, warten=False):
+        """Klang aus dem Archiv oder eigener Klang; geht ein eigener nicht, kommt der Gong."""
+        if not klaenge_mod.eigen_pfad(klang):
+            self.system.gong(klang)
+            return
+
+        def lauf():
+            try:
+                self.system.gong_datei(self._eigene_klangdatei(klang))
+            except (OSError, ValueError) as fehler:
+                log.warning("Eigener Klang %s: %s", klang, fehler)
+                self.system.gong()
+                if warten:
+                    raise ValueError(str(fehler)) from None
+        if warten:
+            lauf()
+        else:
+            threading.Thread(target=lauf, daemon=True, name="klang").start()
+
+    # ------------------------------------------------------------ 5.1: Auszeit = Sperre mit Countdown
+    AUSZEIT_MAX_MIN = 240
+
+    def auszeit(self, minuten):
+        """Alles gesperrt, am Fernseher nur ein Countdown; danach von selbst wieder frei. Erneut aufgerufen verlängert sie
+        sich (bei laufender Auszeit ab dem bisherigen Ende)."""
+        if isinstance(minuten, bool) or not isinstance(minuten, int) or not 1 <= minuten <= self.AUSZEIT_MAX_MIN:
+            raise ValueError("Auszeit: 1 bis %d Minuten." % self.AUSZEIT_MAX_MIN)
+        jetzt = self.uhr().replace(microsecond=0)
+        with self.lock:
+            alt = self.auszeit_bis()
+            start = alt if alt and alt > jetzt else jetzt
+            bis = min(start + timedelta(minutes=minuten), jetzt + timedelta(minutes=self.AUSZEIT_MAX_MIN))
+            neu = not self.gesperrt
+            self.gesperrt = {"text": "Auszeit – gleich geht es weiter.", "auszeit": True, "bis": bis.isoformat()}
+            self.einstellungen["gesperrt"] = self.gesperrt
+            daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
+        log.info("Auszeit bis %s", bis.strftime("%H:%M:%S"))
+        if neu:
+            self.zurueck()
+        return {"bis": bis.strftime("%H:%M"), "rest_s": int((bis - jetzt).total_seconds())}
+
+    def auszeit_bis(self):
+        g = self.gesperrt or {}
+        if not g.get("auszeit"):
+            return None
+        try:
+            return datetime.fromisoformat(g["bis"])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _auszeit_takt(self, jetzt):
+        bis = self.auszeit_bis()
+        if bis and jetzt >= bis:
+            log.info("Auszeit vorbei.")
+            self.entsperren("Die Auszeit ist vorbei – weiter geht's!")
+
+    def gesperrt_anzeige(self, jetzt=None):
+        """Für Startseite und Eltern-Seite: Sperre mit der Restzeit einer Auszeit in Sekunden."""
+        if not self.gesperrt:
+            return None
+        bis = self.auszeit_bis()
+        if not bis:
+            return dict(self.gesperrt)
+        rest = max(0, int((bis - (jetzt or self.uhr())).total_seconds()))
+        return dict(self.gesperrt, rest_s=rest, bis_uhr=bis.strftime("%H:%M"))
+
+    def entsperren(self, meldung="Der Fernseher ist wieder frei."):
         with self.lock:
             self.gesperrt = None
             self.einstellungen.pop("gesperrt", None)
             daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
-        self.melde("Der Fernseher ist wieder frei.")
+        self.melde(meldung)
 
     def richtlinie_aktualisieren(self):
         """Browser-Whitelist (Kap. 12, zweite Schicht) an Chromium geben: Wunschliste schreiben,
@@ -1874,7 +2068,7 @@ def _pruefe_startseite(st):
     if not isinstance(lieblinge, list) or len(lieblinge) > 12 or not all(
             isinstance(x, str) and re.fullmatch(r"[a-z][a-z0-9-]{0,31}", x) for x in lieblinge):
         raise ValueError("Startseite: höchstens 12 Lieblinge.")
-    if st.get("thema", "weltall") not in THEMEN:
+    if st.get("thema", "blau") not in THEMEN:
         raise ValueError("Startseite: unbekanntes Design.")
     if st.get("ansicht", "konsole") not in design_mod.ANSICHT_IDS:
         raise ValueError("Startseite: unbekannte Ansicht.")
