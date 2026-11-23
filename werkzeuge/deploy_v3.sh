@@ -16,8 +16,8 @@ V3_PATH="${V3_PATH:-~/fernsehfranzi}"
 BENUTZER="${PI_HOST%%@*}"
 VERSION="$(tr -d '[:space:]' < VERSION)"
 case "$VERSION" in
-  3.*|4.*) ;;                     # 4.0 nutzt denselben Weg (gleicher Aufbau, gleiche Daten)
-  *) echo "❌ VERSION ist $VERSION – dieses Werkzeug liefert 3.x und 4.x aus."; exit 2 ;;
+  3.*|4.*|5.*) ;;                 # 4.0 und 5.0 nutzen denselben Weg (gleicher Aufbau, gleiche Daten, keine neuen Pakete)
+  *) echo "❌ VERSION ist $VERSION – dieses Werkzeug liefert 3.x bis 5.x aus."; exit 2 ;;
 esac
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=10)
 # Root-Schritte: über das Admin-Konto (sudo mit Passwort, seit make admin-einrichten), sonst wie bisher

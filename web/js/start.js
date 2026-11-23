@@ -23,19 +23,28 @@ import lernen from "./spiele/lernen.js";
 import gutschein from "./spiele/gutschein.js";
 import wecker from "./spiele/wecker.js";
 import nachrichten from "./spiele/nachrichten.js";
-import gestalten from "./spiele/gestalten.js";
+import gestalten, { designZeigen } from "./spiele/gestalten.js";
+import handys from "./spiele/handys.js";
+import fotoalbum from "./spiele/fotoalbum.js";
+import karaoke from "./spiele/karaoke.js";
+import wetter from "./spiele/wetter.js";
+import schule from "./spiele/schule.js";
+import kinderwelten from "./spiele/kinderwelten.js";
+import news from "./spiele/news.js";
 
 const SPIELE = { "spiel-snake": snake, "spiel-memory": memory, "spiel-drei": drei,
                  "spiel-echo": echo, "spiel-malen": malen, "spiel-witz": witz, "spiel-bass": bass,
                  "spiel-duell": duell, "spiel-sticker": sticker, "spiel-lernen": lernen, "spiel-gutschein": gutschein, "spiel-wecker": wecker,
-                 "spiel-nachrichten": nachrichten, "spiel-gestalten": gestalten };
+                 "spiel-nachrichten": nachrichten, "spiel-gestalten": gestalten, "spiel-handys": handys, "spiel-fotoalbum": fotoalbum, "spiel-karaoke": karaoke,
+                 "spiel-wetter": wetter, "spiel-schule": schule, "spiel-kinderwelten": kinderwelten, "spiel-news": news };
 const SYMBOLE = { video: "▶️", film: "🎬", spiel: "🕹️", haus: "🏠", buch: "📚", lernen: "🎓", musik: "🎵",
                   malen: "🎨", web: "🌐", stern: "⭐", mond: "🌙", tier: "🐾", ball: "⚽" };
 const FARBEN = { "spiel-snake": "#1d7a5e", "spiel-memory": "#8a3b8a", "spiel-drei": "#a8791c",
                  "spiel-echo": "#2a6b9e", "spiel-malen": "#6d3fa8", "spiel-witz": "#b06520",
-                 "spiel-bass": "#8d2f2f", "spiel-duell": "#2f6d8d", "spiel-sticker": "#8d7a2f", "spiel-lernen": "#00897b",
+                 "spiel-bass": "#8d2f2f", "spiel-duell": "#2f6d8d", "spiel-sticker": "#8d7a2f", "spiel-lernen": "#00897b", "spiel-handys": "#2f5fa8", "spiel-fotoalbum": "#2f7a8d", "spiel-karaoke": "#a8326b",
+                 "spiel-wetter": "#2f86c9", "spiel-schule": "#3a7d44", "spiel-kinderwelten": "#e07b1a", "spiel-news": "#6b4fb3",
                  "gute-nacht": "#2b2f6b", "retro": "#4a2b6b" };
-const TON_NAMEN = { hdmi: "Fernseher (HDMI)", klinke: "Klinke (Kopfhörer / Anlage)" };
+const TON_NAMEN = { hdmi: "Fernseher (HDMI)", klinke: "Klinke (Kopfhörer / Anlage)", kopfhoerer: "🎧 Bluetooth-Kopfhörer" };
 
 const zustand = {
   reihen: [[], [], []],      // [Apps, Spielzimmer, Zuletzt gespielt] - je eine Liste von {daten, knoten}
@@ -79,7 +88,7 @@ function baueKachel(app, nummer) {
   const symbol = SYMBOLE[app.symbol] || (istSpiel && SPIELE[app.id]?.symbol) || "⭐";
   const knoten = el("button", { class: "kachel" + (app.frei ? "" : " gesperrt"), type: "button", tabindex: "-1",
                                 "data-id": app.id },
-    el("div", { class: "bg", style: `background: linear-gradient(130deg, #141b28, ${farbe})` }),
+    el("div", { class: "bg", style: `--farbe: ${farbe}; background: linear-gradient(130deg, var(--kachel-anfang), ${farbe})` }),
     el("span", { class: "taste", text: nummer }),
     el("div", { class: "symbol", text: symbol }),
     el("div", {},
@@ -102,19 +111,22 @@ const BEREICHE = [
   { id: "lernen", name: "Lernen", symbol: "🎓" }, { id: "musik", name: "Musik", symbol: "🎼" },
   { id: "filme", name: "Filme & YouTube", symbol: "🎬" }, { id: "retro", name: "Retro", symbol: "🕹️" },
 ];
-const START_IDS = ["gute-nacht", "spiel-nachrichten", "spiel-wecker", "spiel-gutschein", "familie", "spiel-gestalten"];
+const START_IDS = ["gute-nacht", "spiel-nachrichten", "spiel-wecker", "spiel-gutschein", "familie", "spiel-gestalten", "spiel-fotoalbum",
+                   "spiel-wetter", "spiel-schule", "spiel-news"];
 function bereichVon(app) {
   if (app.bereich && BEREICHE.some((b) => b.id === app.bereich)) return app.bereich;
   if (START_IDS.includes(app.id)) return "start";
   if (app.typ === "youtube" || app.typ === "hoerbuch" || app.typ === "video" || app.id === "plex") return "filme";
   if (app.typ === "konsole" || app.typ === "retro") return "retro";
-  if (app.id === "spiel-bass") return "musik";
+  if (app.id === "spiel-bass" || app.id === "spiel-karaoke") return "musik";
   if (app.lernen || app.id === "buecher") return "lernen";
   if (app.typ === "spiel") return "spiele";
   return "start";
 }
 const BESCHREIBUNG = { "gute-nacht": "Hörbuch zum Einschlafen", "spiel-wecker": "Deine Wecker", "spiel-gutschein": "Code vom Zettel einlösen",
-                       "spiel-bass": "Bass, Gitarre, Keyboard, Singen", youtube: "Deine Videos", games: "Alle Retro-Spiele" };
+                       "spiel-bass": "Bass, Gitarre, Keyboard, Singen", youtube: "Deine Videos", games: "Alle Retro-Spiele",
+                       "spiel-wetter": "Wann kann ich raus?", "spiel-schule": "Stundenplan und Hausaufgaben",
+                       "spiel-kinderwelten": "Geschichten lesen, Rätsel, Draußen-Spiele", "spiel-news": "Nachrichten für Kinder" };
 
 async function ladeKacheln() {
   let apps;
@@ -133,7 +145,8 @@ async function ladeKacheln() {
   /* 4.0: vom Kind gestaltet - Lieblinge vorne in „Start“, Hintergrund */
   let gestaltung = { lieblinge: [], thema: "weltall" };
   try { gestaltung = await hole("/api/startseite"); } catch (_) { /* Vorgabe */ }
-  document.body.dataset.thema = gestaltung.thema || "weltall";
+  designZeigen(gestaltung.design?.jetzt || gestaltung.thema, gestaltung.design?.hell,   /* 5.0: Design (abends dunkel) */
+               gestaltung.design?.ansicht || "konsole");                              /* 5.0: Ansicht */
   const vorher = zustand.reihen[zustand.zeile]?.bereich;
   zustand.reihen = [];
   const reihenBox = document.getElementById("reihen");
@@ -189,16 +202,33 @@ function markiere(zeile, spalte) {
   k.knoten.classList.add("gewaehlt");
   /* aktive Reihe nach oben schieben, gewählte Kachel in den sichtbaren Bereich */
   const fenster = document.getElementById("reihen");
-  fenster.style.transform = `translateY(${-reihe.abschnitt.offsetTop}px)`;
-  /* Reihe nur so weit schieben, dass die gewählte Kachel ganz zu sehen ist (mit etwas Rand) */
+  const ansicht = document.body.dataset.ansicht || "konsole";     /* 5.0: Konsole · Seitenleiste · Karussell */
+  fenster.style.transform = ansicht === "konsole" ? `translateY(${-reihe.abschnitt.offsetTop}px)` : "none";
   const streifen = k.knoten.parentElement;
-  let versatz = Number(streifen.dataset.versatz || 0);
-  const rand = 40, sicht = streifen.clientWidth;
-  const links = k.knoten.offsetLeft, rechts = links + k.knoten.offsetWidth;
-  if (links - versatz < rand) versatz = Math.max(0, links - rand);
-  if (rechts - versatz > sicht - rand) versatz = rechts - sicht + rand;
-  streifen.dataset.versatz = String(versatz);
-  streifen.style.transform = `translateX(${-versatz}px)`;
+  if (ansicht === "seitenleiste") {
+    /* Raster: nur so weit nach oben schieben, dass die gewählte Kachel ganz zu sehen ist */
+    const sicht = document.getElementById("reihen-fenster").clientHeight;
+    let versatz = Number(streifen.dataset.versatz || 0);
+    const oben = k.knoten.offsetTop, unten = oben + k.knoten.offsetHeight;
+    if (oben - versatz < 10) versatz = Math.max(0, oben - 10);
+    if (unten - versatz > sicht - 20) versatz = unten - sicht + 20;
+    streifen.dataset.versatz = String(versatz);
+    streifen.style.transform = `translateY(${-versatz}px)`;
+  } else if (ansicht === "karussell") {
+    /* die gewählte Kachel steht immer in der Mitte */
+    const versatz = k.knoten.offsetLeft + k.knoten.offsetWidth / 2 - streifen.clientWidth / 2;
+    streifen.dataset.versatz = String(versatz);
+    streifen.style.transform = `translateX(${-versatz}px)`;
+  } else {
+    /* Reihe nur so weit schieben, dass die gewählte Kachel ganz zu sehen ist (mit etwas Rand) */
+    let versatz = Number(streifen.dataset.versatz || 0);
+    const rand = 40, sicht = streifen.clientWidth;
+    const links = k.knoten.offsetLeft, rechts = links + k.knoten.offsetWidth;
+    if (links - versatz < rand) versatz = Math.max(0, links - rand);
+    if (rechts - versatz > sicht - rand) versatz = rechts - sicht + rand;
+    streifen.dataset.versatz = String(versatz);
+    streifen.style.transform = `translateX(${-versatz}px)`;
+  }
   for (const b of document.querySelectorAll("#bereiche .bereich")) b.classList.toggle("an", b.dataset.bereich === reihe.bereich);
   /* großer Titel wie bei der Konsole, Hintergrund in der Farbe der Kachel */
   const d = k.daten;
@@ -367,8 +397,9 @@ function weckerKlingelt(info) {
   const box = el("section", { class: "overlay wecker-klingelt" });
   const uhr = el("div", { class: "wecker-uhr" });
   box.append(el("div", { class: "wecker-sonne", text: "☀️" }), uhr, el("h2", { text: "Guten Morgen!" }),
-    el("div", { class: "knopfreihe" }, el("div", { class: "knopf gewaehlt", text: "😴 OK = Schlummern (5 min)" }),
-      el("div", { class: "knopf", text: "⏹ STOP = Aus" })));
+    el("div", { class: "knopfreihe wecker-knoepfe" }, el("div", { class: "knopf gewaehlt", "data-aktion": "schlummern", text: "😴 Noch 5 Minuten" }),
+      el("div", { class: "knopf", "data-aktion": "aus", text: "⏹ Wecker aus" })),
+    el("div", { class: "leise", text: "◀ ▶ wählen · OK bestätigen · STOP = aus" }));
   document.getElementById("overlay-wurzel").replaceChildren(box);
   const stellen = () => { uhr.textContent = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }); };
   stellen();
@@ -395,10 +426,22 @@ function weckerKlingelt(info) {
     ladeKacheln();
   }
   zustand.overlay = { id: "wecker-klingelt", schliesse: () => { clearInterval(lauter); clearInterval(sanft); clearTimeout(vonSelbstAus); audio?.pause(); },
+    /* 4.4: Pfeile wählen zwischen den Knöpfen (Pfeile = immer Navigation), OK bestätigt die Auswahl, STOP = aus.
+       Vorher war jede Taste „Schlummern“ - auch die Pfeile, mit denen man „Aus“ wählen wollte. */
     taste(t) {
       if (t === "Escape" || t === "Backspace" || t === "MediaStop") { fertig("aus"); return true; }
-      fertig("schlummern");                                    /* jede andere Taste: schlummern (wie am Handy) */
-      return true;
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(t)) {
+        const knoepfe = [...box.querySelectorAll(".wecker-knoepfe .knopf")];
+        const jetzt = knoepfe.findIndex((k) => k.classList.contains("gewaehlt"));
+        knoepfe.forEach((k, i) => k.classList.toggle("gewaehlt", i === (jetzt + 1) % knoepfe.length));
+        ton("bewegen");
+        return true;
+      }
+      if (t === "Enter" || t === " " || t === "MediaPlayPause") {
+        fertig(box.querySelector(".wecker-knoepfe .knopf.gewaehlt")?.dataset.aktion || "schlummern");
+        return true;
+      }
+      return true;                                             /* andere Tasten tun nichts (kein versehentliches Schlummern) */
     } };
 }
 
@@ -447,14 +490,25 @@ function zeigeMeldungen(liste) {
   const uhr = (iso) => iso.slice(11, 16);
   const box = el("div", { id: "meldungen" },
     el("div", { class: "meldungen-karte" },
-      el("div", { class: "meldungen-symbol", text: "📣" }),
+      /* 4.3: Wer schreibt? Symbol und Name des Telegram-Kontakts (sonst „Nachricht von Mama oder Papa“) */
+      el("div", { class: "meldungen-symbol", text: liste.every((m) => m.symbol && m.symbol === liste[0].symbol) ? liste[0].symbol : "📣" }),
       ...liste.map((m) => el("div", { class: "meldung-zeile" }, el("span", { class: "meldung-uhr", text: uhr(m.zeit) }),
-        el("span", {}, el("b", { text: (m.quelle ? m.quelle + ": " : "") }), m.text))),
+        el("span", {}, el("b", { text: (m.quelle ? (m.symbol ? m.symbol + " " : "") + m.quelle + ": " : "") }), m.text))),
+      mediumAnzeige(liste.filter((m) => m.medium).pop()?.medium),
       el("button", { class: "knopf gewaehlt", type: "button", tabindex: "-1", text: "OK, gesehen" })));
   box.querySelector("button").addEventListener("click", meldungenBestaetigen);
   document.body.append(box);
   zustand.meldungen = { box, nummern, liste };
   ton("ok");
+}
+
+/* 4.4: Foto, Sprachnachricht, Musik oder Video von Telegram - groß in der Meldung, Ton/Video spielt einmal von selbst */
+function mediumAnzeige(medium) {
+  if (!medium?.datei) return null;
+  const quelle = "/medien/" + medium.datei;
+  if (medium.art === "foto") return el("img", { class: "meldung-foto", src: quelle, alt: "" });
+  if (medium.art === "video") return el("video", { class: "meldung-video", src: quelle, autoplay: true, playsinline: true });
+  return el("audio", { src: quelle, autoplay: true });
 }
 
 function meldungenBestaetigen() {
@@ -567,6 +621,18 @@ function zeigeRestzeit(rest) {
   box.className = rest <= 0 ? "aus" : rest <= 10 ? "knapp" : "";
 }
 
+/* 5.0: Wetter oben rechts (alle 5 Minuten; der Server fragt Open-Meteo höchstens alle 30 Minuten) */
+async function wetterKopf() {
+  const box = document.getElementById("wetter-kopf");
+  let w;
+  try { w = await hole("/api/wetter"); } catch (_) { return; }
+  const d = w.aktiv && w.kopf ? w.daten : null;
+  box.hidden = !d;
+  if (!d) return;
+  box.replaceChildren(el("span", { text: d.symbol }), el("span", { class: "wk-temp", text: `${d.temp}°` }),
+    el("span", { class: "wk-satz" + (d.regen.nass || d.regen.ab ? " nass" : ""), text: "· " + d.regen.text }));
+}
+
 async function statusAbfrage() {
   let s;
   try { s = await hole("/api/status"); } catch (_) { return; }
@@ -596,10 +662,13 @@ async function statusAbfrage() {
     hinweis("RetroPie ist nicht gestartet. Bitte Mama oder Papa holen.");
   }
 
+  if (s.pause_rest > 0 && !zustand.pauseLaeuft) bewegungspause(Math.min(900, s.pause_rest));   /* 4.2.1: ohne Neuladen */
+
   zustand.still = Boolean(s.still);
   zeigeMeldungen(s.meldungen || []);
   /* 3.5: Glocke oben mit Zahl der neuen Nachrichten (und auf der Kachel) */
-  const anzahl = (s.meldungen || []).length;
+  /* 4.4: Nachrichten von Freunden in der Sperrzeit zählen nur mit (lesen erst danach) */
+  const anzahl = (s.meldungen || []).length + (s.freunde_spaeter || 0);
   const glocke = document.getElementById("glocke");
   glocke.hidden = !anzahl;
   glocke.textContent = `🔔 ${anzahl}`;
@@ -613,11 +682,21 @@ async function statusAbfrage() {
 }
 
 /* ------------------------------------------------------------ Bildschirmschoner (3.1): eigene Zeichnungen */
+/* 4.4: oder die im Fotoalbum ausgesuchten Bilder, wenn das Kind „Bildschirmschoner“ eingeschaltet hat */
 const SCHONER_NACH_MS = 5 * 60 * 1000;
+function auswahlUrl(id) {
+  const [art, ...rest] = id.split(":"), wert = rest.join(":");
+  if (art === "ordner") return "/api/fotoalbum/bild?pfad=" + encodeURIComponent(wert);
+  return (art === "album" ? "/album/" : "/zeichnung/") + encodeURIComponent(wert);
+}
 async function schonerPruefen() {
   if (zustand.schoner || zustand.overlay || Date.now() - zustand.letzteTaste < SCHONER_NACH_MS) return;
   let bilder = [];
-  try { bilder = (await hole("/api/zeichnungen")).zeichnungen; } catch (_) { return; }
+  try {
+    const fa = await hole("/api/fotoalbum").catch(() => null);
+    if (fa?.erlaubt && fa.bildschirmschoner && fa.auswahl.length) bilder = fa.auswahl.map((id) => ({ url: auswahlUrl(id) }));
+    else bilder = (await hole("/api/zeichnungen")).zeichnungen;
+  } catch (_) { return; }
   const box = el("div", { id: "schoner" });
   const bild = el("img", { alt: "" });
   box.append(bild, el("div", { class: "schoner-uhr" }));
@@ -638,23 +717,51 @@ function schonerAus() {
 }
 
 /* ------------------------------------------------------------ Bewegungspause (3.1) */
+/* 4.2.1: Die Pause legt sich ÜBER das, was gerade offen ist (YouTube, Video, Hörbuch, Spiel), und hält nur an. Danach
+   geht es an derselben Stelle weiter. Vorher wurde die Startseite neu geladen und der Film begann von vorn. */
+function medienAnhalten(offen) {
+  const liefen = [...document.querySelectorAll("video, audio")].filter((m) => !m.paused);
+  liefen.forEach((m) => m.pause());
+  try { offen?.anhalten?.(); } catch (_) { /* weiter */ }
+  return () => {
+    liefen.forEach((m) => m.play().catch(() => {}));
+    try { offen?.fortsetzen?.(); } catch (_) { /* weiter */ }
+  };
+}
+
 function bewegungspause(sekunden) {
-  if (zustand.overlay) schliesseOverlay();
-  const box = el("section", { class: "overlay", style: "align-items:center;justify-content:center;gap:4vh;text-align:center" });
+  if (zustand.pauseLaeuft) return;
+  zustand.pauseLaeuft = true;
+  const vorher = zustand.overlay?.id === "pause" ? null : zustand.overlay;
+  const weiter = medienAnhalten(vorher);
+  const box = el("section", { class: "overlay pause-ebene", style: "align-items:center;justify-content:center;gap:4vh;text-align:center;z-index:50" });
   const zahl = el("div", { class: "witz", style: "font-size:clamp(70px,12vw,170px)" });
   const uebungen = ["Hampelmann! 🤸", "Auf einem Bein stehen 🦩", "Arme kreisen 🌀", "Hüpfen wie ein Frosch 🐸", "Strecken bis zur Decke 🙆"];
   const uebung = el("div", { class: "witz" });
   box.append(el("div", { class: "punkte", text: "Bewegungspause" }), uebung, zahl);
-  document.getElementById("overlay-wurzel").replaceChildren(box);
+  if (vorher) box.append(el("div", { class: "hilfe", text: "Danach geht es genau hier weiter." }));
+  document.getElementById("overlay-wurzel").append(box);     /* anhängen, nicht ersetzen: der Player bleibt, wie er ist */
   let rest = sekunden;
+  const ende = () => {
+    clearInterval(timer);
+    box.remove();
+    zustand.pauseLaeuft = false;
+    zustand.overlay = vorher;
+    weiter();
+    hinweis(vorher ? "Super gemacht! Weiter geht's 🎉" : "Super gemacht! 🎉");
+    ton("sieg");
+  };
   const tick = () => {
     zahl.textContent = `${Math.floor(rest / 60)}:${String(rest % 60).padStart(2, "0")}`;
     uebung.textContent = uebungen[Math.floor((sekunden - rest) / 20) % uebungen.length];
-    if (rest-- <= 0) { clearInterval(timer); zustand.overlay = null; box.remove(); hinweis("Super gemacht! 🎉"); ton("sieg"); }
+    if (rest-- <= 0) ende();
   };
   const timer = setInterval(tick, 1000);
   tick();
-  zustand.overlay = { id: "pause", taste: () => true, schliesse: () => clearInterval(timer) };
+  zustand.overlay = { id: "pause", taste: () => true,
+                      /* wird die Pause von außen beendet (Elternbereich, Zur Startseite), schließt das Darunter mit */
+                      schliesse: () => { clearInterval(timer); zustand.pauseLaeuft = false;
+                                         try { vorher?.schliesse?.(); } catch (_) { /* weiter */ } } };
 }
 
 /* ------------------------------------------------------------ Los */
@@ -679,6 +786,8 @@ async function start() {
   await statusAbfrage();
   setInterval(() => { if (!document.hidden) statusAbfrage(); }, 2000);
   setInterval(() => { if (!document.hidden && !zustand.overlay) ladeKacheln(); }, 60000);
+  wetterKopf();
+  setInterval(() => { if (!document.hidden) wetterKopf(); }, 5 * 60 * 1000);
   window.addEventListener("hashchange", hashPruefen);
   hashPruefen();
   setInterval(schonerPruefen, 30000);

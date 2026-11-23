@@ -21,7 +21,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
-from . import hoerbuch as hoerbuch_mod, katalog as katalog_mod, sicherung as sicherung_mod
+from . import hoerbuch as hoerbuch_mod, katalog as katalog_mod, kinderwelten as kinderwelten_mod, sicherung as sicherung_mod, wetter as wetter_mod
 
 log = logging.getLogger("fernsehfranzi.web")
 
@@ -122,7 +122,7 @@ class Basis(BaseHTTPRequestHandler):
             typ += "; charset=utf-8"
         kopf = {"Content-Security-Policy":
                 "default-src 'self'; img-src 'self' data: blob: https://i.ytimg.com https://i9.ytimg.com; "   # blob: 4.2 (Bildschirmfoto, Zeichnungen)
-                "style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; "
+                "style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; media-src 'self' blob:; "
                 # 3.5 YouTube-Bereich: nur der eingebettete Player (nocookie) und sein Steuer-Skript
                 "script-src 'self' https://www.youtube.com https://s.ytimg.com; "
                 "frame-src https://www.youtube-nocookie.com"} if pfad.endswith(".html") else {}
@@ -190,6 +190,12 @@ class Basis(BaseHTTPRequestHandler):
             ("GET", "/api/eltern/wecker-toene"): lambda q: (self.eltern_pflicht(), self.json({"toene": h.wecker_toene()})),
             ("POST", "/api/eltern/gutschein-loeschen"): lambda q: self._eltern(
                 lambda d: h.gutscheine.loeschen(str(d.get("code", "")))),
+            # 5.0: Wetter-Ort suchen, Klassenkiste jetzt abrufen
+            ("GET", "/api/eltern/wetter/orte"): lambda q: (self.eltern_pflicht(),
+                                                            self.json({"orte": wetter_mod.orte_suchen(q.get("q", [""])[0])})),
+            ("POST", "/api/eltern/schule/abrufen"): lambda q: self._eltern_ergebnis(lambda d: h.schule.jetzt_holen()),
+            ("POST", "/api/eltern/ferien-eintragen"): lambda q: self._eltern_ergebnis(lambda d: h.ferien_eintragen(
+                str(d.get("land", "")), d.get("feiertage") is not False, d.get("auto") is True)),
             ("POST", "/api/eltern/bonus"): lambda q: self._eltern(lambda d: h.bonus(_bonus_art(d))),
             ("POST", "/api/eltern/sperre"): lambda q: self._eltern(
                 lambda d: h.entsperren() if d.get("frei") else h.sperren(d.get("text", ""))),
@@ -204,7 +210,7 @@ class Basis(BaseHTTPRequestHandler):
             ("POST", "/api/eltern/gute-nacht"): lambda q: self._eltern(lambda d: h.gute_nacht_starten()),
             ("POST", "/api/eltern/fernseher-aus"): lambda q: self._eltern(lambda d: h.cec_befehl("standby")),
             ("POST", "/api/eltern/ton"): lambda q: self._eltern(
-                lambda d: h.ton_setzen(_wahl(str(d.get("ziel")), ("hdmi", "klinke")))[0]),
+                lambda d: h.ton_setzen(_wahl(str(d.get("ziel")), ("hdmi", "klinke", "kopfhoerer")))[0]),
             ("POST", "/api/eltern/lautstaerke"): lambda q: self._eltern(
                 lambda d: h.lautstaerke(_wahl(str(d.get("richtung")), ("lauter", "leiser")))),
             ("POST", "/api/eltern/domains-erlauben"): lambda q: self._eltern(
@@ -261,7 +267,7 @@ class Basis(BaseHTTPRequestHandler):
 
     def _startseite(self):
         d = self.lies_json()                        # nur einmal lesen (der Körper ist danach leer)
-        self.hub.einstellungen_aendern({"startseite": {"lieblinge": d.get("lieblinge", []), "thema": d.get("thema", "weltall")}})
+        self.hub.startseite_setzen(d)
         self.json({"ok": True})
 
     def _youtube_eintrag(self):
@@ -360,21 +366,55 @@ class KioskHandler(Basis):
                                                   self.json({"ok": True})),
             ("POST", "/api/kiosk/domains"): lambda q: self._domains(),
             ("POST", "/api/kiosk/foto"): lambda q: self._foto(),
+            ("POST", "/api/kiosk/kk-anmeldung"): lambda q: self._kk_anmeldung(),
+            ("GET", "/api/karaoke"): lambda q: self.json({"lieder": h.karaoke_liste()}),
+            ("GET", "/api/karaoke/musik"): lambda q: self._karaoke_musik(q),
             # 3.3 Hörbücher: Liste und Dateien kommen über den Server (Chromium spricht nur mit 127.0.0.1)
             ("GET", "/api/hoerbuch/liste"): lambda q: self._hoerbuch_liste(q),
             ("GET", "/api/hoerbuch/datei"): lambda q: self._hoerbuch_datei(q),
             ("GET", "/api/hoerbuch/cover"): lambda q: self._hoerbuch_cover(q),
             ("POST", "/api/hoerbuch/stand"): lambda q: self._hoerbuch_stand(),
             ("GET", "/api/youtube"): lambda q: self.json(h.youtube_fuer_tv()),
-            ("GET", "/api/startseite"): lambda q: self.json(h.einstellungen.get("startseite") or {"lieblinge": [], "thema": "weltall"}),
+            ("GET", "/api/startseite"): lambda q: self.json(h.startseite_anzeige()),
+            # 5.0: Wetter, Schule (Klassenkiste), Kinderwelten (Familienfabrik), Kinder-News - alles nur lesen
+            ("GET", "/api/wetter"): lambda q: self.json(h.wetter.fuer_tv()),
+            ("GET", "/api/schule"): lambda q: self.json(h.schule.fuer_tv()),
+            ("GET", "/api/kinderwelten"): lambda q: self.json(h.kinderwelten.uebersicht()),
+            ("GET", "/api/kinderwelten/geschichten"): lambda q: self.json({"eintraege": h.kinderwelten.geschichten()}),
+            ("GET", "/api/kinderwelten/geschichte"): lambda q: self.json(h.kinderwelten.geschichte(q.get("a", [""])[0])),
+            ("GET", "/api/kinderwelten/buecher"): lambda q: self.json({"eintraege": h.kinderwelten.buecher()}),
+            ("GET", "/api/kinderwelten/kapitel"): lambda q: self.json(h.kinderwelten.kapitel(
+                q.get("a", [""])[0], _ganzzahl(q.get("n", ["1"])[0]))),
+            ("GET", "/api/kinderwelten/news"): lambda q: self.json({"eintraege": h.kinderwelten.news()}),
+            ("GET", "/api/kinderwelten/draussen"): lambda q: self.json({"eintraege": h.kinderwelten.draussen()}),
+            ("GET", "/api/kinderwelten/beitrag"): lambda q: self.json(h.kinderwelten.beitrag(q.get("a", [""])[0])),
+            ("GET", "/api/kinderwelten/raetsel"): lambda q: self.json(h.kinderwelten.raetsel(h.uhr().date())),
+            ("GET", "/api/kinderwelten/bild"): lambda q: self._durchreichen(kinderwelten_mod.bild_adresse(q.get("u", [""])[0]),
+                                                                            q.get("u", [""])[0], {"User-Agent": "FernsehFranzi"}),
+            ("GET", "/api/news"): lambda q: self.json(h.news.liste()),
             ("POST", "/api/startseite"): lambda q: self._startseite(),
-            ("GET", "/api/telegram"): lambda q: self.json({"aktiv": h.telegram.aktiv(),
-                                                           "antworten": h.telegram.einstellungen()["antworten"],
-                                                           "eigene_texte": h.telegram.einstellungen()["eigene_texte"],
-                                                           "chats": [c["name"] for c in h.telegram.einstellungen()["chats"]]}),
+            ("GET", "/api/telegram"): lambda q: self.json(h.telegram.fuer_tv()),
             ("POST", "/api/telegram/senden"): lambda q: self._telegram_senden(),
+            # 4.4: Speicherplatz, Album, Fotoalbum, Bilder teilen
+            ("GET", "/api/speicher"): lambda q: self.json(h.speicher_status()),
+            ("GET", "/api/album"): lambda q: self.json({"bilder": h.album_liste(), "speicher": h.speicher_status()}),
+            ("POST", "/api/album/uebernehmen"): lambda q: self.json({"ok": True, "datei": h.album_uebernehmen(self.lies_json().get("datei"))}),
+            ("POST", "/api/kind/loeschen"): lambda q: (lambda d: (h.kind_datei_loeschen(str(d.get("art")), str(d.get("name"))),
+                                                                  self.json({"ok": True, "speicher": h.speicher_status()})))(self.lies_json()),
+            ("GET", "/api/fotoalbum"): lambda q: self.json(dict(h.fotoalbum(), ordner=bool(h.fotoalbum()["ordner"]))),
+            ("POST", "/api/fotoalbum"): lambda q: self.json(dict(h.fotoalbum_kind(self.lies_json()), ordner=bool(h.fotoalbum()["ordner"]))),
+            ("GET", "/api/fotoalbum/liste"): lambda q: self._fotoalbum_liste(q),
+            ("GET", "/api/fotoalbum/bild"): lambda q: self._durchreichen(h.fotoalbum_bild_adresse(q.get("pfad", [""])[0]), q.get("pfad", [""])[0]),
+            ("POST", "/api/bild/teilen"): lambda q: (lambda d: self.json({"ok": True, "meldung": "Geschickt an %s ✔" % h.bild_teilen(
+                str(d.get("art")), str(d.get("name")), d.get("chat") if isinstance(d.get("chat"), int) else None)}))(self.lies_json()),
+            # 4.3: Spielraum - der Fernseher als Tafel (die Handys kommen über RaumHandler im Heimnetz)
+            ("POST", "/api/raum/oeffnen"): lambda q: self.json(h.raum_oeffnen()),
+            ("GET", "/api/raum/tv"): lambda q: self.json(h.raum_tv(_zahl_oder_none(q.get("striche_ab", [None])[0]))),
+            ("POST", "/api/raum/tv-aktion"): lambda q: (h.raum_tv_aktion(self.lies_json()), self.json({"ok": True})),
+            ("POST", "/api/raum/schliessen"): lambda q: (h.raum_schliessen(), self.json({"ok": True})),
             ("GET", "/api/inhalte"): lambda q: self.json(h.einstellungen.get("inhalte") or {"witze": [], "quiz": []}),
-            ("GET", "/api/meldungen"): lambda q: self.json({"meldungen": list(reversed(h.familie.zustand["meldungen"][-20:]))}),
+            ("GET", "/api/meldungen"): lambda q: self.json({"meldungen": list(reversed(h.familie.sichtbare_meldungen(20))),
+                                                            "freunde_spaeter": h.familie.gezaehlt_gesperrt()}),
             ("POST", "/api/musik/suche"): lambda q: self._ergebnis(*h.musik_suche(self.lies_json().get("text"))),
             ("GET", "/api/wecker"): lambda q: self.json({"wecker": {k: v for k, v in h.wecker().items() if k != "toene"},
                                                          "toene": h.wecker_toene(), "laeuft": h.status()["wecker"]}),
@@ -388,9 +428,35 @@ class KioskHandler(Basis):
         r.update(self.eltern_routen())
         return r
 
+    def _fotoalbum_liste(self, q):
+        try:
+            self.json(self.hub.fotoalbum_ordner_liste(q.get("pfad", [""])[0]))
+        except hoerbuch_mod.HoerbuchFehler as fehler:
+            self.json({"ok": False, "fehler": str(fehler)}, 502)
+
+    def album_bild(self, pfad):
+        voll = self.hub.album_pfad(os.path.basename(pfad))
+        if not voll:
+            raise Antwort(404, {"ok": False})
+        with open(voll, "rb") as f:
+            self.sende(200, f.read(), "image/png" if voll.endswith(".png") else "image/jpeg")
+
+    def medium(self, pfad):
+        """4.4: Foto, Sprachnachricht, Musik oder Video von Telegram (nur Dateien aus <daten>/medien)."""
+        voll = self.hub.telegram.medium_pfad(os.path.basename(pfad))
+        if not voll:
+            raise Antwort(404, {"ok": False, "fehler": "Diese Nachricht ist nicht mehr da (nach 7 Tagen gelöscht)."})
+        typ = {"jpg": "image/jpeg", "ogg": "audio/ogg", "mp3": "audio/mpeg", "mp4": "video/mp4", "m4a": "audio/mp4"}[voll.rsplit(".", 1)[1]]
+        with open(voll, "rb") as f:
+            self.sende(200, f.read(), typ)
+
     def statisch(self, pfad):
         if pfad in ("/", "/index.html"):
             return self.datei("index.html", ersetze_token=True)
+        if pfad.startswith("/medien/"):
+            return self.medium(pfad)
+        if pfad.startswith("/album/"):
+            return self.album_bild(pfad)
         if pfad.startswith("/zeichnung/"):
             name = os.path.basename(pfad)
             voll = os.path.join(self.zeichnungen, name)
@@ -423,8 +489,19 @@ class KioskHandler(Basis):
         """Audiodatei durchreichen - mit Range (Spulen, Weiterhören an der gemerkten Stelle)."""
         self._durchreichen(self.hub.hoerbuch_datei(q.get("app", [""])[0], q.get("pfad", [""])[0]), q.get("pfad", [""])[0])
 
-    def _durchreichen(self, adresse, pfad):
-        kopf = {}
+    def _kk_anmeldung(self):
+        if self.headers.get("X-FF-Token") != self.hub.token:
+            raise Antwort(403, {"ok": False})
+        d = self.lies_json(grenze=20_000)
+        self.hub.kk_anmeldung_empfangen(int(d.get("nr") or 0), d.get("cookie", ""), d.get("fehler", ""))
+        self.json({"ok": True})
+
+    def _karaoke_musik(self, q):
+        adresse, kopf = self.hub.karaoke_musik(q.get("id", [""])[0])
+        self._durchreichen(adresse, "lied.mp3", kopf)
+
+    def _durchreichen(self, adresse, pfad, zusatz=None):
+        kopf = dict(zusatz or {})
         if self.headers.get("Range"):
             kopf["Range"] = self.headers["Range"]
         try:
@@ -503,8 +580,8 @@ class KioskHandler(Basis):
 
     def _ton(self):
         ziel = self.lies_json().get("ziel")
-        if ziel not in ("hdmi", "klinke"):
-            raise ValueError("ziel muss hdmi oder klinke sein.")
+        if ziel not in ("hdmi", "klinke", "kopfhoerer"):
+            raise ValueError("ziel muss hdmi, klinke oder kopfhoerer sein.")
         ok, name = self.hub.ton_setzen(ziel)
         self.json({"ok": ok, "ziel": ziel, "name": name}, 200 if ok else 500)
 
@@ -531,6 +608,7 @@ class KioskHandler(Basis):
                 raise ValueError
         except (ValueError, binascii.Error):
             raise Antwort(400, {"ok": False, "fehler": "Das Bild konnte nicht gelesen werden."})
+        self.hub.speicher_pruefen(len(png))            # 4.4: Speicherplatz des Kindes (die Eltern stellen ihn ein)
         os.makedirs(self.zeichnungen, exist_ok=True)
         stamm = datetime.now().strftime("zeichnung-%Y%m%d-%H%M%S")
         name, nr = stamm + ".png", 2
@@ -552,10 +630,14 @@ class LanHandler(Basis):
     def statisch(self, pfad):
         if pfad in ("/", "/eltern", "/eltern.html"):
             return self.datei("eltern.html")
-        if pfad in ("/anleitung.pdf", "/kinder-anleitung.pdf"):   # Anleitungen (enthalten nichts Privates)
+        if pfad in ("/anleitung.pdf", "/kinder-anleitung.pdf", "/handbuch.pdf", "/kurzanleitung.pdf"):   # Anleitungen (enthalten nichts Privates)
             return self.datei(pfad.lstrip("/"))
         if pfad.startswith(("/css/", "/js/eltern", "/js/gemeinsam", "/fonts/")):
             return self.datei(pfad.lstrip("/"))
+        if pfad.startswith("/medien/") and self.hub.sitzung_gueltig(self.headers.get("X-FF-Eltern")):
+            return self.medium(pfad)
+        if pfad.startswith("/album/") and self.hub.sitzung_gueltig(self.headers.get("X-FF-Eltern")):
+            return self.album_bild(pfad)
         if pfad.startswith("/zeichnung/") and self.hub.sitzung_gueltig(self.headers.get("X-FF-Eltern")):
             name = os.path.basename(pfad)
             voll = os.path.join(self.zeichnungen, name)
@@ -565,8 +647,52 @@ class LanHandler(Basis):
         raise Antwort(404, {"ok": False, "fehler": "Nicht gefunden."})
 
 
+class RaumHandler(Basis):
+    """4.3: Handys im Heimnetz - nur die Mitspiel-Seite und /api/raum/*, sonst nichts (keine Startseite, keine
+    Eltern-Seite). Läuft nur, solange am Fernseher ein Spielraum offen ist und die Eltern Handy-Spiele erlaubt haben.
+    Beitreten braucht den Schlüssel aus dem QR-Code (oder den Raumcode), danach weist sich jedes Handy mit seinem
+    eigenen Geheimnis aus (X-FF-Spieler)."""
+    lan = True
+
+    def routen(self):
+        h = self.hub
+        geheim = lambda: self.headers.get("X-FF-Spieler", "")       # noqa: E731
+        return {
+            ("POST", "/api/raum/beitreten"): lambda q: self._beitreten(),
+            ("GET", "/api/raum/zustand"): lambda q: self.json(h.raum_zustand(geheim())),
+            ("POST", "/api/raum/aktion"): lambda q: self.json(h.raum_aktion(geheim(), self.lies_json(grenze=200_000))),
+        }
+
+    def _beitreten(self):
+        d = self.lies_json()
+        self.json(self.hub.raum_beitreten(d.get("schluessel"), d.get("name", ""), d.get("symbol", ""), bool(d.get("leicht"))))
+
+    def statisch(self, pfad):
+        if self.hub.raum is None:
+            raise Antwort(404, {"ok": False, "fehler": "Gerade ist kein Spielraum offen."})
+        if pfad in ("/", "/mitspielen"):
+            return self.datei("mitspielen.html")
+        if pfad in ("/js/mitspielen.js", "/css/mitspielen.css"):
+            return self.datei(pfad.lstrip("/"))
+        raise Antwort(404, {"ok": False, "fehler": "Nicht gefunden."})
+
+
+def _zahl_oder_none(wert):
+    try:
+        return max(0, int(wert)) if wert is not None else None
+    except ValueError:
+        return None
+
+
 def _bonus_art(daten):
     return _wahl(str(daten.get("art")), ("15", "30", "ohne_limit"))
+
+
+def _ganzzahl(wert):
+    try:
+        return int(wert)
+    except (TypeError, ValueError):
+        raise ValueError("Bitte eine Zahl.") from None
 
 
 def _wahl(wert, erlaubt):

@@ -22,6 +22,15 @@
   --warn: #ffc95a;
   --schlecht: #ff6b6b;
   --akzent: #7fa8ff;
+  /* 5.0: Farben der Startseite als Variablen - die hellen Designs setzen sie neu (Spiele und Player bleiben dunkel) */
+  --kopf-leise: #91a9d2;
+  --gruss: #9fb4d8;
+  --held-info: #c3cee2;
+  --fuss: #78869a;
+  --chip-an: rgba(255, 255, 255, .14);
+  --kachel-anfang: #141b28;
+  --kachel-taste: rgba(255, 255, 255, .6);
+  --hinweis-bg: #1f2a3d;
 }
 
 * { box-sizing: border-box; }
@@ -47,9 +56,9 @@ main {
 
 /* ------------------------------------------------------------ Kopf */
 header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3vh; }
-.eyebrow { color: #91a9d2; font-size: clamp(10px, 1vw, 14px); font-weight: 700; letter-spacing: .28em; text-transform: uppercase; }
+.eyebrow { color: var(--kopf-leise); font-size: clamp(10px, 1vw, 14px); font-weight: 700; letter-spacing: .28em; text-transform: uppercase; }
 h1 { margin: .4rem 0 0; font-size: clamp(30px, 4.2vw, 56px); line-height: 1; font-weight: 700; letter-spacing: -.05em; }
-#gruss { color: #9fb4d8; font-size: clamp(13px, 1.5vw, 20px); font-weight: 600; margin-top: 8px; }
+#gruss { color: var(--gruss); font-size: clamp(13px, 1.5vw, 20px); font-weight: 600; margin-top: 8px; }
 .kopf-rechts { text-align: right; }
 #uhr { font-size: clamp(22px, 2.8vw, 40px); font-weight: 600; font-variant-numeric: tabular-nums; }
 #datum { color: var(--leise); font-size: clamp(12px, 1.2vw, 16px); margin-top: 4px; }
@@ -62,7 +71,7 @@ h1 { margin: .4rem 0 0; font-size: clamp(30px, 4.2vw, 56px); line-height: 1; fon
 #restzeit.aus { background: rgba(255, 107, 107, .14); border-color: rgba(255, 107, 107, .5); color: #ffb3b3; }
 
 /* ------------------------------------------------------------ Kacheln */
-.reihe-titel { color: #9fb4d8; font-size: clamp(12px, 1.2vw, 16px); font-weight: 750; letter-spacing: .22em; text-transform: uppercase; margin: 0 0 1.2vh; }
+.reihe-titel { color: var(--gruss); font-size: clamp(12px, 1.2vw, 16px); font-weight: 750; letter-spacing: .22em; text-transform: uppercase; margin: 0 0 1.2vh; }
 .apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 1.4vw; }
 .spiele { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1vw; margin-top: 1vh; }
 .kachel {
@@ -86,18 +95,18 @@ h1 { margin: .4rem 0 0; font-size: clamp(30px, 4.2vw, 56px); line-height: 1; fon
 .kachel .name { font-size: clamp(15px, 1.6vw, 28px); font-weight: 750; overflow-wrap: break-word; hyphens: auto; }
 .spiele .kachel .name { font-size: clamp(13px, 1.3vw, 18px); }
 .kachel .grund { font-size: clamp(11px, 1.05vw, 15px); color: #ffd7a0; font-weight: 650; }
-.kachel .taste { position: absolute; top: 9px; right: 12px; color: rgba(255, 255, 255, .6); font-size: 12px; font-weight: 700; z-index: 1; }
+.kachel .taste { position: absolute; top: 9px; right: 12px; color: var(--kachel-taste); font-size: 12px; font-weight: 700; z-index: 1; }
 .kachel .frei-hinweis { font-size: 11px; color: rgba(255, 255, 255, .7); font-weight: 650; }
 .anschlag { animation: anschlag .22s ease; }
 @keyframes anschlag { 35% { translate: var(--stoss-x, 0) var(--stoss-y, 0); } }
 
-footer { display: flex; justify-content: space-between; color: #78869a; font-size: clamp(11px, 1vw, 14px); margin-top: auto; padding-top: 2vh; }
+footer { display: flex; justify-content: space-between; color: var(--fuss); font-size: clamp(11px, 1vw, 14px); margin-top: auto; padding-top: 2vh; }
 #version { letter-spacing: .18em; font-weight: 700; }
 
 /* ------------------------------------------------------------ Hinweis, Sperre */
 #hinweis {
   position: fixed; left: 50%; bottom: 7vh; transform: translate(-50%, 20px); opacity: 0;
-  background: #1f2a3d; border: 2px solid var(--linie); border-radius: 18px; padding: 16px 28px;
+  background: var(--hinweis-bg); color: var(--text); border: 2px solid var(--linie); border-radius: 18px; padding: 16px 28px;
   font-size: clamp(16px, 1.8vw, 26px); font-weight: 700; transition: opacity .2s ease, transform .2s ease; z-index: 50;
   max-width: 80vw; text-align: center;
 }
@@ -321,10 +330,10 @@ header { margin-bottom: 1.6vh; }
 #bereiche { display: flex; gap: 1vw; margin-bottom: 2vh; }
 #bereiche .bereich { display: flex; align-items: center; gap: .5em; border: 0; background: transparent; color: var(--leise);
   font-size: clamp(14px, 1.45vw, 22px); font-weight: 750; padding: .45em 1em; border-radius: 999px; cursor: pointer; }
-#bereiche .bereich.an { background: rgba(255, 255, 255, .14); color: var(--text); }
+#bereiche .bereich.an { background: var(--chip-an); color: var(--text); }
 #held { min-height: 11vh; margin-bottom: 1.5vh; }
 #held-name { font-size: clamp(30px, 4.2vw, 64px); font-weight: 800; letter-spacing: -.02em; line-height: 1.05; }
-#held-info { color: #c3cee2; font-size: clamp(14px, 1.5vw, 22px); margin-top: .6vh; }
+#held-info { color: var(--held-info); font-size: clamp(14px, 1.5vw, 22px); margin-top: .6vh; }
 #reihen-fenster { flex: 1; min-height: 0; overflow: hidden; }
 #reihen { position: relative; transition: transform .28s ease; }
 .reihe { margin-bottom: 2.2vh; opacity: .55; transition: opacity .2s ease; }
@@ -398,3 +407,261 @@ body[data-thema="nacht"] { background: #030408; }
 .vid-info { color: #d0d8e8; font-size: clamp(14px, 1.4vw, 22px); }
 .memory-bild { width: 90%; height: 90%; object-fit: contain; border-radius: 10px; background: #fff; }
 .karte > span:has(.memory-bild) { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+/* ------------------------------------------------------------------ 4.3: Mit Handys spielen (Spielraum) */
+.handys .overlay-inhalt { display: flex; flex-direction: column; min-height: 0; }
+.hs-ansicht { display: flex; flex-direction: column; gap: 2.2vh; flex: 1; min-height: 0; }
+.hs-lobby { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 4vw; align-items: start; }
+.hs-qr-box { background: #fff; color: #1d2433; border-radius: 22px; padding: 2.4vh; text-align: center; }
+.hs-qr svg { width: 100%; max-width: 46vh; display: block; margin: 0 auto; }
+.hs-adresse { font-size: clamp(14px, 1.5vw, 22px); margin-top: 1.2vh; line-height: 1.5; }
+.hs-code { letter-spacing: .4em; font-size: 1.4em; }
+.hs-rechts h3 { margin: 0 0 1.2vh; font-size: clamp(18px, 1.9vw, 30px); }
+.hs-liste { display: flex; flex-wrap: wrap; gap: 1vh 1vw; margin-bottom: 3vh; }
+.hs-zeile { background: #18233a; border-left: 6px solid #888; padding: 1vh 1.2vw; border-radius: 10px; font-size: clamp(16px, 1.6vw, 26px); }
+.hs-menue { display: flex; flex-direction: column; gap: 1.1vh; }
+.hs-eintrag { background: #18233a; border: 3px solid transparent; border-radius: 14px; padding: 1.4vh 1.4vw; font-size: clamp(18px, 1.9vw, 30px); font-weight: 700; }
+.hs-eintrag.gewaehlt { border-color: #fff; background: #23345a; transform: scale(1.02); }
+.hs-eintrag.geht-nicht { opacity: .45; }
+.hs-spielerleiste { display: flex; flex-wrap: wrap; gap: .8vw; }
+.hs-spieler { border: 3px solid #888; border-radius: 99px; padding: .5vh 1vw; font-size: clamp(14px, 1.4vw, 22px); background: #141d31; }
+.hs-spieler.weg { opacity: .4; }
+.hs-frage-nr { color: #9fb0d6; font-size: clamp(16px, 1.6vw, 24px); }
+.hs-frage { font-size: clamp(28px, 3.6vw, 60px); font-weight: 800; line-height: 1.2; }
+.hs-status { font-size: clamp(20px, 2.2vw, 36px); color: #ffd76a; font-weight: 700; }
+.hs-buzzer-bild { font-size: 18vh; text-align: center; animation: atmen34 1.4s ease-in-out infinite; }
+@keyframes atmen34 { 50% { transform: scale(.92); } }
+.hs-optionen { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6vh 1.4vw; }
+.hs-option { border-radius: 16px; padding: 2vh 1.4vw; font-size: clamp(22px, 2.4vw, 40px); font-weight: 800; color: #fff; }
+.hs-option.o0 { background: #c9473d; } .hs-option.o1 { background: #2f74c9; } .hs-option.o2 { background: #2f9a5c; } .hs-option.o3 { background: #c98d1d; }
+.hs-option.falsch { opacity: .3; } .hs-option.richtig { outline: 6px solid #fff; transform: scale(1.03); }
+.hs-tv-panel { display: flex; flex-wrap: wrap; align-items: center; gap: .8vw; background: #101827; border-radius: 14px; padding: 1.2vh 1.2vw; margin-top: auto; }
+.hs-tv-panel.leise { color: #9fb0d6; }
+.hs-tv-name { font-weight: 800; font-size: clamp(16px, 1.6vw, 26px); }
+.hs-knopf { background: #1f2c4a; border: 3px solid #33466f; border-radius: 12px; padding: 1vh 1.1vw; font-size: clamp(16px, 1.6vw, 26px); font-weight: 700; }
+.hs-knopf.gewaehlt { border-color: #fff; background: #2f5fa8; }
+.hs-knopf.aus { opacity: .45; }
+.hs-bahn { display: flex; flex-direction: column; gap: .9vh; }
+.hs-spur { display: grid; grid-template-columns: 12vw 1fr; align-items: center; gap: 1vw; }
+.hs-spur-name { font-size: clamp(14px, 1.4vw, 22px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-spur-strecke { position: relative; height: 5.4vh; background: repeating-linear-gradient(90deg, #1b2740 0 11.5%, #22314f 11.5% 12.5%); border-radius: 10px; }
+.hs-figur { position: absolute; top: 50%; transform: translateY(-50%); font-size: 4.4vh; transition: left .8s cubic-bezier(.3, 1.4, .5, 1); }
+.hs-ziel { position: absolute; right: .6vw; top: 50%; transform: translateY(-50%); font-size: 3.6vh; }
+.hs-malen { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 2vw; flex: 1; min-height: 0; }
+.hs-leinwand { width: 100%; max-height: 62vh; object-fit: contain; background: #fff; border-radius: 16px; }
+.hs-malen-rechts { display: flex; flex-direction: column; gap: 1.6vh; }
+.hs-malen-rechts h3 { margin: 0; font-size: clamp(22px, 2.4vw, 38px); }
+.hs-malen-rechts .hs-tv-panel { flex-direction: column; align-items: stretch; margin-top: 1vh; }
+.hs-raumschiff { display: grid; grid-template-columns: 1.3fr 1fr; gap: 3vw; align-items: center; flex: 1; }
+.hs-cockpit { background: radial-gradient(circle at 50% 30%, #1d2b4d, #0b111e); border: 4px solid #2c3d63; border-radius: 26px; padding: 3vh; text-align: center; }
+.hs-lampe { width: 22vh; height: 22vh; margin: 0 auto 2vh; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff8, var(--lampe) 55%, #0006);
+            display: flex; align-items: center; justify-content: center; font-size: 11vh; box-shadow: 0 0 0 0 var(--lampe); }
+.hs-cockpit.alarm .hs-lampe { animation: lampe .9s ease-in-out infinite; }
+@keyframes lampe { 50% { box-shadow: 0 0 6vh 1vh var(--lampe); filter: brightness(1.3); } }
+.hs-alarm-text { font-size: clamp(22px, 2.6vw, 42px); font-weight: 900; letter-spacing: .05em; }
+.hs-zeitbalken { height: 1.4vh; background: #1b2740; border-radius: 99px; margin-top: 2vh; overflow: hidden; }
+.hs-zeitbalken span { display: block; height: 100%; background: linear-gradient(90deg, #e4574b, #f2c230); transition: width .4s linear; }
+.hs-stand { display: flex; flex-direction: column; gap: 2vh; font-size: clamp(22px, 2.4vw, 40px); font-weight: 700; }
+.hs-stand .leise { font-size: clamp(14px, 1.4vw, 22px); font-weight: 400; }
+.hs-ton { display: flex; flex-direction: column; align-items: center; gap: 2.4vh; flex: 1; }
+.hs-saenger { margin: 0; font-size: clamp(24px, 2.8vw, 44px); }
+.hs-leiter { display: flex; align-items: flex-end; gap: 1.6vw; height: 34vh; }
+.hs-note { width: 8vw; height: calc(9vh + var(--hoehe) * 3.2vh); background: #22314f; border-radius: 14px 14px 6px 6px; display: flex; align-items: flex-start;
+           justify-content: center; padding-top: 1vh; font-size: clamp(18px, 2vw, 32px); font-weight: 800; transition: background .2s, transform .2s; }
+.hs-note.klingt { background: #3f74d9; transform: translateY(-1.2vh); }
+.hs-note.jetzt { background: #f2c230; color: #1d2433; transform: translateY(-1.2vh); }
+.hs-note.treffer { background: #2f9a5c; } .hs-note.daneben { background: #7a2f2f; }
+.hs-pegel { position: relative; width: 50vw; height: 1.2vh; background: linear-gradient(90deg, #7a2f2f, #2f9a5c 45% 55%, #7a2f2f); border-radius: 99px; }
+.hs-pegel span { position: absolute; top: 50%; left: 50%; width: 2.4vh; height: 2.4vh; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); transition: left .1s; }
+.hs-ergebnis { text-align: center; } .hs-ergebnis h2 { font-size: clamp(32px, 4vw, 64px); margin: 1vh 0; }
+.hs-rangliste { display: inline-block; text-align: left; font-size: clamp(22px, 2.6vw, 42px); line-height: 1.6; }
+
+/* 4.4: Fotos und Videos von Telegram in der Meldung */
+.meldung-foto, .meldung-video { display: block; max-width: 100%; max-height: 46vh; margin: 1.6vh auto 0; border-radius: 14px; }
+.medium-ansicht { display: flex; flex-direction: column; align-items: center; gap: 2vh; }
+.medium-gross { max-width: 80vw; max-height: 56vh; border-radius: 16px; }
+audio.medium-gross { width: 50vw; }
+
+/* 4.4: Fotoalbum */
+.fa-leiste { margin-bottom: 1.6vh; } .knopf.an { box-shadow: inset 0 -4px 0 #ffd76a; }
+.fa-menue { margin-bottom: 1.4vh; }
+.fa-raster { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.4vh 1vw; overflow-y: auto; max-height: 64vh; padding: 4px; }
+.fa-kachel { position: relative; aspect-ratio: 4 / 3; background: #141d31; border: 4px solid transparent; border-radius: 14px; overflow: hidden;
+             display: flex; align-items: center; justify-content: center; }
+.fa-kachel.gewaehlt { border-color: #fff; transform: scale(1.04); }
+.fa-kachel img { width: 100%; height: 100%; object-fit: cover; }
+.fa-ordner { font-size: 7vh; } .fa-name { position: absolute; bottom: .6vh; left: .6vw; right: .6vw; font-size: clamp(12px, 1.2vw, 20px); text-align: center; }
+.fa-stern { position: absolute; top: .4vh; right: .5vw; font-size: 4vh; filter: drop-shadow(0 0 4px #000); }
+
+/* 4.4: Lautstärke-Rakete und Klatsch-Rhythmus */
+.hs-rakete, .hs-klatsch { display: flex; flex-direction: column; align-items: center; gap: 2vh; flex: 1; }
+.hs-himmel { position: relative; width: 30vw; height: 52vh; border-radius: 20px; background: linear-gradient(#0a1030, #1d3a7a 70%, #2f6d4a); overflow: hidden; }
+.hs-rakete-bild { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%) rotate(-45deg); font-size: 9vh; transition: bottom .1s linear; }
+.hs-rekord { position: absolute; left: 0; right: 0; border-top: 3px dashed #ffd76a; color: #ffd76a; font-size: clamp(12px, 1.2vw, 18px); text-align: right; padding-right: .6vw; }
+.hs-takt { display: flex; align-items: center; font-size: 8vh; min-height: 14vh; }
+.hs-schlag { opacity: .35; transition: opacity .1s, transform .1s; }
+.hs-schlag.klingt { opacity: 1; transform: scale(1.3); }
+.hs-schlag.treffer { opacity: 1; filter: drop-shadow(0 0 1vh #3bb36b); }
+
+/* 4.4: Karaoke */
+.ka-liste { display: flex; flex-direction: column; gap: 1vh; }
+.ka-eintrag { display: flex; justify-content: space-between; align-items: baseline; gap: 2vw; background: #141d31; border: 3px solid transparent;
+              border-radius: 14px; padding: 1.6vh 1.6vw; font-size: clamp(18px, 2vw, 32px); }
+.ka-eintrag span { color: #9fb0d6; font-size: .7em; }
+.ka-eintrag.gewaehlt { border-color: #fff; background: #2a1f3f; }
+.ka-buehne { display: flex; flex-direction: column; gap: 1.6vh; flex: 1; min-height: 0; }
+.ka-buehne h3 { margin: 0; font-size: clamp(22px, 2.4vw, 38px); color: #ffd76a; }
+.ka-fenster { position: relative; flex: 1; height: 58vh; overflow: hidden; border-radius: 18px; background: linear-gradient(#1a1030, #0d1222);
+              mask-image: linear-gradient(transparent, #000 15%, #000 70%, transparent); padding: 0 4vw; }
+.ka-text { padding: 24vh 0 40vh; text-align: center; }
+.ka-text p { margin: 0 0 1.2vh; font-size: clamp(28px, 3.6vw, 60px); font-weight: 800; line-height: 1.25; }
+.ka-text p.ka-pause { height: 3vh; }
+.ka-text p.ka-strophe { margin-top: 4vh; }
+.ka-text p.ka-ueberschrift { font-size: clamp(18px, 2vw, 32px); color: #b9a6e8; font-weight: 700; letter-spacing: .06em; }
+.ka-text.mit-marken p { opacity: .55; transition: opacity .25s, color .25s, transform .25s; }
+.ka-text.mit-marken p.vorbei { opacity: .35; }
+.ka-text.mit-marken p.dran { opacity: 1; color: #ffd84d; transform: scale(1.06); text-shadow: 0 0 24px rgba(255, 216, 77, .45); }
+.ka-sterne { font-size: clamp(22px, 2.4vw, 38px); min-height: 1.4em; text-align: center; }
+/* Fotoalbum und Karaoke: Inhalt untereinander (nicht zentriert nebeneinander) */
+.fotoalbum .overlay-inhalt, .karaoke .overlay-inhalt { flex-direction: column; align-items: stretch; justify-content: flex-start; }
+.fa-leiste { justify-content: flex-start; }
+.ka-buehne .ka-fenster { height: auto; min-height: 0; }
+
+/* ------------------------------------------------------------ 5.0: helle Designs
+   Nur die Startseite (main) und der Hinweis werden hell. Spiele, Player, Elternbereich und Sperre bleiben dunkel. */
+body[data-thema="himmel"] { background: linear-gradient(170deg, #9fd4ff 0, #d9efff 45%, #f4fbff 100%); }
+body[data-thema="zuckerwatte"] { background: radial-gradient(ellipse at 15% 0%, #ffc6e4 0, transparent 55%),
+  radial-gradient(ellipse at 95% 100%, #d4c8ff 0, transparent 55%), #fff1f8; }
+body[data-thema="wiese"] { background: radial-gradient(ellipse at 85% 0%, #fff3a8 0, transparent 45%),
+  linear-gradient(175deg, #e8f8d8 0, #c8edb0 100%); }
+body[data-thema="regenbogen"] { background: linear-gradient(120deg, #ffd6d6 0, #ffe9c7 20%, #fffac4 38%, #d6f5d1 56%,
+  #d2ecff 74%, #e6d8ff 100%); }
+body.hell main, body.hell #hinweis {
+  --bg: #f4f7fc; --flaeche: #ffffff; --flaeche-2: #eef3fb; --text: #1b2333; --leise: #4b5870; --linie: rgba(25, 40, 80, .16);
+  --fokus: #1b2333; --kopf-leise: #3a5c9e; --gruss: #3a5c9e; --held-info: #33405a; --fuss: #56637c;
+  --chip-an: rgba(25, 40, 80, .1); --kachel-anfang: rgba(255, 255, 255, .55); --kachel-taste: rgba(255, 255, 255, .9);
+  --hinweis-bg: #ffffff;
+}
+body.hell main { color: var(--text); }
+body.hell .kachel { color: #fff; border-color: rgba(255, 255, 255, .7); }
+body.hell .kachel .name { text-shadow: 0 1px 3px rgba(0, 0, 0, .45); }
+body.hell .kachel .bg { opacity: 1; background: linear-gradient(130deg, color-mix(in srgb, var(--farbe) 45%, #fff), var(--farbe)) !important; }
+body.hell .reihe { opacity: .8; }
+body.hell .reihe.aktiv { opacity: 1; }
+body.hell .kachel.gewaehlt { border-color: #1b2333; }
+body.hell .kachel.gesperrt .bg { opacity: .35; }
+body.hell #restzeit { background: rgba(30, 150, 95, .14); border-color: rgba(30, 150, 95, .5); color: #11603c; }
+body.hell #restzeit.knapp { background: rgba(220, 150, 20, .16); border-color: rgba(200, 130, 10, .55); color: #7a4b00; }
+body.hell #restzeit.aus { background: rgba(210, 60, 60, .14); border-color: rgba(200, 50, 50, .5); color: #8a1f1f; }
+body.hell #hinweis { box-shadow: 0 8px 30px rgba(25, 40, 80, .18); }
+
+/* ------------------------------------------------------------ 5.0: Wetter oben rechts */
+#wetter-kopf { margin-top: 6px; font-size: clamp(13px, 1.3vw, 18px); font-weight: 700; color: var(--text); white-space: nowrap; }
+#wetter-kopf .wk-temp { margin: 0 .3em 0 .2em; }
+#wetter-kopf .wk-satz { color: var(--leise); font-weight: 650; }
+#wetter-kopf .wk-satz.nass { color: var(--akzent); }
+body.hell #wetter-kopf .wk-satz.nass { color: #1d5fc4; }
+
+/* ------------------------------------------------------------ 5.0: Seiten Wetter, Schule, Kinderwelten, Kinder-News */
+.seite { width: min(1300px, 92vw); height: 100%; display: flex; flex-direction: column; gap: 2vh; min-height: 0; }
+.seite-reiter { display: flex; flex-wrap: wrap; gap: .8vw; }
+.seite-reiter-knopf { padding: .5em 1.1em; border-radius: 999px; background: var(--flaeche); color: var(--leise);
+  font-size: clamp(14px, 1.5vw, 22px); font-weight: 750; border: 3px solid transparent; }
+.seite-reiter-knopf.an { background: var(--flaeche-2); color: var(--text); border-color: var(--fokus); }
+.seite-liste { display: flex; flex-direction: column; gap: 1.2vh; min-height: 0; }
+.seite-eintrag { display: flex; align-items: center; gap: 1.4vw; padding: 1.4vh 1.6vw; border-radius: 16px; background: var(--flaeche);
+  border: 3px solid transparent; }
+.seite-eintrag.gewaehlt { border-color: var(--fokus); background: var(--flaeche-2); transform: scale(1.01); }
+.seite-eintrag.neu { border-left: 8px solid var(--warn); }
+.seite-eintrag.aus .seite-titel { text-decoration: line-through; opacity: .7; }
+.seite-symbol { font-size: clamp(26px, 3vw, 44px); flex: none; width: 1.4em; text-align: center; }
+.seite-bild { width: clamp(70px, 8vw, 120px); height: clamp(70px, 8vw, 120px); object-fit: cover; border-radius: 12px; flex: none; background: #000; }
+.seite-eintrag-text { flex: 1; min-width: 0; }
+.seite-titel { font-size: clamp(18px, 1.9vw, 30px); font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seite-zeile { color: var(--leise); font-size: clamp(13px, 1.3vw, 19px); margin-top: .4vh; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.seite-rechts { color: var(--warn); font-weight: 750; font-size: clamp(14px, 1.4vw, 22px); flex: none; }
+.seite-mehr { text-align: center; color: var(--leise); font-size: 14px; line-height: 1; }
+.seite-leer { display: flex; flex-direction: column; align-items: center; gap: 2vh; text-align: center; margin: auto;
+  font-size: clamp(20px, 2.2vw, 34px); font-weight: 700; max-width: 70vw; }
+.seite-leer-symbol { font-size: clamp(50px, 6vw, 90px); }
+
+/* Lesen: große Schrift, ruhige Zeilen - zum Selberlesen */
+.lesen { width: min(1150px, 90vw); height: 100%; display: flex; flex-direction: column; gap: 1.4vh; min-height: 0; }
+.lesen-fenster { flex: 1; overflow: hidden; background: #fbf7ee; color: #2a2116; border-radius: 22px; padding: 3vh 4vw; }
+.lesen-text { font-size: clamp(22px, 2.5vw, 38px); line-height: 1.6; font-family: "FF Emoji", "Noto Serif", "DejaVu Serif", Georgia, serif; }
+.lesen-titel { margin: 0 0 2vh; font-size: 1.3em; line-height: 1.2; font-family: "FF Emoji", "Noto Sans", "DejaVu Sans", sans-serif; }
+.lesen-h { margin: 2.4vh 0 1vh; font-size: 1.05em; font-family: "FF Emoji", "Noto Sans", "DejaVu Sans", sans-serif; }
+.lesen-p, .lesen-li, .lesen-zitat { margin: 0 0 1.4vh; }
+.lesen-zitat { font-style: italic; padding-left: 1em; border-left: 4px solid #d8c9a6; }
+.lesen-bild { float: right; width: min(30%, 320px); border-radius: 16px; margin: 0 0 2vh 2vw; }
+.lesen-ende { clear: both; text-align: center; color: #8a7a5c; font-weight: 700; margin-top: 4vh; }
+.lesen-balken { height: 8px; border-radius: 4px; background: var(--flaeche); overflow: hidden; }
+.lesen-balken span { display: block; height: 100%; width: 0; background: var(--akzent); transition: width .25s ease; }
+
+/* Rätsel */
+.kw-spruch { font-size: clamp(20px, 2.2vw, 34px); color: var(--leise); text-align: center; }
+.kw-raetsel { margin: auto; text-align: center; display: flex; flex-direction: column; gap: 4vh; max-width: 80vw; }
+.kw-frage { font-size: clamp(28px, 3.4vw, 54px); font-weight: 800; line-height: 1.3; }
+.kw-antwort { font-size: clamp(26px, 3vw, 48px); font-weight: 800; color: var(--warn); }
+
+/* Wetter */
+.wetter-seite { width: min(1400px, 94vw); display: flex; flex-direction: column; gap: 2.2vh; }
+.wetter-jetzt { display: flex; align-items: center; gap: 3vw; }
+.wetter-gross { font-size: clamp(80px, 10vw, 160px); line-height: 1; }
+.wetter-temp { font-size: clamp(50px, 6vw, 96px); font-weight: 800; line-height: 1; }
+.wetter-text { color: var(--leise); font-size: clamp(16px, 1.7vw, 26px); margin-top: .6vh; }
+.wetter-regen { font-size: clamp(20px, 2.2vw, 34px); font-weight: 800; margin-top: 1vh; }
+.wetter-regen.nass { color: var(--akzent); }
+.wetter-anziehen { font-size: clamp(16px, 1.7vw, 26px); font-weight: 700; margin-top: .8vh; }
+.wetter-stunden { display: grid; grid-template-columns: repeat(12, 1fr); gap: .5vw; }
+.wetter-stunde { background: var(--flaeche); border-radius: 14px; padding: 1vh .3vw; text-align: center; }
+.wetter-stunde.nass { background: #1d3a66; }
+.ws-uhr { color: var(--leise); font-size: clamp(11px, 1vw, 15px); }
+.ws-symbol { font-size: clamp(20px, 2.2vw, 34px); margin: .4vh 0; }
+.ws-temp { font-weight: 800; font-size: clamp(14px, 1.4vw, 21px); }
+.ws-regen { color: #8fb8ff; font-size: clamp(10px, .9vw, 14px); min-height: 1.2em; }
+.wetter-unten { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.6vw; }
+.wetter-tage { display: grid; grid-template-columns: repeat(5, 1fr); gap: .6vw; }
+.wetter-tag { background: var(--flaeche); border-radius: 16px; padding: 1.4vh .6vw; text-align: center; }
+.wt-name { font-weight: 800; font-size: clamp(13px, 1.3vw, 19px); }
+.wt-symbol { font-size: clamp(28px, 3vw, 46px); margin: .6vh 0; }
+.wt-temp { font-weight: 750; font-size: clamp(13px, 1.3vw, 19px); }
+.wt-regen { color: var(--leise); font-size: clamp(11px, 1vw, 15px); margin-top: .4vh; }
+.wetter-fenster { background: var(--flaeche); border-radius: 16px; padding: 1.6vh 1.4vw; display: flex; flex-direction: column; gap: 1vh; }
+.wf-titel { font-weight: 800; font-size: clamp(16px, 1.6vw, 24px); }
+.wf-zeile { font-size: clamp(14px, 1.4vw, 21px); }
+.wf-zeile.jetzt { color: var(--gut); font-weight: 800; }
+.wetter-tipp { background: #1f3d2a; border-radius: 16px; padding: 1.4vh 1.4vw; font-size: clamp(15px, 1.5vw, 22px); font-weight: 650; }
+
+/* ------------------------------------------------------------ 5.0: Ansichten (Aufteilung) - Bedienung überall gleich */
+/* Seitenleiste: Bereiche links untereinander, rechts die Kacheln des Bereichs als Raster */
+body[data-ansicht="seitenleiste"] main { display: grid; grid-template-columns: minmax(210px, 19vw) 1fr;
+  grid-template-rows: auto auto minmax(0, 1fr) auto; column-gap: 3vw; }
+body[data-ansicht="seitenleiste"] header, body[data-ansicht="seitenleiste"] footer { grid-column: 1 / -1; }
+body[data-ansicht="seitenleiste"] #bereiche { grid-column: 1; grid-row: 2 / 4; flex-direction: column; gap: 1vh; margin: 0; }
+body[data-ansicht="seitenleiste"] #bereiche .bereich { justify-content: flex-start; font-size: clamp(16px, 1.7vw, 26px); padding: .7em 1em; border-radius: 18px; }
+body[data-ansicht="seitenleiste"] #bereiche .bereich.an { box-shadow: inset 5px 0 0 var(--fokus); }
+body[data-ansicht="seitenleiste"] #held { grid-column: 2; grid-row: 2; min-height: 0; }
+body[data-ansicht="seitenleiste"] #held-name { font-size: clamp(26px, 3.2vw, 50px); }
+body[data-ansicht="seitenleiste"] #reihen-fenster { grid-column: 2; grid-row: 3; }
+body[data-ansicht="seitenleiste"] .reihe:not(.aktiv), body[data-ansicht="karussell"] .reihe:not(.aktiv) { display: none; }
+body[data-ansicht="seitenleiste"] .reihe-titel, body[data-ansicht="karussell"] .reihe-titel { display: none; }
+body[data-ansicht="seitenleiste"] .reihe-kacheln { flex-wrap: wrap; gap: 1.4vw; }
+body[data-ansicht="seitenleiste"] .reihe.aktiv .kachel { width: clamp(150px, 15vw, 250px); height: clamp(120px, 21vh, 210px); }
+body[data-ansicht="seitenleiste"] .reihe.aktiv .kachel .symbol { font-size: clamp(32px, 3.8vw, 60px); }
+/* Karussell: nur der gewählte Bereich, die gewählte Kachel groß in der Mitte */
+body[data-ansicht="karussell"] #bereiche { justify-content: center; }
+body[data-ansicht="karussell"] #held { text-align: center; order: 2; margin: 2vh 0 0; }
+body[data-ansicht="karussell"] #reihen-fenster { display: flex; align-items: center; }
+body[data-ansicht="karussell"] #reihen { width: 100%; }
+body[data-ansicht="karussell"] .reihe-kacheln { gap: 2.4vw; align-items: center; padding: 3vh 0; }
+body[data-ansicht="karussell"] .reihe.aktiv .kachel { width: clamp(200px, 20vw, 340px); height: clamp(200px, 36vh, 360px);
+  opacity: .55; transform: scale(.82); transition: transform .2s ease, opacity .2s ease; }
+body[data-ansicht="karussell"] .reihe.aktiv .kachel.gewaehlt { opacity: 1; transform: scale(1.1); }
+body[data-ansicht="karussell"] .reihe.aktiv .kachel .symbol { font-size: clamp(50px, 6vw, 100px); }
+body[data-ansicht="karussell"] main { display: flex; flex-direction: column; }
+body[data-ansicht="karussell"] #reihen-fenster { order: 1; }
+body[data-ansicht="karussell"] footer { order: 3; }
+body[data-ansicht="seitenleiste"] #bereiche .bereich { text-align: left; }
+body[data-ansicht="karussell"] #reihen-fenster { margin: 0 -6vw; }

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>FernsehFranzi – Kurzanleitung</title>
+<!-- Quelle für web/kurzanleitung.pdf (make anleitung): eine DIN-A4-Seite für neben den Fernseher. -->
+<style>
+  @page { size: A4; margin: 0; }
+  html, body { margin: 0; }
+  body { font-family: "DejaVu Sans", sans-serif; color: #1d2433; }
+  .blatt { width: 210mm; height: 296mm; box-sizing: border-box; padding: 8mm 11mm 5mm; display: flex; flex-direction: column; gap: 3mm; overflow: hidden; }
+  .kopf { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(120deg, #13224a, #3a2a6b);
+          color: #fff; border-radius: 4mm; padding: 3.6mm 6mm; }
+  .kopf h1 { margin: 0; font-size: 21pt; letter-spacing: -.5px; }
+  .kopf p { margin: 0.6mm 0 0; color: #c9d4f2; font-size: 10pt; }
+  .kopf .gross { font-size: 24pt; letter-spacing: 2mm; }
+  .raster { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; }
+  .box { border: 0.5mm solid #c9d4ea; border-radius: 3.5mm; padding: 2.6mm 4mm 2.2mm; break-inside: avoid; }
+  .box h2 { margin: 0 0 1.4mm; font-size: 11.5pt; color: #1b2a4a; }
+  .breit { grid-column: 1 / -1; }
+  table { border-collapse: collapse; width: 100%; font-size: 9.8pt; }
+  td { padding: 0.8mm 0; vertical-align: middle; border-bottom: 0.3mm solid #e3e9f5; }
+  tr:last-child td { border-bottom: 0; }
+  td.t { text-align: right; white-space: nowrap; padding-left: 2mm; }
+  .taste { display: inline-block; border: 0.3mm solid #8a97b5; border-bottom-width: 0.8mm; border-radius: 1.3mm; padding: 0.2mm 1.6mm;
+           font-weight: 700; font-size: 8.8pt; background: #fff; line-height: 1.4; white-space: nowrap; }
+  .rot { background: #e44b4b; color: #fff; border-color: #a92f2f; } .gruen { background: #3bb36b; color: #fff; border-color: #23804a; }
+  .gelb { background: #f2c230; border-color: #b18a14; } .blau { background: #3f74d9; color: #fff; border-color: #24509f; }
+  .exit { background: #1b2a4a; color: #fff; border-color: #0b1430; }
+  .gross-hinweis { background: #eef2fa; border-radius: 3.5mm; padding: 2.8mm 5mm; font-size: 11pt; display: flex; align-items: center; gap: 5mm; }
+  .gross-hinweis .symbol { font-size: 22pt; }
+  .symbole { font-size: 9.6pt; line-height: 1.55; }
+  .fuss { margin-top: auto; text-align: center; font-size: 8.5pt; color: #7a86a3; }
+  .warnung { background: #fff6e8; border-color: #f0c98a; }
+</style>
+</head>
+<body>
+<div class="blatt">
+  <div class="kopf">
+    <div><h1>FernsehFranzi</h1><p>Kurzanleitung · das Wichtigste auf einen Blick</p></div>
+    <div class="gross">📺🎮</div>
+  </div>
+
+  <div class="gross-hinweis"><span class="symbol">🏠</span>
+    <div><b>Von überall zurück zur Startseite:</b> <span class="taste exit">EXIT</span> auf der Fernbedienung
+    (im Retro-Spiel lange drücken) · <span class="taste">Xbox-Taste</span> am Controller · Haus-Taste ⌂ auf der Tastatur</div></div>
+
+  <div class="raster">
+    <div class="box">
+      <h2>🎛️ Fernbedienung</h2>
+      <table>
+        <tr><td>Aussuchen</td><td class="t"><span class="taste">←</span> <span class="taste">→</span> <span class="taste">↑</span> <span class="taste">↓</span></td></tr>
+        <tr><td>Öffnen</td><td class="t"><span class="taste">OK</span></td></tr>
+        <tr><td>Einen Schritt zurück</td><td class="t"><span class="taste">STOP</span></td></tr>
+        <tr><td>Abspielen · Pause</td><td class="t"><span class="taste">▶</span> <span class="taste">⏸</span></td></tr>
+        <tr><td>Spulen</td><td class="t"><span class="taste">◀◀</span> <span class="taste">▶▶</span></td></tr>
+        <tr><td>Kachel direkt</td><td class="t"><span class="taste">1</span> … <span class="taste">0</span></td></tr>
+      </table>
+    </div>
+    <div class="box">
+      <h2>🔊 Ton</h2>
+      <table>
+        <tr><td>Lauter · leiser</td><td class="t"><span class="taste gelb">GELB</span>, dann <span class="taste">↑</span> <span class="taste">↓</span></td></tr>
+        <tr><td>Ton aus dem Fernseher</td><td class="t"><span class="taste rot">ROT</span></td></tr>
+        <tr><td>Ton aus Anlage/Kopfhörer</td><td class="t"><span class="taste gruen">GRÜN</span></td></tr>
+        <tr><td>Controller: lauter · leiser</td><td class="t"><span class="taste">Back</span> + <span class="taste">↑</span> <span class="taste">↓</span></td></tr>
+        <tr><td>Nur für Mama und Papa</td><td class="t"><span class="taste blau">BLAU</span></td></tr>
+      </table>
+    </div>
+
+    <div class="box">
+      <h2>🏠 Startseite</h2>
+      <table>
+        <tr><td>Bereich wechseln</td><td class="t"><span class="taste">↑</span> <span class="taste">↓</span></td></tr>
+        <tr><td>Kachel wählen</td><td class="t"><span class="taste">←</span> <span class="taste">→</span></td></tr>
+        <tr><td>Restzeit und Wetter</td><td class="t">oben rechts</td></tr>
+        <tr><td>Farben und Ansicht</td><td class="t">🎨 Gestalten</td></tr>
+      </table>
+      <div class="symbole" style="margin-top:1.5mm">Graue Kachel = geht gerade nicht:<br>
+        ⏳ Zeit um · 🌙 Nachtruhe · 🏫 Schule · 🔒 gesperrt</div>
+    </div>
+    <div class="box">
+      <h2>▶️ Filme · YouTube · Hörbuch</h2>
+      <table>
+        <tr><td>Nächstes · voriges Video</td><td class="t"><span class="taste">→</span> <span class="taste">←</span></td></tr>
+        <tr><td>YouTube von vorn</td><td class="t"><span class="taste">0</span> (Tastatur)</td></tr>
+        <tr><td>Gute Nacht: Zeit wählen</td><td class="t"><span class="taste">←</span> <span class="taste">→</span> <span class="taste">OK</span></td></tr>
+        <tr><td>Anderes Hörbuch</td><td class="t"><span class="taste">STOP</span>, dann <span class="taste">↑</span> <span class="taste">↓</span></td></tr>
+      </table>
+      <div class="symbole" style="margin-top:1.5mm">Lange Videos laufen dort weiter, wo du aufgehört hast.</div>
+    </div>
+
+    <div class="box breit">
+      <h2>🕹️ Retro-Spiele (Controller: Xbox-Taste festhalten und dazu drücken)</h2>
+      <table>
+        <tr><td>💾 Speichern</td><td class="t"><span class="taste">Xbox</span> + <span class="taste">RB</span></td>
+            <td style="padding-left:9mm">📂 Laden</td><td class="t"><span class="taste">Xbox</span> + <span class="taste">LB</span></td></tr>
+        <tr><td>⏸ Spiel-Menü</td><td class="t"><span class="taste">Xbox</span> + <span class="taste">X</span></td>
+            <td style="padding-left:9mm">🚪 Spiel beenden</td><td class="t"><span class="taste">Xbox</span> + <span class="taste">Start</span></td></tr>
+        <tr><td>🔢 Speicherplatz</td><td class="t"><span class="taste">Xbox</span> + <span class="taste">←</span> <span class="taste">→</span></td>
+            <td style="padding-left:9mm">C64: Feuer · Leertaste</td><td class="t"><span class="taste">A</span> · <span class="taste">Y</span></td></tr>
+      </table>
+      <div class="symbole" style="margin-top:1.5mm">⚠️ <span class="taste">Xbox</span> + <span class="taste">B</span> startet das Spiel von vorn – vorher speichern!</div>
+    </div>
+
+    <div class="box breit">
+      <h2>🔔 Nachrichten · 🤸 Pausen</h2>
+      <div class="symbole">Eine Nachricht kommt mit einem Gong und bleibt stehen, bis du <span class="taste">OK</span> drückst –
+      antworten in der Kachel „Nachrichten“. Bei der Bewegungspause: hüpfen, strecken, Hampelmann! Dein Film wartet und
+      läuft danach weiter. Bei 10, 5 und 1 Minute Restzeit: speichern!</div>
+    </div>
+
+    <div class="box breit warnung">
+      <h2>🆘 Wenn etwas nicht geht</h2>
+      <table>
+        <tr><td>Ich komme nicht zurück</td><td class="t"><span class="taste exit">EXIT</span> (im Spiel lange) oder <span class="taste">Xbox-Taste</span></td></tr>
+        <tr><td>Kein Ton · zu leise</td><td class="t"><span class="taste rot">ROT</span> oder <span class="taste gruen">GRÜN</span>, dann <span class="taste gelb">GELB</span> + <span class="taste">↑</span></td></tr>
+        <tr><td>Fernbedienung geht nicht</td><td class="t">Am Fernseher den richtigen HDMI-Eingang wählen</td></tr>
+        <tr><td><b>Alles hängt</b></td><td class="t"><b>Mama oder Papa holen – bitte nicht den Stecker ziehen</b></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="fuss">FernsehFranzi 4.4 · Ausführlich: das Handbuch (handbuch.pdf) und die Kinder-Anleitung auf der Eltern-Seite</div>
+</div>
+</body>
+</html>

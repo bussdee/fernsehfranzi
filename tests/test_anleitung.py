@@ -22,7 +22,25 @@ class Anleitung(unittest.TestCase):
         self.assertGreaterEqual(inhalt.count('"/anleitung.pdf"'), 2)
         self.assertIn('"/kinder-anleitung.pdf"', inhalt)
         with open(os.path.join(REPO, "server", "fernsehfranzi", "web.py"), encoding="utf-8") as f:
-            self.assertIn('("/anleitung.pdf", "/kinder-anleitung.pdf")', f.read())
+            self.assertIn('("/anleitung.pdf", "/kinder-anleitung.pdf", "/handbuch.pdf", "/kurzanleitung.pdf")', f.read())
+        self.assertIn('"/handbuch.pdf"', inhalt)
+        self.assertIn('"/kurzanleitung.pdf"', inhalt)
+
+    def test_handbuch_und_kurzanleitung(self):
+        """4.2.1: großes Handbuch mit Inhaltsverzeichnis (Seitenzahlen aus dem zweiten Durchlauf), Kurzanleitung auf einer Seite."""
+        import subprocess
+        info = subprocess.run(["pdfinfo", anleitung_pdf.HANDBUCH_ZIEL], capture_output=True, text=True, check=True).stdout
+        self.assertGreaterEqual(int(info.split("Pages:")[1].split()[0]), 25)
+        info = subprocess.run(["pdfinfo", anleitung_pdf.KURZ_ZIEL], capture_output=True, text=True, check=True).stdout
+        self.assertEqual(int(info.split("Pages:")[1].split()[0]), 1)
+        text = subprocess.run(["pdftotext", "-f", "3", "-l", "3", anleitung_pdf.HANDBUCH_ZIEL, "-"],
+                              capture_output=True, text=True, check=True).stdout
+        self.assertIn("Inhalt", text)
+        self.assertNotIn(" 00\n", text, "Inhaltsverzeichnis ohne Seitenzahlen")
+        with open(anleitung_pdf.KURZ_QUELLE, encoding="utf-8") as f:
+            kurz = f.read()
+        for verboten in ("PIN", "Entsperr", "Einstellungen"):
+            self.assertNotIn(verboten, kurz, "die Kurzanleitung hängt am Fernseher - nichts zum Verstellen")
 
     def test_kinder_anleitung_ohne_verstellen(self):
         with open(anleitung_pdf.KINDER_QUELLE, encoding="utf-8") as f:

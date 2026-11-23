@@ -17,6 +17,7 @@ import zipfile
 DATEIEN = ("apps.json", "einstellungen.json", "familie.json", "gutscheine.json", "hoerbuch.json", "nutzung.json",
            "woche.json", "zeitkonto.json", "domains.json")
 ZEICHNUNG = re.compile(r"zeichnungen/[A-Za-z0-9._-]+\.png\Z")
+ALBUM = re.compile(r"album/a[0-9]{10}-[a-z0-9]{6}\.(jpg|png)\Z")         # 4.4: Fotos, die das Kind von Telegram übernommen hat
 INFO = "fernsehfranzi-sicherung.json"
 ZIP_MAX = 40 * 1024 * 1024
 ENTPACKT_MAX = 80 * 1024 * 1024
@@ -47,11 +48,12 @@ def erstellen(ordner, version, zeit):
             with open(pfad, "rb") as f:
                 inhalt = f.read()
             z.writestr(name, _ohne_geheimes(inhalt) if name == "einstellungen.json" else inhalt)
-        bilder = os.path.join(ordner, "zeichnungen")
-        if os.path.isdir(bilder):
-            for name in sorted(os.listdir(bilder)):
-                if ZEICHNUNG.match("zeichnungen/" + name) and os.path.isfile(os.path.join(bilder, name)):
-                    z.write(os.path.join(bilder, name), "zeichnungen/" + name)
+        for unter, muster in (("zeichnungen", ZEICHNUNG), ("album", ALBUM)):
+            bilder = os.path.join(ordner, unter)
+            if os.path.isdir(bilder):
+                for name in sorted(os.listdir(bilder)):
+                    if muster.match(unter + "/" + name) and os.path.isfile(os.path.join(bilder, name)):
+                        z.write(os.path.join(bilder, name), unter + "/" + name)
     return puffer.getvalue()
 
 
@@ -73,7 +75,7 @@ def pruefen(daten):
     for e in eintraege:
         if e.is_dir():
             continue
-        if e.filename != INFO and e.filename not in DATEIEN and not ZEICHNUNG.match(e.filename):
+        if e.filename != INFO and e.filename not in DATEIEN and not ZEICHNUNG.match(e.filename) and not ALBUM.match(e.filename):
             raise SicherungsFehler("Unbekannte Datei in der Sicherung: %s" % e.filename[:60])
         roh = z.read(e)
         if e.filename.endswith(".json"):
@@ -81,7 +83,7 @@ def pruefen(daten):
                 json.loads(roh.decode("utf-8"))
             except (ValueError, UnicodeDecodeError):
                 raise SicherungsFehler("%s in der Sicherung ist beschädigt." % e.filename) from None
-        elif not roh.startswith(b"\x89PNG"):
+        elif not (roh.startswith(b"\x89PNG") or (ALBUM.match(e.filename) and roh.startswith(b"\xff\xd8"))):
             raise SicherungsFehler("%s ist kein Bild." % e.filename[:60])
         inhalt[e.filename] = roh
     return inhalt

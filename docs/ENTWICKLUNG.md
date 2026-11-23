@@ -1,6 +1,6 @@
 # FernsehFranzi – Entwickler-Dokumentation
 
-Stand: Version 4.2.0 (November 2026). Diese Datei beschreibt, wie FernsehFranzi aufgebaut ist, nach welchen Grundsätzen
+Stand: Version 5.0.0 (November 2026). Diese Datei beschreibt, wie FernsehFranzi aufgebaut ist, nach welchen Grundsätzen
 es gebaut wurde und wie man es weiterentwickelt, testet und ausliefert. Die Bedienung für Eltern und Kinder steht in den
 Anleitungen (`docs/anleitung/`, als PDF in `web/`), die Änderungen je Version im [CHANGELOG](../CHANGELOG.md).
 
@@ -118,6 +118,7 @@ Optional im Heimnetz: Plex, Kavita, FileBrowser (für Hörbücher, Video-Ordner 
  server (python3 -m fernsehfranzi, Kiosk-Benutzer) – das Gehirn
    127.0.0.1:8765  Startseite, Kiosk-API, Elternbereich am TV
    LAN-Port 8766   nur Eltern-Seite (einschaltbar im Elternbereich)
+   LAN-Port 8767   nur Mitspiel-Seite der Handy-Spiele, solange ein Spielraum offen ist (4.3)
    Zeitkonto · PIN · App-Katalog · Whitelist · Familie · Telegram · Statistik
         │ Aufträge (lange Abfrage)            │ systemctl über die enge sudo-Regel
         ▼                                     ▼
@@ -182,18 +183,27 @@ Kiosk-Server auf `127.0.0.1:8765`, bei Bedarf den LAN-Server für die Eltern-Sei
 | `system.py` | Alle Systemaufrufe: RetroPie, Ton (`wpctl`), Lautstärke, RetroArch-Netzwerkbefehle, Neustart, Bluetooth, Scraper. In Tests eine Attrappe. |
 | `daten.py` | Datenordner, atomares Schreiben, Schema-Version und Migration |
 | `katalog.py` | App-Katalog `apps.json`: Prüfung mit verständlichen Fehlern, Vorgabe-Kacheln ohne Adressen |
-| `zeitkonto.py` | Tages-Timer, App-Limits, Sperrzeiten, Warnungen, Kulanz, Bonus, Leerlauf, Lernzeit verdient Spielzeit |
+| `zeitkonto.py` | Tages-Timer (Bildschirmzeit), 4.6: Gaming-Zeit als Teil davon (`zeit: "gaming"`, `gaming_min`) und „nur eigenes Limit“ (`zeit: "frei"` + `limit_min`), App-Limits, Sperrzeiten, Warnungen, Kulanz, Bonus, Leerlauf, Lernzeit verdient Spielzeit |
+| `ferien.py` (4.6) | Ferien des Bundeslandes aus `ferien_daten.json` (KMK-Tabellen, mit `werkzeuge/ferien_uebernehmen.py` aus der Ferienliste der Klassenkiste erzeugt – nur lesen), gesetzliche Feiertage (Osterformel), Zusammenführen mit eigenen Einträgen; jährlich nach dem Ferien-Import der Klassenkiste neu erzeugen |
+| `design.py` (5.0) | Farben (`DESIGNS`, hell/dunkel) und Ansichten (`ANSICHTEN`: Konsole, Seitenleiste, Karussell) der Startseite, Erlaubtes und Abend-Automatik der Eltern; `fuer_startseite()` liefert das gerade gültige Design |
+| `wetter.py` (5.0) | Open-Meteo (ohne Schlüssel) im Hintergrund höchstens alle 30 min; Regen-Satz aus Viertelstunden, Trockenfenster (≥ 1,5 h bei Tageslicht, 0,1 mm / 55 %) wie im Familien Dashboard, Anzieh-Tipp; Ortssuche für die Eltern-Seite |
+| `schule.py` (5.0) | Klassenkiste nur lesen (`/api/overview`, `/api/homework/mine`, `/api/messages`, `/api/timetable`) mit der Anmeldung des Kindes (`Hub.klassenkiste_json`); alle 15 min, Neues einmal melden (Merkliste in `schule.json`), Morgen-Check am Abend vor einem Schultag |
+| `kinderwelten.py` (5.0) | Öffentliche Schnittstelle der Familienfabrik (`familienfabrik.at/api`, nur lesen, 30 min Zwischenspeicher); HTML wird zu schlichten Absätzen, Bilder nur von `familienfabrik.at/bilder/` über `/api/kinderwelten/bild` |
+| `news.py` (5.0) | Kinder-News: feste Liste von RSS-Quellen, jede einzeln von den Eltern freizuschalten (ab Werk aus), reiner Text |
 | `pin.py` | PBKDF2-SHA256 mit Salz, Vergleich in konstanter Zeit, wachsende Sperre nach Fehlversuchen |
 | `familie.py` | Nachrichten ans TV, Erinnerungen, Schlafenszeit, Sticker, Bass-Tagebuch |
 | `gutschein.py` | Gutschein-Codes (normal: +Minuten, besonders: alles frei), Schutz gegen Raten |
 | `wecker.py` | Wecker mit Grenzen der Eltern (frühestens, höchste Lautstärke) |
 | `youtube.py` | YouTube-Kategorien der Eltern, Videos und Playlisten für den eigenen Player |
 | `hoerbuch.py` | Hörbücher aus einem FileBrowser-Freigabelink (nur lesen, Range-Anfragen) |
-| `telegram.py` | Telegram-Bot per Long-Polling: Nachrichten erlaubter Chats ans TV, Antworten des Kindes |
+| `telegram.py` | Telegram-Bot per Long-Polling: Nachrichten erlaubter Chats ans TV, Antworten des Kindes; 4.3: Kontakte mit Grenzen (Eltern, schreiben, eigene Texte, nur Freizeit), Verlauf für die Eltern; 4.4: Fotos/Sprache/Musik/Videos (getFile, ≤ 20 MB, 7 Tage), Befehle für Eltern, Meldungen an Eltern, Tagesbericht, Bilder senden (sendPhoto, multipart) |
 | `nutzung.py` | Nutzungsstatistik je Tag, App und Stunde (62 Tage) |
 | `sicherung.py` | Sicherung als ZIP erstellen, prüfen, einspielen (ohne PIN und ohne Telegram-Token) |
 | `scraper.py` | Spielbilder aus den freien libretro-thumbnails für EmulationStation (läuft als eigener Dienst) |
 | `whitelist.py` | Domainliste aus dem Katalog, Export für Fritzbox und Pi-hole |
+| `raum.py` | 4.3: Spielraum für Handy-Spiele – Raum, Spieler, die fünf Spiele (Buzzer, Quizrennen, Malen & Raten, Raumschiff-Rettung, Ton-Treffer); Handys bekommen fertige Ansichten, der Fernseher je Spiel eine eigene |
+| `qr.py` | 4.3: QR-Codes (Byte-Modus, Fehlerkorrektur M, Versionen 1–10) als SVG, nur Standardbibliothek |
+| `kern.py` (4.4) | dazu: Speicherplatz des Kindes, Album, Fotoalbum (Auswahl, Bildschirmschoner), Bilder teilen, Karaoke (Anmeldung der Klassenkiste über kiosk.py, nur GET auf `/api/playlists/karaoke` und den Musik-Stream) |
 | `uebernahme.py` | Einmalige Übernahme aus Version 2.x |
 
 **Schnittstellen.** Alle Routen stehen als Tabellen in `web.py` (`KioskHandler.routen`, `Basis.eltern_routen`; der
@@ -205,6 +215,12 @@ LAN-Server `LanHandler` liefert nur die Eltern-Routen).
 - Eltern (`/api/eltern/*`, am TV und im Heimnetz): `anmelden`, `daten`, `einstellungen`, `apps`, `gutscheine`,
   `statistik`, `bildschirm`, `sicherung`, `sicherung-einspielen`, `bluetooth`, `scraper`, `whitelist` und weitere.
 
+- Spielraum (4.3): am Fernseher `POST /api/raum/oeffnen`, `GET /api/raum/tv`, `POST /api/raum/tv-aktion`,
+  `POST /api/raum/schliessen`; für die Handys ein eigener Server (`web.RaumHandler`, Port 8767), der nur
+  `/mitspielen`, `/js/mitspielen.js`, `/css/mitspielen.css` und `/api/raum/beitreten|zustand|aktion` kennt. Beitreten
+  braucht den Schlüssel aus dem QR-Code oder den Raumcode, danach weist sich jedes Handy mit seinem Geheimnis aus
+  (`X-FF-Spieler`). `__main__.py` startet ihn nur, solange ein Raum offen ist und die Eltern Handy-Spiele erlaubt haben.
+
 Aktionen gehen nur per `POST`. Kiosk-Aufrufe brauchen den Token `X-FF-Token`, den der Server beim Ausliefern in die
 Startseite schreibt (`__FF_TOKEN__`). Eltern-Aufrufe brauchen eine PIN-Sitzung (`X-FF-Eltern`).
 
@@ -213,8 +229,15 @@ Startseite schreibt (`__FF_TOKEN__`). Eltern-Aufrufe brauchen eine PIN-Sitzung (
 - `web/index.html` + `web/js/start.js`: Startseite, Navigation, Kacheln, Restzeit, Meldungen, Spielzimmer.
 - `web/js/spiele/*.js`: je Spiel ein ES-Modul (Snake, Memory, Drei gewinnt, Echo, Duell, Malen, Musik, Bass,
   Lernen, Sticker, Witze, Gutschein, Wecker, Nachrichten). Gemeinsames in `spiele/kern.js`.
+  5.0: Seiten mit Inhalten von außen (`wetter.js`, `schule.js`, `kinderwelten.js`, `news.js`) nutzen die Bausteine aus
+  `spiele/seite.js` (Reiter, Liste, Lesefenster); Texte immer als Text, nie als HTML. Farben und Ansichten der Startseite
+  setzt `designZeigen()` (`gestalten.js`) als `body[data-thema]`, Klasse `hell` und `body[data-ansicht]`; die hellen
+  Designs überschreiben nur die Farb-Variablen von `main`, die Ansichten nur das Layout (Navigation in `markiere()`).
 - `web/js/eltern.js`: Elternbereich am TV (PIN). `web/eltern.html` + `eltern-seite.js` + `eltern-handy.js`:
-  Eltern-Seite fürs Handy.
+  Eltern-Seite fürs Handy. 4.5: Leiste Heute · Menü · Statistik; `GRUPPEN` ordnet die Bereiche aus `bereiche()`
+  (je Bereich Symbol, Titel, Status-Chip, Karten), Adresse `#bereich` mit `history.pushState`, damit die Zurück-Taste
+  des Handys ins Menü führt; `ALTE_SEITEN` leitet alte Reiter-Adressen um. Neue Einstellungen als Karte in den
+  passenden Bereich hängen, nicht als neue Seite.
 - `web/js/youtube.js`, `video.js`, `hoerbuch.js`: eigene Player.
 - `web/retro.html`: Platzhalter-Seite, falls Chromium während eines Spiels nicht beendet werden konnte.
 - `web/fonts/emoji.ttf`: Ausschnitt aus Noto Color Emoji (das Gerät hat keine Emoji-Schrift). Nach neuen Emojis im Code
@@ -262,6 +285,9 @@ Code liegt auf dem Gerät in `~/fernsehfranzi/`, Daten in `~/fernsehfranzi-daten
 | `familie.json` | Nachrichten, Erinnerungen, Sticker, Bass-Tagebuch |
 | `gutscheine.json`, `hoerbuch.json`, `nutzung.json`, `domains.json` | Gutscheine, Hörbuch-Stände, Statistik, gesehene Domains |
 | `scraper.json`, `spiel-start.json`, `whitelist-richtlinie.json` | Übergabedateien an Dienste und Helfer |
+| `telegram-verlauf.json` | 4.3: Nachrichten je Telegram-Kontakt (die letzten 50, 30 Tage) und wartende Nachrichten; nicht in der Sicherung |
+| `medien/` | 4.4: Fotos, Sprachnachrichten, Musik und Videos von Telegram (7 Tage, höchstens 200 MB) |
+| `album/` | 4.4: vom Kind übernommene Fotos (zählen zum Speicherplatz, sind in der Sicherung) |
 | `zeichnungen/` | Gemalte Bilder |
 | `sicherungen/` | Automatische Sicherungen vor dem Einspielen (die letzten drei) |
 | `logs/` | `server.log`, `kiosk.log` |
@@ -278,6 +304,13 @@ Neue Felder bekommen einen Vorgabewert im Code. Ändert sich der Aufbau, wird `S
   Die Whitelist der Eltern wird als `URLBlocklist ["*"]` + `URLAllowlist` geschrieben.
 - Die sudo-Regel erlaubt dem Kiosk-Benutzer nur feste Befehle ohne frei wählbare Argumente.
 - Der Telegram-Token wird nie an einen Browser zurückgegeben und ist nicht in Sicherungen enthalten.
+- Handy-Spiele: Vorgabe aus; der Zugang fürs Heimnetz läuft nur, solange ein Raum offen ist, liefert nichts außer dem
+  Spiel und weist fremde Herkunft bei Aktionen ab. Über Mitspieler wird nichts gespeichert.
+- Telegram: Kinder können nur freigegebenen Kontakten schreiben; neue Kontakte starten streng (Grundsatz 6). Befehle
+  nimmt der Bot nur von Eltern-Kontakten an. Medien nur mit Recht je Kontakt.
+- Karaoke: Das Anmelde-Cookie der Klassenkiste liest kiosk.py über DevTools (`Storage.getCookies`) und gibt es nur an
+  den eigenen Server; der Server hält es im Speicher (10 Minuten), nutzt es nur für zwei GET-Anfragen und gibt es nie an
+  einen Browser.
 - Strenge Content-Security-Policy auf allen Seiten. Bilder aus `blob:` sind erlaubt (Bildschirmfoto, Zeichnungen).
 
 ## 12 · Entwicklungsumgebung, Prüfungen und Tests
@@ -301,15 +334,20 @@ private IP-Adressen, mDNS-Namen, E-Mail-Adressen, Werte aus `config/` und Wörte
 
 **`make test`:** alle `tests/test_*.py`. Server- und Logiktests laufen mit Testuhr und Attrappen für das System.
 Oberflächentests starten einen echten Chromium (Playwright), auch in Handy-Größe und ohne Emoji-Schrift wie am Gerät.
+Die Handy-Spiele werden mit Fernseher und Handys in echten Browsern durchgespielt (`tests/test_raum_web.py`, Ton-Treffer
+mit dem Test-Mikrofon von Chromium); die Lesbarkeit der QR-Codes prüft OpenCV, falls vorhanden (`tests/test_raum.py`).
 Bildschirmfotos der Tests landen in `.local/bildschirm/`.
 
 Tests rufen nie Endpunkte mit echter Wirkung auf das System auf (siehe Lehre 13).
 
-**Anleitungen:** Quellen in `docs/anleitung/*.html`, PDFs mit `make anleitung`. Ein Test prüft, dass das PDF zur
+**Anleitungen:** Quellen in `docs/anleitung/*.html` (Anleitung, Kinder-Anleitung, Handbuch mit Umschlag,
+Kurzanleitung), PDFs mit `make anleitung` (braucht `pdftotext`, `pdfunite` und `pdfinfo` aus poppler-utils: Das
+Handbuch wird zweimal gedruckt, damit das Inhaltsverzeichnis die echten Seitenzahlen bekommt; die Kurzanleitung muss auf
+eine Seite passen, sonst bricht das Werkzeug ab). Ein Test prüft, dass das PDF zur
 aktuellen HTML-Fassung passt.
 
-**Bildschirmfotos:** `make bildschirmfotos` erzeugt die Bilder in `docs/bilder/` (README) mit Beispieldaten in einem
-temporären Ordner, ohne persönliche Werte. Port 8765 muss frei sein.
+**Bildschirmfotos:** `make bildschirmfotos` erzeugt die Bilder in `docs/bilder/` (README, Handbuch) mit Beispieldaten in
+einem temporären Ordner, ohne persönliche Werte (die Spielraum-Adresse ist ein Beispiel). Port 8765 muss frei sein.
 
 ## 13 · Ausliefern auf das Gerät
 
@@ -372,21 +410,29 @@ Jede dieser Lehren hat einmal einen Fehlschlag gekostet.
 | 18 | Sondertasten einer Tastatur führt Chromium selbst aus (Verlauf zurück, leere Seite, Kontextmenü). Im Kernel per hwdb umlegen, nicht im Browser abfangen. |
 | 19 | Den Strom zu ziehen statt sauber neu zu starten, ließ frisch geschriebene Dateien verloren gehen. `install.sh` schreibt mit `sync` und repariert Reste. |
 | 20 | Amiberry startet CD-Abbilder nur als `.cue`, nicht aus einem ZIP, und braucht `libserialport0`. |
+| 21 | `replaceChildren(null)` und `append(null)` schreiben das Wort „null“ auf die Seite. Leere Teile vorher herausfiltern. |
+| 22 | Eine Klasse wie `ansicht buzzer` am Rahmen färbt ihn wie den Buzzer-Knopf. Ansichts-Klassen eindeutig benennen (`ansicht-buzzer`). |
+| 23 | Handy-Browser geben Mikrofon (und Kamera) nur über HTTPS frei. Mikrofon-Spiele laufen deshalb über das USB-Mikro am Fernseher. |
+| 24 | `.overlay-inhalt` legt Teile nebeneinander und zentriert sie. Höhere Inhalte (Karaoke) ragen sonst über den Kopf; für Spalten-Ansichten `flex-direction: column`. |
 
 ## 16 · Bekannte Grenzen und Ideen
 
-**Grenzen von 4.2.0**
+**Grenzen von 5.0.0**
 
 - Videos puffern über WLAN gelegentlich. Abhilfe: LAN-Kabel oder Powerline, eventuell feste 720p.
 - Anspruchsvolle N64-Spiele laufen auf dem Pi 3 nur knapp flüssig. Nächster Schritt wäre zram statt Swap auf der SD-Karte.
 - Amiga CD32 braucht die CD32-Kickstart-ROMs, sie liegen dem Projekt nicht bei.
-- Keine Installationsanleitung für ein frisch aufgesetztes Gerät.
+- Die Installationsanleitung (`docs/INSTALLATION.md`) ist auf einem ganz frischen Gerät noch nicht durchgespielt.
+- Handy-Spiele: Handy-Mikrofone gehen im Heimnetz ohne HTTPS nicht; bei vielen Handys auf dem Pi 3 noch ungemessen.
+- Wetter, Schule, Kinderwelten und Kinder-News brauchen Internet am Pi. Ohne Netz bleibt der letzte Stand stehen; die
+  Schul-Seite braucht zusätzlich die Anmeldung in der Klassenkiste-Kachel (Cookie aus dem Kiosk-Profil, nur im Speicher).
+- Die Kinder-News bringen nur RSS-Quellen aus der festen Liste in `news.py`; neue Quellen erst nach Prüfung durch die Eltern.
 
 **Ideen für später**
 
-- Bluetooth-Kopfhörer als Ton-Ausgang (bisher HDMI und Klinke).
 - Web-Benachrichtigungen von Lernseiten in die Nachrichten übernehmen (erst prüfen, ob Web-Push im Pi-Chromium ankommt).
 - Temperaturgrenze erst nach Einbau eines Lüfters und nur im offiziell erlaubten Rahmen anpassen.
 - Pi-Kamera (z. B. für Videotelefonie mit der Familie).
-- Eigene Mehrspieler-Spiele für zwei Controller.
+- Kinder-Smartwatch (Xplora): nur Nachrichten an die Uhr, über die inoffizielle Schnittstelle – erst als Versuch.
+- Lesen üben mit dem Mikrofon auf Basis von „Geschichten & Rätsel“, Countdown bis Ferien und Geburtstag.
 - Prüfungen bei jedem Push (CI).

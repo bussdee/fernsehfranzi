@@ -2,6 +2,127 @@
 
 Alle nennenswerten Änderungen an FernsehFranzi. Versionsquelle ist die Datei `VERSION`.
 
+## 5.0.0 – Designs und Ansichten, Wetter, Schule, Geschichten & Rätsel, Kinder-News (23.11.2026)
+
+- **Farben und Ansichten:** Unter „Gestalten“ wählt das Kind jetzt zwei Dinge. Bei den Farben gibt es zu den dunklen
+  Designs vier helle: ☀️ Sonnentag, 🍭 Zuckerwatte, 🌼 Blumenwiese und 🌈 Regenbogen. Bei der Ansicht, also der Aufteilung
+  der Startseite, gibt es 🎮 Konsole (wie bisher), 📋 Seitenleiste (Bereiche links, Kacheln als Raster) und 🎠 Karussell
+  (die gewählte Kachel groß in der Mitte). Die Bedienung bleibt überall gleich. Die Eltern legen fest, welche Farben und
+  Ansichten es gibt. Mit der Abend-Automatik wird die Startseite ab einer Uhrzeit von selbst dunkel. Spiele, Player und der
+  Elternbereich bleiben immer dunkel.
+- **Wetter:** Oben rechts steht das Wetter in einer Zeile mit Symbol, Temperatur und „Regen ab 16:15“ oder „trocken ab 18:00“.
+  Die Kachel „Wetter“ zeigt dazu die nächsten zwölf Stunden, fünf Tage, „Wann können wir raus?“ (trockene Zeiten bei
+  Tageslicht), einen Anzieh-Tipp und bei trockenem Wetter ein Spiel für draußen aus den Kinderwelten. Die Daten kommen von
+  Open-Meteo, ohne Konto und ohne Schlüssel, nach denselben Regen-Regeln wie im Familien Dashboard. Den Ort suchen die Eltern
+  einmal auf der Eltern-Seite.
+- **Schule (Klassenkiste):** Die Kachel „Schule“ zeigt die heutigen Stunden mit Ausfall und Vertretung, die offenen
+  Hausaufgaben, Termine, Klassennachrichten und den nächsten Schultag. Der Fernseher liest nur, mit der Anmeldung des
+  Kindes: Er hakt nichts ab und markiert nichts als gelesen. Neue Hausaufgaben, Nachrichten und Ausfälle meldet er einmal,
+  am Fernseher und auf Wunsch per Telegram an die Eltern. Abends kommt der Morgen-Check: erste Stunde und Hausaufgaben bis
+  morgen.
+- **Geschichten & Rätsel (Kinderwelten):** Die Inhalte der Familienfabrik erscheinen als eigene Seite: Geschichten und frei
+  lesbare Bücher kapitelweise in großer Schrift zum Selberlesen, die Kinder-News der Familienfabrik, Spiele für draußen und
+  das Rätsel des Tages. Alles wird nur gelesen und braucht keine Anmeldung.
+- **Kinder-News:** Es erscheinen nur Quellen, die die Eltern einzeln einschalten (logo!, Duda.news, Kruschel, Kleine
+  Kinderzeitung). Ab Werk sind alle aus. Gezeigt werden Überschrift und kurzer Text, ohne Links und Bilder.
+- Alle neuen Seiten starten ausgeschaltet und erscheinen erst, wenn die Eltern sie einschalten (Menü → Aussehen, Wetter &
+  Schule).
+
+## 4.6.0 – Gaming-Zeit, alles ein- und ausschaltbar, Ferien per Knopf, Karaoke im Takt (23.11.2026)
+
+- **Bildschirmzeit und Gaming-Zeit:** Neben der Bildschirmzeit des Tages gibt es eine Gaming-Zeit als Teil davon (Vorgabe
+  45 / 75 Minuten). Ist sie aufgebraucht, gehen Spiele nicht mehr, Filme und Lernen aber schon. Bonus und Lernbonus gelten
+  für beide. Retro-Spiele und die Spiele im Spielzimmer (Snake, Memory, Drei Gewinnt, Farben-Echo, Zu zweit, Mit Handys
+  spielen) zählen jetzt zur Gaming-Zeit.
+- **Vier Zeitarten je App:** Bildschirmzeit · Gaming-Zeit · nur eigenes Limit (kostet keine Bildschirmzeit, hat aber eine
+  eigene Höchstgrenze) · kein Limit. Sperrzeiten gelten weiter für alle.
+- **Alles ein- und ausschaltbar:** Auch die eingebauten Spiele und Kacheln (Snake, Malen, Nachrichten, Wecker, Karaoke …)
+  stehen jetzt unter Menü → Apps & Kacheln, mit Schalter, Zeitart, Limit, Sperrzeiten und Bewegungspause.
+- **Bewegungspause je Angebot:** Für jede App und jedes Spiel einzeln an oder aus (z. B. bei Spielen ja, beim Film nein).
+- **Erinnerungen mit Ferien-Schalter:** immer · nicht in den Ferien (Sportsachen, Training) · nur in den Ferien.
+- **Ferien per Knopf:** Bundesland wählen, „📅 Ferien eintragen“ – die amtlichen Ferien der Kultusministerkonferenz und
+  auf Wunsch die gesetzlichen Feiertage stehen für die kommenden Schuljahre drin, mit „jedes Jahr automatisch“ auch
+  künftige. Kein fremder Dienst; neue Schuljahre kommen mit den Updates. Eigene freie Tage bleiben erhalten.
+- **Karaoke markiert die gesungene Zeile:** Die Zeitmarken je Zeile aus der Klassenkiste kommen jetzt mit; die aktuelle
+  Zeile leuchtet und steht in der Mitte, „[Refrain]“ erscheint als Überschrift. Bisher lief der Text nur gleichmäßig über
+  die Liedlänge und passte deshalb nicht zum Gesang. Lieder ohne Marken laufen wie bisher.
+
+## 4.5.0 – Eltern-Seite neu sortiert, mit richtigem Menü (23.11.2026)
+
+- **Eltern-Seite am Handy neu aufgebaut:** Unten liegen nur noch drei Knöpfe – 🏠 Heute, ⚙️ Menü, 📊 Statistik. Das Menü
+  sortiert alle Einstellungen in vier Gruppen (Alltag · Familie und Kontakte · Was es am Fernseher gibt · Technik und
+  Hilfe) mit zwölf klar benannten Bereichen statt langer Sammelseiten. Jede Kachel zeigt kurz den Stand, orange heißt:
+  Hier fehlt etwas (z. B. Speicher voll, Ordner fehlt).
+- **Zurück funktioniert wie gewohnt:** „‹ Menü“ oben im Bereich und die Zurück-Taste bzw. Wischgeste des Handys führen
+  zurück ins Menü; Lesezeichen alter Reiter landen am passenden neuen Ort.
+- Bluetooth-Kopfhörer-Schalter von „Heute“ nach „Gerät & Ton“ verschoben, damit „Heute“ übersichtlich bleibt.
+- Handbuch, Anleitung und Bilder auf das neue Menü umgestellt.
+
+## 4.4.0 – Fotos und Sprachnachrichten, Telegram für Eltern, Fotoalbum, Karaoke, Mikro-Spiele (23.11.2026)
+
+- **Fotos, Sprachnachrichten, Musik und Videos per Telegram:** Sie erscheinen groß am Fernseher (Ton und Video spielen
+  einmal von selbst). In der Kachel Nachrichten öffnet OK sie wieder; Fotos lassen sich mit „⭐ Ins Album“ behalten.
+  Recht je Kontakt („Fotos, Sprachnachrichten und Videos erlaubt“, Eltern immer). Nach 7 Tagen löscht der Pi sie selbst.
+- **Befehle für Eltern im Chat mit dem Bot:** `/status`, `/zeit 15|30|frei`, `/sperren`, `/freigeben`, `/gutenacht`,
+  `/aus`, `/foto` (Bild vom Fernseher aufs Handy), `/bericht`, `/hilfe` – nur von Eltern-Kontakten.
+- **Meldungen an die Eltern** (je Elternteil abschaltbar): Spielzeit aufgebraucht, Nachrichten mit Freunden, Gutschein
+  eingelöst, Wecker aus, „✔ gelesen“, dazu der **Tagesbericht** am Abend (Uhrzeit einstellbar).
+- **Sperrzeiten:** Nachrichten der Eltern kommen auch in Sperrzeiten an und lassen sich beantworten, aber ohne Gong
+  (abschaltbar). Nachrichten von Freunden zählen in der Sperrzeit nur in der Glocke mit; lesen und antworten erst danach.
+- **Bilder schicken:** Gemalte Bilder und Album-Fotos lassen sich an freigegebene Kontakte schicken (Malen → Galerie,
+  Fotoalbum).
+- **🖼️ Fotoalbum:** Neue Kachel (wenn die Eltern es erlauben). Das Kind wählt Bilder aus einem Foto-Ordner der Eltern
+  (FileBrowser-Freigabe), aus seinem Album und aus seinen Zeichnungen (⭐) und schaltet sie selbst als
+  Bildschirmschoner ein – z. B. wenn Freunde zu Besuch sind.
+- **Speicherplatz des Kindes:** Die Eltern stellen ein Limit für Zeichnungen und Album ein; ist es voll, muss das Kind
+  erst alte Bilder löschen (Fotoalbum oder Malen-Galerie). Das Album ist Teil der Sicherung.
+- **🎤 Karaoke** mit den Liedern der Klassenkiste: eigener Player für den Fernseher (großer Text im Takt des Liedes,
+  Musik, Pause, Spulen, Mikro-Sterne). Der Fernseher nutzt die bestehende Anmeldung in der Klassenkiste-Kachel und liest
+  nur; die Anmeldung bleibt im Speicher des Pi und geht nie an einen Browser.
+- **Neue Mikro-Spiele im Spielraum:** Lautstärke-Rakete und Klatsch-Rhythmus. Mikro-Spiele gehen auch ganz ohne Handy.
+- **Wecker repariert:** Am klingelnden Wecker war jede Taste außer STOP „Schlummern“ – auch die Pfeile, mit denen man
+  „Aus“ wählen wollte. Jetzt wählen die Pfeile zwischen „Noch 5 Minuten“ und „Wecker aus“, OK bestätigt, STOP schaltet aus.
+
+## 4.3.0 – Mit Handys spielen, Telegram für Freunde, Bluetooth-Kopfhörer (23.11.2026)
+
+- **📱 Mit Handys spielen:** Neue Kachel im Bereich Spiele (nur wenn die Eltern es auf der Eltern-Seite unter
+  „Mehr → Handy-Spiele“ erlauben; Vorgabe aus). Der Fernseher zeigt einen QR-Code, jeder scannt ihn und spielt am
+  eigenen Handy mit, das Kind mit der Fernbedienung. Fünf eigene Spiele:
+  - **Buzzer-Runde** – wer zuerst drückt, darf antworten,
+  - **Familien-Quizrennen** – richtige Antworten bringen die Figur voran (Gemischt, Einmaleins, Englisch, eure eigenen
+    Quizfragen; „Ich bin noch klein“ gibt mehr Zeit),
+  - **Malen & Raten** – einer malt am Handy, der Fernseher zeigt es live, die anderen raten,
+  - **Raumschiff-Rettung** – gemeinsam: jedes Handy hat einen Teil des Handbuchs oder der Schalter,
+  - **Ton-Treffer** – der Fernseher spielt eine Tonfolge, der Spieler am Zug singt sie ins USB-Mikro am Fernseher
+    (Handy-Mikrofone gehen im Browser nur über HTTPS).
+  Der Zugang fürs Heimnetz (Port 8767) ist nur offen, solange am Fernseher ein Spiel läuft, und kann nur das Spiel.
+  Der Raum schließt bei Sperrzeit, Zeitende oder nach zwei Stunden. Nichts über die Mitspieler wird gespeichert.
+  QR-Codes erzeugt der Pi selbst (`server/fernsehfranzi/qr.py`, nur Standardbibliothek).
+- **Telegram mit Absender und Empfänger:** Am Fernseher steht groß, von wem eine Nachricht kommt (Symbol und Name).
+  „Nachricht schreiben“ fragt „An wen?“. Grenzen je Kontakt: Eltern dürfen alles; neue Kontakte (z. B. eine Freundin)
+  starten streng – empfangen ja, das Kind darf ihnen erst nach Freigabe schreiben, eigene Texte je Kontakt, Nachrichten
+  auf Wunsch nur außerhalb der Sperrzeiten (sie warten bis danach). Die Eltern lesen den Verlauf je Kontakt mit
+  (Eltern-Seite → Mehr → Telegram); der Verlauf ist nicht in der Sicherung.
+- **🎧 Bluetooth-Kopfhörer:** Verbindet sich ein Kopfhörer, wechselt der Ton dorthin, danach zurück zu HDMI bzw. Klinke
+  (wie am Handy). Dritte Tonwahl im Elternbereich und auf der Eltern-Seite, Automatik abschaltbar.
+- **Installationsanleitung** für einen frisch aufgesetzten Pi: `docs/INSTALLATION.md`.
+- Handbuch, Anleitungen, Kurzanleitung und README mit den Neuerungen; neue Bildschirmfotos.
+
+## 4.2.1 – Bewegungspause unterbricht den Film nicht mehr (22.11.2026)
+
+- **Bewegungspause:** Läuft ein Film (YouTube, eigene Videos), ein Hörbuch oder ein Spiel der Startseite, legt sich die
+  Pause jetzt darüber und hält nur an. Danach geht es an derselben Stelle weiter. Vorher lud die Startseite neu, der
+  Player wurde geschlossen und der Film begann von vorn. Auf fremden Webseiten wechselt der Fernseher wie bisher zur
+  Startseite.
+- **YouTube merkt sich die Stelle** bei langen Videos (ab 10 Minuten): Beim nächsten Öffnen läuft das Video dort weiter
+  („Weiter ab 25:00“), `0` startet von vorn.
+- **Handbuch und Kurzanleitung:** `web/handbuch.pdf` (Buch mit Umschlag, Inhaltsverzeichnis mit Seitenzahlen, drei
+  Teilen und Anhang, viele Bildschirmfotos) und `web/kurzanleitung.pdf` (eine DIN-A4-Seite für neben den Fernseher).
+  Beide auf der Eltern-Seite unter „Mehr → Gerät“. Erzeugt mit `make anleitung`, Bilder mit `make bildschirmfotos`.
+- Bewegungspause auf der Startseite zeigte unten „null“ – behoben.
+- **Eigene Videos:** Denselben Film im Ordner wieder öffnen = an der gemerkten Stelle weiter (bisher nur über
+  „Weiterschauen“).
+
 ## 4.2.0 – Scraper, mehr RAM für Retro-Spiele, Eltern-Seite aufgeräumt (22.11.2026)
 
 - **Bilder für Retro-Spiele (Scraper):** Eltern-Seite → Mehr → „Retro-Spiele: Bilder“ → „Bilder für neue Spiele holen“

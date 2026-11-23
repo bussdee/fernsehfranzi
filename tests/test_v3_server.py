@@ -57,6 +57,11 @@ class Attrappe:
     def retroarch_laeuft(self):
         return self.retroarch_an
 
+    senken = ["alsa_output.platform-3f902000.hdmi.hdmi-stereo", "alsa_output.platform-3f00b840.mailbox.stereo-fallback"]
+
+    def ton_ausgaenge(self):
+        return list(self.senken)
+
     def ton_setzen(self, ziel):
         self.aufrufe.append(("ton", ziel))
         return True, "senke-" + ziel
@@ -121,6 +126,59 @@ class Uhr:
 def neuer_hub(ordner, uhr, system=None):
     return kern.Hub(ordner, system or Attrappe(), version="3.0.0-test", uhr=uhr,
                     monoton=uhr.monoton, uhr_sicher=lambda: True)
+
+
+class Kopfhoerer(unittest.TestCase):
+    """4.3: Bluetooth-Kopfhörer verbindet sich -> Ton dorthin, getrennt -> zurück. Gespeichert bleibt HDMI/Klinke."""
+
+    def setUp(self):
+        self.ordner = tempfile.mkdtemp(prefix="ff-kh-")
+        self.addCleanup(shutil.rmtree, self.ordner, True)
+        self.uhr = Uhr(MITTWOCH)
+        self.s = Attrappe()
+        self.s.senken = list(Attrappe.senken)
+        self.hub = neuer_hub(self.ordner, self.uhr, self.s)
+
+    def takt(self):
+        self.uhr.weiter(5)
+        self.hub.tick(5)
+
+    def test_automatisch_hin_und_zurueck(self):
+        self.hub.ton_setzen("klinke")
+        self.takt()
+        self.assertEqual(self.hub.status()["ton"], "klinke")
+        self.assertFalse(self.hub.status()["kopfhoerer"])
+        with self.assertRaisesRegex(ValueError, "Kein Bluetooth-Kopfhörer"):
+            self.hub.ton_setzen("kopfhoerer")
+        self.s.senken.append("bluez_output.AA_BB_CC_DD_EE_FF.1")
+        self.takt()
+        self.assertEqual(self.hub.status()["ton"], "kopfhoerer")
+        self.assertTrue(self.hub.status()["kopfhoerer"])
+        self.assertEqual(self.hub.einstellungen["ton"]["ziel"], "klinke", "gespeichert bleibt die Klinke")
+        self.hub.ton_setzen("hdmi")                              # Eltern wählen bewusst den Fernseher
+        self.takt()
+        self.assertEqual(self.hub.status()["ton"], "hdmi", "kein erneuter Wechsel, solange er verbunden bleibt")
+        self.hub.ton_setzen("kopfhoerer")
+        self.s.senken.pop()                                      # Kopfhörer aus
+        self.takt()
+        self.assertEqual(self.hub.status()["ton"], "hdmi")
+        self.assertEqual([a for a in self.s.aufrufe if a[0] == "ton"][-1], ("ton", "hdmi"))
+
+    def test_ohne_automatik(self):
+        self.hub.einstellungen_aendern({"ton": {"ziel": "hdmi", "kopfhoerer_auto": False}})
+        self.s.senken.append("bluez_output.AA_BB_CC_DD_EE_FF.1")
+        self.takt()
+        self.assertEqual(self.hub.status()["ton"], "hdmi")
+        self.assertTrue(self.hub.status()["kopfhoerer"])
+        self.assertTrue(self.hub.ton_setzen("kopfhoerer")[0])
+
+    def test_kopfhoerer_wird_nie_gespeichert_und_usb_nie_gewaehlt(self):
+        from fernsehfranzi import system
+        senken = ["alsa_output.usb-C-Media_USB_Audio_Device-00.analog-stereo", "bluez_output.11_22.1"]
+        self.assertEqual(system.waehle_ausgang(senken, "kopfhoerer"), ["bluez_output.11_22.1"])
+        self.assertEqual(system.waehle_ausgang(senken[:1], "kopfhoerer"), [])
+        with self.assertRaises(ValueError):
+            self.hub.einstellungen_aendern({"ton": {"ziel": "kopfhoerer"}})
 
 
 class TonAusgang(unittest.TestCase):

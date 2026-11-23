@@ -107,6 +107,7 @@ export function oeffneElternbereich(box, api) {
                 [d.gesperrt ? "Fernseher freigeben" : "Fernseher jetzt sperren", () => sperre(!d.gesperrt)]]],
       ["Fernseher", [["Ton: Fernseher", () => sende("/api/audio", { ziel: "hdmi" }).then(() => api.hinweis("Ton: Fernseher"))],
                      ["Ton: Klinke", () => sende("/api/audio", { ziel: "klinke" }).then(() => api.hinweis("Ton: Klinke"))],
+                     ...(d.kopfhoerer ? [["Ton: Kopfhörer", () => sende("/api/audio", { ziel: "kopfhoerer" }).then(() => api.hinweis("Ton: Kopfhörer"))]] : []),
                      ["Leiser", () => sende("/api/eltern/lautstaerke", { richtung: "leiser" })],
                      ["Lauter", () => sende("/api/eltern/lautstaerke", { richtung: "lauter" })],
                      ["Gute Nacht starten", () => sende("/api/eltern/gute-nacht").then(() => { api.schliessen(); }).catch((e) => api.hinweis(e.message))],

@@ -1,0 +1,49 @@
+/* FernsehFranzi 4.3 - Mitspielen am Handy */
+:root { --hg: #0e1424; --karte: #182238; --text: #eef2fb; --leise: #9aa7c4; --blau: #3f74d9; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--hg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { min-height: 100vh; display: flex; flex-direction: column; overscroll-behavior: none; }
+#kopf { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #121a2e; font-weight: 700; }
+#kopf .logo { font-size: 15px; } #ich { font-size: 15px; color: #ffd76a; }
+#buehne { flex: 1; padding: 16px; display: flex; flex-direction: column; }
+.ansicht { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+h1 { margin: 6px 0 4px; font-size: 26px; } h2 { margin: 4px 0; font-size: 22px; } h3 { margin: 0 0 6px; font-size: 16px; }
+.text { font-size: 19px; line-height: 1.35; margin: 0; } .klein { color: var(--leise); font-size: 14px; margin: 0; }
+.mitte { text-align: center; margin-top: 30vh; color: var(--leise); }
+.hinweis { background: #3a2a14; padding: 10px; border-radius: 10px; }
+.beitreten { display: flex; flex-direction: column; gap: 12px; }
+.beitreten label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--leise); }
+.beitreten label.zeile { flex-direction: row; align-items: center; gap: 10px; color: var(--text); }
+.eingabe { font-size: 20px; padding: 12px 14px; border-radius: 12px; border: 2px solid #2c3a5c; background: var(--karte); color: var(--text); }
+.eingabe.gross { text-transform: uppercase; letter-spacing: 8px; text-align: center; font-size: 28px; }
+.tiere { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.tier { font-size: 30px; padding: 6px 0; border-radius: 12px; border: 2px solid transparent; background: var(--karte); }
+.tier.an { border-color: #ffd76a; background: #2a3554; }
+.knopf { font-size: 20px; padding: 14px; border-radius: 14px; border: 0; color: #fff; background: #2c3a5c; font-weight: 700; }
+.knopf.haupt { background: var(--blau); }
+.rest { font-size: 16px; color: #ffd76a; font-weight: 700; }
+.optionen { display: grid; grid-template-columns: 1fr; gap: 12px; flex: 1; }
+.option { font-size: 22px; font-weight: 700; padding: 18px 14px; border-radius: 16px; border: 0; color: #fff; min-height: 70px; }
+.option.o0 { background: #c9473d; } .option.o1 { background: #2f74c9; } .option.o2 { background: #2f9a5c; } .option.o3 { background: #c98d1d; }
+.option:active, .schalter-knopf:active, .buzzer:active, .daumen:active { transform: scale(.97); }
+.buzzer-box { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.buzzer { width: min(70vw, 300px); height: min(70vw, 300px); flex: 0 0 auto; padding: 0; border-radius: 50%; border: 8px solid #ff9a8f; background: radial-gradient(circle at 35% 30%, #ff6b5e, #b81f14);
+          color: #fff; font-size: 44px; font-weight: 900; box-shadow: 0 10px 0 #7d150e; }
+.buzzer:active { box-shadow: 0 3px 0 #7d150e; transform: translateY(6px); }
+.schalter { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.schalter-knopf { font-size: 19px; font-weight: 800; padding: 22px 8px; border-radius: 14px; border: 3px solid #3f5585; background: #1f2c4a; color: #fff; }
+.schalter-knopf:disabled { opacity: .45; }
+.handbuch { background: #f4ecd6; color: #2a2210; border-radius: 12px; padding: 12px; }
+.regel { font-size: 17px; padding: 6px 0; border-bottom: 1px dashed #b9a978; } .regel:last-child { border-bottom: 0; }
+.daumen { margin: auto; font-size: 90px; padding: 26px 40px; border-radius: 30px; border: 0; background: #2a3554; }
+.daumen.an { background: #2f9a5c; font-size: 30px; color: #fff; }
+.rangliste { font-size: 20px; padding-left: 26px; } .rangliste li { padding: 4px 0; } .rangliste li.ich { color: #ffd76a; font-weight: 800; }
+.warten-punkte { margin: auto; font-size: 34px; letter-spacing: 8px; color: var(--leise); animation: atmen 1.6s infinite; }
+@keyframes atmen { 50% { opacity: .3; } }
+.malen-box { display: flex; flex-direction: column; gap: 10px; }
+.malflaeche { width: 100%; background: #fff; border-radius: 12px; touch-action: none; }
+.farben { display: flex; gap: 8px; flex-wrap: wrap; }
+.farbe { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #1b2440; font-size: 20px; color: #fff; background: #2c3a5c; }
+.farbe.an { border-color: #ffd76a; transform: scale(1.12); }
+#meldung { position: fixed; left: 12px; right: 12px; bottom: 16px; padding: 12px 14px; border-radius: 12px; background: #2f9a5c; color: #fff; font-weight: 700; text-align: center; }
+#meldung.fehler { background: #b8392f; }

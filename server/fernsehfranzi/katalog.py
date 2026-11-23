@@ -14,7 +14,8 @@ from urllib.parse import urlsplit
 from . import hoerbuch
 
 TYPEN = ("web", "desktop", "konsole", "hoerbuch", "youtube", "video")   # hoerbuch (3.3): Player auf der Startseite, start = Freigabelink
-ZEIT = ("zaehlt", "frei", "nie")          # "nie" = zählt nie (Plex, Dashboard - Grundsatz 8)
+ZEIT = ("zaehlt", "gaming", "frei", "nie")   # "nie" = zählt nie (Plex, Dashboard - Grundsatz 8); 4.6: "gaming" = Teil der
+                                            # Bildschirmzeit mit eigener Gaming-Zeit
 EINGABE = ("tasten", "maus")
 BEREICHE = ("", "start", "spiele", "lernen", "musik", "filme", "retro")   # 3.5: Startseite (leer = automatisch)
 KENNUNG = re.compile(r"[a-z][a-z0-9-]{0,31}\Z")
@@ -29,7 +30,7 @@ VORGABE = [
     {"id": "plex", "name": "Plex", "typ": "web", "start": "", "zeit": "frei", "sperr_erlaubt": [], "eingabe": "tasten",
      "domains": [], "aktiv": True, "symbol": "film", "farbe": "#e5a00d", "reihenfolge": 10},
     {"id": "games", "name": "Games", "typ": "konsole", "start": "fernsehfranzi-retropie.service",
-     "zeit": "zaehlt", "limit_min": {"schultag": 45, "frei": 75}, "sperr_erlaubt": [], "eingabe": "tasten",
+     "zeit": "gaming", "limit_min": {"schultag": 45, "frei": 75}, "sperr_erlaubt": [], "eingabe": "tasten",
      "domains": [], "aktiv": True, "symbol": "spiel", "farbe": "#e4002b", "reihenfolge": 20},
     {"id": "familie", "name": "Familie", "typ": "web", "start": "", "zeit": "frei", "sperr_erlaubt": "alle",
      "eingabe": "tasten", "domains": [], "aktiv": True, "symbol": "haus", "farbe": "#2e7d32", "reihenfolge": 30},
@@ -129,6 +130,8 @@ def _pruefe_eintrag(eintrag, nr):
         fehler.append("%s: lernen muss true oder false sein." % wo)
     if not isinstance(eintrag.get("aktiv", True), bool):
         fehler.append("%s: aktiv muss true oder false sein." % wo)
+    if not isinstance(eintrag.get("bewegung", True), bool):
+        fehler.append("%s: bewegung (Bewegungspause) muss true oder false sein." % wo)
     symbol = eintrag.get("symbol", "")
     if symbol and symbol not in SYMBOLE:
         fehler.append("%s: symbol muss eines von %s sein." % (wo, ", ".join(SYMBOLE)))

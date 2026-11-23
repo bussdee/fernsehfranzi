@@ -18,12 +18,14 @@ import os
 import random
 from datetime import datetime, timedelta
 
-from . import daten
+from . import daten, zeitkonto
 
 log = logging.getLogger("fernsehfranzi.familie")
 
 VORGABE = {
-    "erinnerungen": [],                       # [{"zeit": "19:00", "text": "Zähneputzen!", "tage": [0..6]}]
+    # [{"zeit": "19:00", "text": "Zähneputzen!", "tage": [0..6], "wann": "immer"}] - 4.6: wann = immer / schule (nicht in
+    # den Ferien) / ferien (nur in den Ferien)
+    "erinnerungen": [],
     "tv_aus_bei_zeitende": False,
     # 3.4: Gute Nacht (Hörbuch-App "gute-nacht") öffnet sich zu Beginn der Nachtruhe von selbst, wenn an
     "gute_nacht": {"automatisch": False},
@@ -37,6 +39,7 @@ VORGABE = {
     "hoerbuch": {"schlaf_max_min": 60},
 }
 WARN_MIN = (10, 5, 1)
+ERINNERUNG_WANN = ("immer", "schule", "ferien")
 WIEDERHOLEN_S = 5 * 60          # unbestätigte Erinnerungen/Nachrichten (Entscheidung 8.4: alle 5 min, ohne Ende)
 MELDUNGEN_MAX = 30
 CHECK_FRIST_S = 90
@@ -96,6 +99,8 @@ def pruefe(familie):
         _uhr(e.get("zeit", ""))
         if not all(isinstance(t, int) and 0 <= t <= 6 for t in e.get("tage", [])):
             raise ValueError("Erinnerung %d: Tage 0 (Mo) bis 6 (So)." % nr)
+        if e.get("wann", "immer") not in ERINNERUNG_WANN:
+            raise ValueError("Erinnerung %d: immer, nicht in den Ferien oder nur in den Ferien." % nr)
     if len(familie.get("erinnerungen", [])) > 30:
         raise ValueError("Höchstens 30 Erinnerungen.")
     g = familie.get("gute_nacht", VORGABE["gute_nacht"])
@@ -157,7 +162,7 @@ class Familie:
             self.zuletzt_gespeichert = self.hub.monoton()
 
     # ------------------------------------------------------------ Nachricht ans TV
-    def nachricht(self, text, quelle="Nachricht von Mama oder Papa", bleibt=False, chat=None):
+    def nachricht(self, text, quelle="Nachricht von Mama oder Papa", bleibt=False, chat=None, symbol=None, medium=None):
         """bleibt=True (Eltern-Nachricht, Erinnerung): steht, bis sie am Fernseher mit OK bestätigt wird, und kommt
         alle 5 Minuten wieder. Sonst ein kurzer Hinweis."""
         text = str(text or "").strip()[:140]
@@ -171,7 +176,7 @@ class Familie:
                 liste = self.zustand["meldungen"]
                 nr = max([m["nr"] for m in liste] + [0]) + 1
                 liste.append({"nr": nr, "text": text, "quelle": quelle or "", "zeit": jetzt.isoformat(timespec="seconds"),
-                              "gesehen": None, "chat": chat})
+                              "gesehen": None, "chat": chat, "symbol": symbol, "medium": medium})
                 del liste[:-MELDUNGEN_MAX]
             self._wiederholt = self.hub.monoton()        # nächste Wiederholung 5 min nach dieser Meldung
             self.speichern(sofort=True)
@@ -180,23 +185,45 @@ class Familie:
 
     def _zeigen(self, voll):
         if not self.hub.still():                    # Gute-Nacht-Modus/Fernseher aus: kein Gong, kein Hinweis
-            self.hub.system.gong()                  # hörbar überall - auch wenn sie gerade nicht hinschaut
+            if not self.nachrichten_leise():        # 4.4: in Sperrzeiten ohne Gong (einstellbar), sichtbar bleibt sie
+                self.hub.system.gong()              # hörbar überall - auch wenn sie gerade nicht hinschaut
             self.hub.auftrag("hinweis", text=voll)
             laeuft, _ = self.hub.system.retropie_zustand()
             if laeuft:
                 self.hub.system.retroarch("SHOW_MSG " + voll)
         self.hub.melde(voll)
 
+    def nachrichten_leise(self):
+        """4.4: In einer Sperrzeit kommen Nachrichten ohne Ton (Eltern-Seite → Telegram, Vorgabe an)."""
+        return bool(self.hub.telegram.einstellungen().get("sperrzeit_still", True)) and self.hub.telegram._sperrzeit_jetzt()
+
     def offene_meldungen(self):
-        return [m for m in self.zustand["meldungen"] if not m.get("gesehen")]
+        """Unbestätigte Nachrichten. 4.4: Nachrichten von Freunden, die nur außerhalb der Sperrzeiten gelesen werden
+        dürfen, bleiben in der Sperrzeit verborgen (sie zählen nur, siehe gezaehlt_gesperrt)."""
+        gesperrt = self.hub.telegram.gesperrte_chats()
+        return [m for m in self.zustand["meldungen"] if not m.get("gesehen") and m.get("chat") not in gesperrt]
+
+    def sichtbare_meldungen(self, anzahl=20):
+        gesperrt = self.hub.telegram.gesperrte_chats()
+        return [m for m in self.zustand["meldungen"][-anzahl:] if m.get("chat") not in gesperrt]
+
+    def gezaehlt_gesperrt(self):
+        """Neue Freunde-Nachrichten, die gerade nicht gelesen werden dürfen (wartend + unbestätigt verborgen)."""
+        gesperrt = self.hub.telegram.gesperrte_chats()
+        verborgen = sum(1 for m in self.zustand["meldungen"] if not m.get("gesehen") and m.get("chat") in gesperrt)
+        return verborgen + len(self.hub.telegram.wartend)
 
     def meldungen_gesehen(self, nummern):
         jetzt = self.hub.uhr().isoformat(timespec="seconds")
+        neu = []
         with self.hub.lock:
             for m in self.zustand["meldungen"]:
                 if m["nr"] in nummern and not m.get("gesehen"):
                     m["gesehen"] = jetzt
+                    neu.append(dict(m))
         self.speichern(sofort=True)
+        if neu:
+            self.hub.telegram.gelesen(neu)          # 4.4: „✔ gelesen“ an den Absender (Eltern)
 
     def _wiederholen(self):
         if self.hub.monoton() - self._wiederholt < WIEDERHOLEN_S:
@@ -228,10 +255,17 @@ class Familie:
         return True
 
     def _erinnerungen(self, e, jetzt, heute):
+        ferien = None
         for er in e["erinnerungen"]:
             tage = er.get("tage") or list(range(7))
             if jetzt.weekday() not in tage:
                 continue
+            wann = er.get("wann", "immer")
+            if wann != "immer":
+                if ferien is None:
+                    ferien = zeitkonto.in_ferien(jetzt.date(), self.hub._regeln())
+                if (wann == "schule") == ferien:
+                    continue
             zeit = datetime.combine(jetzt.date(), _uhr(er["zeit"]))
             if zeit <= jetzt < zeit + timedelta(minutes=2) and \
                     self._einmal("erinnerung:%s:%s:%s" % (heute, er["zeit"], er["text"])):
@@ -251,7 +285,8 @@ class Familie:
                 self.hub.melde("Pause geschafft – weiter geht's!")
                 self.erfolg("pause", 1)
             return
-        zaehlt = bool(app) and app.get("zeit") == "zaehlt"
+        # 4.6: je Angebot einstellbar („bewegung“); ohne Angabe gilt sie für alles, was Zeit kostet
+        zaehlt = bool(app) and bool(app.get("bewegung", zeitkonto.zaehlt(app)))
         if zaehlt and aktiv:
             self.am_stueck_s += sekunden
         elif not zaehlt:
@@ -263,11 +298,26 @@ class Familie:
             self.nachricht("Zeit für eine Bewegungspause! %d Minuten Hampelmann, Strecken, Hüpfen." % dauer,
                            quelle="Bewegungspause")
             laeuft, _ = self.hub.system.retropie_zustand()
-            if not laeuft:
+            # 4.2.1: Nur wenn der Browser woanders ist (Webseite, Desktop-App), zur Startseite wechseln. Läuft etwas auf der
+            # Startseite selbst (YouTube, Video, Hörbuch, Spiel), legt sie die Pause darüber und hält den Film nur an -
+            # ein Neuladen hätte den Player geschlossen, der Film begann danach von vorn.
+            if not laeuft and not self._auf_startseite():
                 self.hub.auftrag("startseite", eltern=False, pause=dauer * 60)
+
+    def _auf_startseite(self):
+        aktuell = self.hub.aktuell
+        if aktuell == "internet":
+            return False
+        return (self.hub.app(aktuell) or {}).get("typ") not in ("web", "desktop") if aktuell else True
 
     def in_pause(self):
         return self.pause_bis is not None
+
+    def pause_rest(self, jetzt):
+        """Sekunden bis zum Ende der Bewegungspause (0 = keine Pause)."""
+        if not self.pause_bis:
+            return 0
+        return max(0, int((self.pause_bis - jetzt).total_seconds()))
 
     # ------------------------------------------------------------ Lernen verdient Spielzeit
     def tasten(self, namen):

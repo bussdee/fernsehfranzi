@@ -4,6 +4,8 @@
  * auf unserer Seite (das iframe bekommt keinen Fokus und keine Maus) - also keine Klicks auf Vorschläge, Kanal, Suche.
  * Pause und Ende verdecken wir selbst, bevor YouTube „Weitere Videos“ zeigt.
  * Tasten: ↑ ↓ ← → wählen · OK öffnen/abspielen · PLAY/PAUSE · ⏪ ⏩ 10 s · im Player ← → voriges/nächstes · STOP zurück
+ * 4.2.1: Lange Videos (ab 10 min) merken sich die Stelle (localStorage dieses Kiosk-Profils) und laufen beim nächsten
+ * Öffnen dort weiter; 0 springt an den Anfang. anhalten()/fortsetzen() für die Bewegungspause der Startseite.
  */
 import { el } from "./gemeinsam.js";
 import { ton } from "./spiele/kern.js";
@@ -23,6 +25,19 @@ function ladeApi() {
     });
   }
   return apiLaden;
+}
+
+const STAND = "ff-yt-stand";
+const LANG_S = 600;
+
+function staende() {
+  try { return JSON.parse(localStorage.getItem(STAND) || "{}") || {}; } catch (_) { return {}; }
+}
+
+function zeitText(s) {
+  s = Math.floor(s);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sek = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${sek}` : `${m}:${sek}`;
 }
 
 const QUALITAET = { tiny: "144p", small: "240p", medium: "360p", large: "480p", hd720: "720p", hd1080: "1080p" };
@@ -70,6 +85,19 @@ export function oeffneYoutube(box, api) {
     inhalt.querySelector(".gewaehlt")?.scrollIntoView({ block: "nearest" });
   }
 
+  /* ------------------------------------------------ Stelle merken (4.2.1) */
+  function standMerken() {
+    const p = z.player;
+    if (!p?.getCurrentTime || !p.getVideoData) return;
+    const id = p.getVideoData()?.video_id, t = p.getCurrentTime() || 0, d = p.getDuration?.() || 0;
+    if (!id || !d) return;
+    const s = staende();
+    if (d < LANG_S || t < 60 || t > d - 60) delete s[id];          /* kurz, kaum angefangen oder fast fertig */
+    else s[id] = { t: Math.floor(t), z: Date.now() };
+    const neueste = Object.entries(s).sort((a, b) => b[1].z - a[1].z).slice(0, 30);
+    try { localStorage.setItem(STAND, JSON.stringify(Object.fromEntries(neueste))); } catch (_) { /* ohne Speicher */ }
+  }
+
   /* ------------------------------------------------ Player */
   async function spiele(stelle = 0) {
     const e = z.kategorien[z.kat].eintraege[z.eintrag];
@@ -91,9 +119,12 @@ export function oeffneYoutube(box, api) {
     const vars = { autoplay: 1, controls: 0, disablekb: 1, fs: 0, rel: 0, modestbranding: 1, iv_load_policy: 3,
                    playsinline: 1, cc_load_policy: z.untertitel ? 1 : 0, hl: "de", cc_lang_pref: "de", origin: location.origin };
     if (e.art === "playlist" && !liste) Object.assign(vars, { listType: "playlist", list: e.id });   /* alter Weg als Rückfall */
+    const videoId = liste ? liste[z.stelle] : e.art === "video" ? e.id : undefined;
+    const gemerkt = videoId && staende()[videoId];
+    if (gemerkt) { vars.start = gemerkt.t; api.hinweis(`Weiter ab ${zeitText(gemerkt.t)} · 0 = von vorn`); }
     z.player = new YT.Player(ziel, {
       host: "https://www.youtube-nocookie.com",
-      videoId: liste ? liste[z.stelle] : e.art === "video" ? e.id : undefined,
+      videoId,
       playerVars: vars, width: "100%", height: "100%",
       events: {
         onReady: (ev) => { const f = ev.target.getIframe(); f.setAttribute("tabindex", "-1"); ev.target.playVideo(); fokusZurueck(); },
@@ -127,11 +158,13 @@ export function oeffneYoutube(box, api) {
     if (!z.spieler) return;
     if (s === YT.PlayerState.PLAYING) { z.spieler.deckel.hidden = true; z.spieler.buehne.classList.remove("ende"); untertitelAnwenden(); }
     else if (s === YT.PlayerState.PAUSED) {
+      standMerken();
       const q = QUALITAET[z.player.getPlaybackQuality?.()] || "";        /* 4.1: Qualität im Pause-Bild (zur Kontrolle) */
       deckelZeigen("⏸", ((z.player.getVideoData?.().title) || z.spieler.e.titel) + (q ? `  ·  ${q}` : ""));
     }
     else if (s === YT.PlayerState.BUFFERING) { /* Deckel bleibt, wie er ist */ }
     else if (s === YT.PlayerState.ENDED) {
+      standMerken();
       z.spieler.buehne.classList.add("ende");                     /* sofort weg, bevor Vorschläge kommen */
       deckelZeigen("⏭", "Gleich geht's weiter …");
       setTimeout(weiter, 800);
@@ -171,6 +204,7 @@ export function oeffneYoutube(box, api) {
   }
 
   function stopp() {
+    try { standMerken(); } catch (_) { /* weiter */ }
     try { z.player?.destroy(); } catch (_) { /* weg */ }
     z.player = null; z.spieler = null;
   }
@@ -187,6 +221,7 @@ export function oeffneYoutube(box, api) {
   const zaehlen = setInterval(() => {
     if (z.player?.getPlayerState?.() === 1) api.sende("/api/eingabe", { tasten: [] }).catch(() => {});
   }, 60000);
+  const merken = setInterval(() => { if (z.player?.getPlayerState?.() === 1) standMerken(); }, 15000);
 
   lade();
   return {
@@ -218,14 +253,24 @@ export function oeffneYoutube(box, api) {
         api.hinweis(z.untertitel ? "Untertitel an" : "Untertitel aus");
         return true;
       }
+      if (t === "0") { p.seekTo(0, true); api.hinweis("Von vorn"); return true; }
       if (t === "MediaFastForward") { p.seekTo(p.getCurrentTime() + SPRUNG_S, true); return true; }
       if (t === "MediaRewind") { p.seekTo(Math.max(0, p.getCurrentTime() - SPRUNG_S), true); return true; }
       if (t === "ArrowRight" || t === "MediaTrackNext") { wechsle(1); return true; }
       if (t === "ArrowLeft" || t === "MediaTrackPrevious") { wechsle(-1); return true; }
       return true;
     },
+    anhalten() {
+      z.liefVorPause = z.player?.getPlayerState?.() === 1;
+      if (z.liefVorPause) z.player.pauseVideo();
+      standMerken();
+    },
+    fortsetzen() {
+      if (z.liefVorPause) z.player?.playVideo?.();
+      z.liefVorPause = false;
+    },
     schliesse() {
-      clearInterval(wache); clearInterval(zaehlen);
+      clearInterval(wache); clearInterval(zaehlen); clearInterval(merken);
       window.removeEventListener("blur", fokusZurueck);
       stopp();
     },

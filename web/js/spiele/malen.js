@@ -96,7 +96,7 @@ export default {
         await api.sende("/api/zeichnung", { bild: canvas.toDataURL("image/png") });
         api.hinweis("Bild gespeichert – es ist jetzt in der Galerie.");
         ton("sieg");
-      } catch (_) { api.hinweis("Speichern hat nicht geklappt."); ton("fehler"); }
+      } catch (f) { api.hinweis(f.message || "Speichern hat nicht geklappt.", 6000); ton("fehler"); }
     }
 
     function schliesseMenue() { s.menue?.box.remove(); s.menue = null; }
@@ -121,14 +121,32 @@ export default {
       const kasten = el("div", { class: "overlay", style: "z-index:32;align-items:center;justify-content:center;gap:2vh" });
       const titel = el("div", { class: "punkte" });
       const bild = el("img", { class: "galerie-bild", alt: "" });
-      kasten.append(titel, bild, el("div", { class: "leise", text: "← → Blättern · STOP Zurück zum Malen" }));
+      const aktionen = el("div", { class: "knopfreihe" });
+      kasten.append(titel, bild, aktionen, el("div", { class: "leise", text: "← → Blättern · OK: schicken oder löschen · STOP Zurück zum Malen" }));
       box.append(kasten);
-      s.galerie = { box: kasten, i: 0, bilder, titel, bild };
+      s.galerie = { box: kasten, i: 0, bilder, titel, bild, aktionen, menue: null };
+      zeigeGaleriebild();
+    }
+
+    /* 4.4: Bild an einen freigegebenen Kontakt schicken oder löschen (Speicherplatz) */
+    async function galerieMenue() {
+      const ga = s.galerie, b = ga.bilder[ga.i];
+      if (!b) return;
+      let kontakte = [];
+      try { const t = await api.hole("/api/telegram"); if (t.aktiv) kontakte = t.kontakte || []; } catch (_) { /* ohne Telegram */ }
+      ga.menue = { wahl: 0, eintraege: [
+        ...kontakte.map((k) => ({ text: `📤 an ${k.symbol} ${k.name}`, tun: () => api.sende("/api/bild/teilen", { art: "zeichnung", name: b.datei, chat: k.id })
+          .then((a) => { api.hinweis(a.meldung); ton("sieg"); }) })),
+        { text: "🗑 Löschen", tun: () => api.sende("/api/kind/loeschen", { art: "zeichnung", name: b.datei }).then(() => {
+          ga.bilder.splice(ga.i, 1); ga.i = Math.max(0, Math.min(ga.i, ga.bilder.length - 1)); api.hinweis("Gelöscht."); }) },
+        { text: "Zurück", tun: () => Promise.resolve() },
+      ] };
       zeigeGaleriebild();
     }
 
     function zeigeGaleriebild() {
       const ga = s.galerie;
+      ga.aktionen.replaceChildren(...(ga.menue ? ga.menue.eintraege.map((e, n) => el("span", { class: "knopf" + (n === ga.menue.wahl ? " gewaehlt" : ""), text: e.text })) : []));
       if (!ga.bilder.length) { ga.titel.textContent = "Noch keine Bilder gespeichert."; ga.bild.hidden = true; return; }
       ga.bild.hidden = false;
       ga.bild.src = ga.bilder[ga.i].url;
@@ -138,7 +156,21 @@ export default {
     zeichneZeiger();
     return {
       taste(t) {
+        if (s.galerie?.menue) {
+          const m = s.galerie.menue, n = m.eintraege.length;
+          if (t === "ArrowLeft" || t === "ArrowUp") { m.wahl = (m.wahl + n - 1) % n; zeigeGaleriebild(); return true; }
+          if (t === "ArrowRight" || t === "ArrowDown") { m.wahl = (m.wahl + 1) % n; zeigeGaleriebild(); return true; }
+          if (t === "Enter" || t === " ") {
+            const e = m.eintraege[m.wahl];
+            s.galerie.menue = null;
+            e.tun().catch((f) => { api.hinweis(f.message, 5000); ton("fehler"); }).finally(() => s.galerie && zeigeGaleriebild());
+            return true;
+          }
+          if (t === "Escape" || t === "Backspace") { s.galerie.menue = null; zeigeGaleriebild(); return true; }
+          return true;
+        }
         if (s.galerie) {
+          if (t === "Enter" || t === " ") { galerieMenue(); return true; }
           if (t === "ArrowLeft" || t === "ArrowRight") {
             const n = s.galerie.bilder.length;
             if (n) s.galerie.i = (s.galerie.i + (t === "ArrowLeft" ? n - 1 : 1)) % n;

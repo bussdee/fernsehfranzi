@@ -56,7 +56,8 @@ export function oeffneVideo(box, api, app) {
     if (!e) return;
     if (e.art === "hoch" || e.art === "ordner") { z.wahl = 0; ton("bewegen"); return lade(e.pfad); }
     if (e.art === "weiter") return spiele(z.stand.titel, z.stand.ordner, z.stand.sekunde);
-    if (e.art === "titel") spiele(e.pfad, z.pfad, 0);
+    /* 4.2.1: denselben Film aus dem Ordner wieder öffnen = an der gemerkten Stelle weiter */
+    if (e.art === "titel") spiele(e.pfad, z.pfad, z.stand?.titel === e.pfad ? z.stand.sekunde : 0);
   }
 
   /* ------------------------------------------------ Player */

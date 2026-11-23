@@ -10,12 +10,21 @@ Modell 3.4:
 - ``sperrzeiten``: Liste {name, von, bis, tage, ferien_frei, nacht}. Darf über Mitternacht gehen; gehört zu dem Tag,
   an dem sie beginnt. In einer Sperrzeit ist jede App gesperrt, außer sie erlaubt sie (``sperr_erlaubt``:
   Liste von Namen oder "alle"). Gilt für alle Apps, auch freie.
+
+4.6: ``zeit`` kann auch "gaming" sein: Die Minuten zählen zum allgemeinen Timer (Bildschirmzeit) UND zur Gaming-Zeit
+``gaming_min`` (je Tagesart) - Gaming ist ein Teil der Bildschirmzeit. Eine freie App mit ``limit_min`` hat nur ihr eigenes
+Limit („nur eigenes Limit“). Bonus der Eltern und Lernbonus gelten für beide Töpfe. ``bundesland`` und ``ferien_auto``:
+Ferien des Landes per Knopf bzw. von selbst (siehe ferien.py).
 """
 import copy
 from datetime import date, datetime, time as uhrzeit, timedelta
 
 VORGABE_REGELN = {
     "budget_min": {"schultag": 90, "frei": 150},
+    "gaming_min": {"schultag": 45, "frei": 75},        # 4.6: Teil der Bildschirmzeit für Apps mit zeit "gaming"
+    "bundesland": "",                                   # 4.6: für „Ferien eintragen“ (z. B. "SH")
+    "ferien_auto": False,                               # 4.6: neue Ferien des Landes von selbst übernehmen
+    "ferien_feiertage": True,                           # 4.6: gesetzliche Feiertage gleich mit eintragen
     "sperrzeiten": [
         {"name": "Nacht", "von": "19:30", "bis": "08:00", "tage": [0, 1, 2, 3, 4, 5, 6], "ferien_frei": False, "nacht": True},
         {"name": "Schule", "von": "08:00", "bis": "14:00", "tage": [0, 1, 2, 3, 4], "ferien_frei": True, "nacht": False},
@@ -73,8 +82,23 @@ def _uhr(text):
 
 
 def zaehlt(app):
-    """Zieht diese App vom allgemeinen Timer ab? (freie Apps und "nie" nicht)"""
-    return bool(app) and app.get("zeit") == "zaehlt"
+    """Zieht diese App vom allgemeinen Timer ab? (Bildschirmzeit und Gaming-Zeit; freie Apps und "nie" nicht)"""
+    return bool(app) and app.get("zeit") in ("zaehlt", "gaming")
+
+
+def ist_gaming(app):
+    return bool(app) and app.get("zeit") == "gaming"
+
+
+def hat_limit(app):
+    """Hat die App eine eigene Höchstgrenze (an irgendeiner Tagesart)?"""
+    limit = (app or {}).get("limit_min")
+    return bool(limit.get("schultag") or limit.get("frei")) if isinstance(limit, dict) else bool(limit)
+
+
+def begrenzt(app):
+    """Wird für diese App überhaupt gezählt? (Timer, Gaming oder nur eigenes Limit)"""
+    return zaehlt(app) or hat_limit(app)
 
 
 def ist_retropie(app):
@@ -158,8 +182,9 @@ class Zeitkonto:
         if self.zustand.get("datum") != heute:
             sonder = self.zustand.get("sonder_bis")             # Gutschein über Mitternacht bleibt gültig
             self.zustand.clear()
-            self.zustand.update(datum=heute, genutzt_s=0, retropie_s=0, app_s={}, bonus_min=0,
+            self.zustand.update(datum=heute, genutzt_s=0, retropie_s=0, app_s={}, bonus_min=0, gaming_s=0,
                                 ohne_limit=False, gewarnt=[], ende_seit=None, sonder_bis=sonder)
+        self.zustand.setdefault("gaming_s", 0)                 # Stand von vor 4.6 (am Tag des Updates)
         return self.zustand
 
     # ------------------------------------------------------------ Besonderer Gutschein (3.5)
@@ -180,12 +205,28 @@ class Zeitkonto:
         art = tagesart(jetzt.date(), self.regeln)
         return (self.regeln["budget_min"][art] + z["bonus_min"]) * 60
 
-    def rest_s(self, jetzt, app=None):
-        """Restzeit in Sekunden des allgemeinen Timers (bzw. für ``app`` mit ihrer Höchstgrenze). None = ohne Limit."""
+    def gaming_budget_s(self, jetzt):
+        z = self._tag(jetzt)
+        art = tagesart(jetzt.date(), self.regeln)
+        return (self.regeln["gaming_min"][art] + z["bonus_min"]) * 60
+
+    def gaming_rest_s(self, jetzt):
         z = self._tag(jetzt)
         if z["ohne_limit"]:
             return None
-        rest = self.budget_s(jetzt) - z["genutzt_s"]
+        return max(0, min(self.gaming_budget_s(jetzt) - z["gaming_s"], self.budget_s(jetzt) - z["genutzt_s"]))
+
+    def rest_s(self, jetzt, app=None):
+        """Restzeit in Sekunden des allgemeinen Timers (bzw. für ``app``: dazu Gaming-Zeit und eigene Höchstgrenze).
+        None = ohne Limit (oder eine App, für die nichts zählt)."""
+        z = self._tag(jetzt)
+        if z["ohne_limit"]:
+            return None
+        if app is not None and not begrenzt(app):
+            return None
+        rest = self.budget_s(jetzt) - z["genutzt_s"] if app is None or zaehlt(app) else 24 * 3600
+        if ist_gaming(app):
+            rest = min(rest, self.gaming_budget_s(jetzt) - z["gaming_s"])
         if app is not None:
             limit = limit_heute(app, tagesart(jetzt.date(), self.regeln))
             if limit:
@@ -204,7 +245,7 @@ class Zeitkonto:
     def darf_starten(self, app, jetzt, uhr_sicher=True):
         """(ok, grund, art) - grund ist ein kindgerechter Text, art das Symbol der Kachel:
         zeit · nacht · schule · sperrzeit · uhr."""
-        frei = not zaehlt(app)
+        frei = not begrenzt(app)
         if not uhr_sicher:
             # Pi 3 ohne Echtzeituhr: solange die Zeit nicht feststeht, gilt die strengere Regel - nur Apps, die
             # nie gesperrt sind (frei und in allen Sperrzeiten erlaubt), gehen schon.
@@ -220,7 +261,11 @@ class Zeitkonto:
         if self._tag(jetzt)["ohne_limit"]:
             return True, "", ""
         if self.rest_s(jetzt, app) <= 0:
-            return False, "Für heute ist die Zeit aufgebraucht.", "zeit"
+            if zaehlt(app) and self.budget_s(jetzt) - self._tag(jetzt)["genutzt_s"] <= 0:
+                return False, "Für heute ist die Zeit aufgebraucht.", "zeit"
+            if ist_gaming(app) and self.gaming_rest_s(jetzt) <= 0:
+                return False, "Die Spielzeit für heute ist aufgebraucht – Filme, Lernen und Malen gehen noch.", "zeit"
+            return False, "Für %s ist die Zeit heute aufgebraucht." % app.get("name", "diese App"), "zeit"
         return True, "", ""
 
     # ------------------------------------------------------------ Zählen
@@ -232,10 +277,13 @@ class Zeitkonto:
         """
         z = self._tag(jetzt)
         ereignisse = []
-        if not zaehlt(app) or not aktiv or sekunden <= 0 or self.sonder_aktiv(jetzt):
+        if not begrenzt(app) or not aktiv or sekunden <= 0 or self.sonder_aktiv(jetzt):
             return ereignisse
         sekunden = min(sekunden, 60)     # Uhrsprung (z. B. NTP nach dem Start) nicht mitzählen
-        z["genutzt_s"] += sekunden
+        if zaehlt(app):
+            z["genutzt_s"] += sekunden
+        if ist_gaming(app):
+            z["gaming_s"] += sekunden
         z["app_s"][app["id"]] = z["app_s"].get(app["id"], 0) + sekunden
         if ist_retropie(app):
             z["retropie_s"] += sekunden
@@ -284,6 +332,15 @@ def pruefe_regeln(regeln):
         wert = regeln["budget_min"].get(art)
         if not isinstance(wert, int) or isinstance(wert, bool) or not 0 <= wert <= 24 * 60:
             raise ValueError("Spielzeit %s: 0 bis 1440 Minuten." % ("Schultag" if art == "schultag" else "freier Tag"))
+    for art in ("schultag", "frei"):
+        wert = (regeln.get("gaming_min") or {}).get(art)
+        if not isinstance(wert, int) or isinstance(wert, bool) or not 0 <= wert <= 24 * 60:
+            raise ValueError("Gaming-Zeit %s: 0 bis 1440 Minuten." % ("Schultag" if art == "schultag" else "freier Tag"))
+    if regeln.get("bundesland") not in ("", "BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN",
+                                        "ST", "SH", "TH"):
+        raise ValueError("Unbekanntes Bundesland.")
+    if not isinstance(regeln.get("ferien_auto"), bool) or not isinstance(regeln.get("ferien_feiertage"), bool):
+        raise ValueError("Ferien automatisch / Feiertage: ja oder nein.")
     namen = set()
     if not isinstance(regeln["sperrzeiten"], list) or len(regeln["sperrzeiten"]) > 12:
         raise ValueError("Höchstens 12 Sperrzeiten.")

@@ -53,7 +53,10 @@ def ton_datei(name="ton", toene=((660, 0.15), (990, 0.2))):
 
 def waehle_ausgang(senken, ziel):
     """HDMI oder die eingebaute Klinke des Pi (bcm2835, Name mit "mailbox"/"headphones").
-    Eine USB-Soundkarte (3.1.1: fürs Mikrofon der Bass-Ecke) wird nie als „Klinke“ gewählt."""
+    Eine USB-Soundkarte (3.1.1: fürs Mikrofon der Bass-Ecke) wird nie als „Klinke“ gewählt.
+    4.3: "kopfhoerer" = ein verbundener Bluetooth-Kopfhörer (PipeWire-Senke "bluez_output.…")."""
+    if ziel == "kopfhoerer":
+        return [s for s in senken if s.lower().startswith("bluez")]
     if ziel == "hdmi":
         return [s for s in senken if "hdmi" in s.lower()]
     eingebaut = [s for s in senken if "hdmi" not in s.lower() and "usb" not in s.lower()
@@ -160,7 +163,7 @@ class System:
         return False
 
     def ton_setzen(self, ziel):
-        """ziel 'hdmi' oder 'klinke'. Rückgabe (ok, knotenname)."""
+        """ziel 'hdmi', 'klinke' oder 'kopfhoerer'. Rückgabe (ok, knotenname)."""
         senken = self.ton_ausgaenge()
         passend = waehle_ausgang(senken, ziel)
         if not passend:

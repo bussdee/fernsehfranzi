@@ -53,6 +53,37 @@ def main():
             lan_zustand.update(server=eltern, port=soll)
             log.info("Eltern-Seite im Heimnetz auf Port %s", soll)
 
+    raum_zustand = {"server": None, "port": None}
+
+    def raum_abgleichen():
+        """4.3: Server für die Handys nur, solange am Fernseher ein Spielraum offen ist (und Handy-Spiele erlaubt sind)."""
+        hs = hub.handyspiele()
+        soll = hs["port"] if hs["aktiv"] and hub.raum is not None else None
+        if soll == raum_zustand["port"]:
+            return
+        if raum_zustand["server"] is not None:
+            raum_zustand["server"].shutdown()
+            raum_zustand["server"].server_close()
+            log.info("Spielraum im Heimnetz beendet.")
+            raum_zustand.update(server=None, port=None)
+        if soll:
+            try:
+                server = web.baue_server(web.RaumHandler, hub, web_ordner, zeichnungen, ("0.0.0.0", soll))
+            except OSError as fehler:
+                log.error("Spielraum nicht startbar (Port %s): %s", soll, fehler)
+                return
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            raum_zustand.update(server=server, port=soll)
+            log.info("Spielraum im Heimnetz auf Port %s", soll)
+
+    def raum_wache():
+        while True:
+            time.sleep(1)
+            try:
+                raum_abgleichen()
+            except Exception:   # noqa: BLE001
+                log.exception("Spielraum-Server")
+
     ziel = hub.ton["ziel"]          # gespeicherte Wahl, sonst HDMI
     if ziel:
         def ton_wiederherstellen():
@@ -74,6 +105,7 @@ def main():
     lan_abgleichen()
     threading.Thread(target=hub.richtlinie_aktualisieren, daemon=True).start()
     threading.Thread(target=takt, daemon=True).start()
+    threading.Thread(target=raum_wache, daemon=True).start()
     try:
         kiosk.serve_forever()
     finally:

@@ -16,14 +16,17 @@ import re
 import secrets
 import threading
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta
 from urllib.parse import urlsplit
 
-from . import daten, sicherung as sicherung_mod, telegram as telegram_mod, familie as familie_mod, gutschein as gutschein_mod, hoerbuch, nutzung as nutzung_mod, katalog as katalog_mod, wecker as wecker_mod, youtube as youtube_mod, pin as pin_mod, whitelist, zeitkonto
+from . import daten, design as design_mod, kinderwelten as kinderwelten_mod, news as news_mod, schule as schule_mod, wetter as wetter_mod, ferien as ferien_mod, qr, raum as raum_mod, system as system_mod, sicherung as sicherung_mod, telegram as telegram_mod, familie as familie_mod, gutschein as gutschein_mod, hoerbuch, nutzung as nutzung_mod, katalog as katalog_mod, wecker as wecker_mod, youtube as youtube_mod, pin as pin_mod, whitelist, zeitkonto
 
 log = logging.getLogger("fernsehfranzi.hub")
 
 TICK_S = 5
+KOPFHOERER_S = 5                       # 4.3: so oft wird nach einem Bluetooth-Kopfhörer geschaut (pactl, billig)
 SPEICHERN_S = 30
 LEERLAUF_S = 180            # ohne Eingabe zählt nichts
 WARN_SPERRE_MIN = (1, 5, 10)   # Hinweise vor Beginn einer Sperrzeit (kleinste zuerst prüfen: nur einer je Takt)
@@ -33,21 +36,37 @@ START_URL = "http://127.0.0.1:8765/"
 
 # Spielzimmer-Spiele gehören zum Katalog wie Apps (Zeitkonto: Malen zählt nicht).
 SPIELZIMMER = [
-    {"id": "spiel-snake", "name": "Snake", "zeit": "zaehlt"},
-    {"id": "spiel-memory", "name": "Memory", "zeit": "zaehlt"},
-    {"id": "spiel-drei", "name": "Drei Gewinnt", "zeit": "zaehlt"},
-    {"id": "spiel-echo", "name": "Farben-Echo", "zeit": "zaehlt"},
+    {"id": "spiel-snake", "name": "Snake", "zeit": "gaming"},
+    {"id": "spiel-memory", "name": "Memory", "zeit": "gaming"},
+    {"id": "spiel-drei", "name": "Drei Gewinnt", "zeit": "gaming"},
+    {"id": "spiel-echo", "name": "Farben-Echo", "zeit": "gaming"},
     {"id": "spiel-malen", "name": "Malen", "zeit": "frei"},
     {"id": "spiel-witz", "name": "Witz", "zeit": "frei"},
     {"id": "spiel-bass", "name": "Musik-Akademie", "zeit": "frei", "lernen": True},   # 3.5 (vorher Bass-Ecke); Lernen zählt nicht
-    {"id": "spiel-duell", "name": "Zu zweit", "zeit": "zaehlt"},                 # 3.1: Spiele für zwei
+    {"id": "spiel-duell", "name": "Zu zweit", "zeit": "gaming"},                 # 3.1: Spiele für zwei
     {"id": "spiel-sticker", "name": "Sticker", "zeit": "frei"},                  # 3.1: Sticker-Album
     {"id": "spiel-lernen", "name": "Lernspiele", "zeit": "frei", "lernen": True},  # 3.2: Einmaleins, Uhr, Englisch
     {"id": "spiel-gutschein", "name": "Gutschein", "zeit": "frei", "sperr_erlaubt": "alle"},   # 3.5: immer einlösbar
     {"id": "spiel-wecker", "name": "Wecker", "zeit": "frei", "sperr_erlaubt": "alle"},         # 3.5: selbst einstellen
     {"id": "spiel-nachrichten", "name": "Nachrichten", "zeit": "frei", "sperr_erlaubt": "alle"},   # 3.5: alte und neue
     {"id": "spiel-gestalten", "name": "Gestalten", "zeit": "frei", "sperr_erlaubt": "alle"},       # 4.0: Startseite selbst gestalten
+    {"id": "spiel-handys", "name": "Mit Handys spielen", "zeit": "gaming"},     # 4.3: Spielraum (nur wenn die Eltern es erlauben)
+    {"id": "spiel-fotoalbum", "name": "Fotoalbum", "zeit": "frei"},             # 4.4: Bilder auswählen, Bildschirmschoner
+    {"id": "spiel-karaoke", "name": "Karaoke", "zeit": "frei"},                 # 4.4: Lieder der Klassenkiste (wenn eingerichtet)
+    # 5.0: Seiten mit Inhalten von außen (nur lesen) - erscheinen erst, wenn die Eltern sie eingeschaltet haben
+    {"id": "spiel-wetter", "name": "Wetter", "zeit": "frei", "sperr_erlaubt": "alle"},
+    {"id": "spiel-schule", "name": "Schule", "zeit": "frei", "sperr_erlaubt": "alle", "lernen": True},
+    {"id": "spiel-kinderwelten", "name": "Geschichten & Rätsel", "zeit": "frei", "lernen": True},
+    {"id": "spiel-news", "name": "Kinder-News", "zeit": "frei"},
 ]
+HANDYSPIELE_PORT = 8767
+KK_LIED = re.compile(r"[A-Za-z0-9_-]{1,64}")
+KK_ANMELDEN = ("Dafür muss die Klassenkiste am Fernseher angemeldet sein: einmal die Kachel „Klassenkiste“ öffnen "
+               "und anmelden, dann hier nochmal versuchen.")
+SPEICHER_VORGABE_MB = 200                  # 4.4: Platz für Zeichnungen und Album des Kindes (die Eltern stellen ihn ein)
+ALBUM_NAME = re.compile(r"a[0-9]{10}-[a-z0-9]{6}\.(jpg|png)\Z")
+ZEICHNUNG_NAME = re.compile(r"zeichnung-[0-9]{8}-[0-9]{6}(-[0-9]+)?\.png\Z")
+FOTO_AUSWAHL = re.compile(r"(album|ordner|zeichnung):[^\x00-\x1f]{1,400}\Z")
 GUTE_NACHT_ID = "gute-nacht"        # 3.4: die Hörbuch-App "Gute Nacht" (Katalog), auch automatisch zur Nachtruhe
 ALTE_RETRO_GRENZE = {"schultag": 45, "frei": 75}
 BASS_ARTEN = ("video", "tab", "backing")
@@ -56,7 +75,9 @@ EINSTELLUNGEN_FELDER = {"name": str, "untertitel": str, "geburtstage": list, "ze
                         "whitelist": dict, "eltern_lan": dict, "ton": dict, "desktop": dict, "bass": list,
                         "familie": dict, "wecker": dict,
                         "youtube": dict, "inhalte": dict, "sticker_eigen": list,
-                        "startseite": dict, "telegram": dict}
+                        "startseite": dict, "telegram": dict, "handyspiele": dict, "speicher": dict, "fotoalbum": dict,
+                        "spielzimmer": dict, "design": dict, "wetter": dict, "schule": dict, "kinderwelten": dict,
+                        "news": dict}
 ROMS = os.path.expanduser("~/RetroPie/roms")
 GAMELISTS = [os.path.expanduser("~/.emulationstation/gamelists"),
              "/opt/retropie/configs/all/emulationstation/gamelists"]
@@ -102,6 +123,10 @@ class Hub:
         # Die Wahl mit ROT/GRÜN bleibt gespeichert und wird bewacht (ton_wache)
         self.ton = {"ziel": self.einstellungen["ton"].get("ziel") or "hdmi", "nr": 0}
         self._ton_geprueft = self.monoton()
+        # 4.3: Bluetooth-Kopfhörer - verbindet sich einer, wechselt der Ton dorthin (wie am Handy) und danach zurück.
+        # Gespeichert bleibt die Wahl HDMI/Klinke; der Kopfhörer gilt nur, solange er verbunden ist.
+        self.kopfhoerer = []                      # verbundene Bluetooth-Senken (zuletzt gesehen)
+        self._kopfhoerer_geprueft = 0.0
         self.gesperrt = self.einstellungen.get("gesperrt")   # {"text": ...} oder None
         self._zuletzt_gespeichert = self.monoton()
         self._retropie_vorher = False
@@ -118,9 +143,19 @@ class Hub:
         self.telegram = telegram_mod.Telegram(self)      # 4.0: Nachrichten der Familie per Telegram
         self.telegram.neu_starten()
         self._wecker_erledigt = set()
+        self.wetter = wetter_mod.Wetter(self)                    # 5.0: Wetter und Regenzeiten
+        self.schule = schule_mod.Schule(self)                    # 5.0: Klassenkiste (nur lesen)
+        self.kinderwelten = kinderwelten_mod.Kinderwelten(self)  # 5.0: Familienfabrik (nur lesen)
+        self.news = news_mod.News(self)                          # 5.0: Kinder-News (nur freigeschaltete Quellen)
         self.wecker_laeuft = None                 # 3.5: {"nr", "ton", "laut", "seit", "vorher"} solange es klingelt
+        self.raum = None                          # 4.3: offener Spielraum (Handy-Spiele) oder None
+        self._kk = {"nr": 0, "cookie": None, "fehler": "", "zeit": 0.0}   # 4.4: Anmeldung der Klassenkiste (nur im Speicher)
+        self._kk_neu = threading.Condition(threading.Lock())
+        self._raum_lock = threading.RLock()
         self._schlummer = None                    # (Zeitpunkt, Wecker-Eintrag)
         self._sonder_vorher = False
+        if self.uhr_sicher():
+            self.ferien_auffrischen()             # 4.6: neue Schuljahre kommen mit dem Update
 
     # ------------------------------------------------------------ Hilfen
     def _pfad(self, name):
@@ -202,6 +237,15 @@ class Hub:
                     log.info("Katalog: %s ergänzt.", app_id)
                 korrigiert = True
                 daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
+        # 4.6: Retro-Spiele zählen zur Gaming-Zeit (einmal; die Eltern können es danach wieder ändern)
+        if not self.einstellungen.get("gaming_46") and isinstance(eintraege, list):
+            self.einstellungen["gaming_46"] = True
+            for eintrag in eintraege:
+                if isinstance(eintrag, dict) and eintrag.get("typ") == "konsole" and eintrag.get("zeit") == "zaehlt":
+                    eintrag["zeit"] = "gaming"
+                    log.info("4.6: %s zählt jetzt zur Gaming-Zeit.", eintrag.get("id"))
+            korrigiert = True
+            daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
         if korrigiert:
             daten.schreibe_json(self._pfad("apps.json"), eintraege)
         try:
@@ -211,10 +255,19 @@ class Hub:
             return katalog_mod.pruefe_katalog(copy.deepcopy(katalog_mod.VORGABE))
 
     def app(self, app_id):
-        for eintrag in self.katalog + SPIELZIMMER:
+        for eintrag in self.katalog:
+            if eintrag["id"] == app_id:
+                return eintrag
+        for eintrag in self.spielzimmer():
             if eintrag["id"] == app_id:
                 return eintrag
         return None
+
+    def spielzimmer(self):
+        """4.6: eingebaute Spiele und Kacheln mit den Einstellungen der Eltern (an/aus, Zeitart, Limit, Sperrzeiten,
+        Bewegungspause)."""
+        eigen = self.einstellungen.get("spielzimmer") or {}
+        return [dict(e, **eigen.get(e["id"], {})) for e in SPIELZIMMER]
 
     # ------------------------------------------------------------ Hörbücher (3.3)
     def _hoerbuch_app(self, app_id):
@@ -351,6 +404,8 @@ class Hub:
         self.wecker_laeuft = None
         if laeuft.get("vorher") is not None:
             self.system.lautstaerke_setzen(laeuft["vorher"])
+        if aktion == "aus":
+            self.telegram.melde_eltern("wecker", "⏰ Der Wecker (%s Uhr) wurde ausgeschaltet." % laeuft.get("zeit", "?"))
         if aktion == "schlummern":
             eintrag = next((e for e in self.wecker()["liste"] if e["nr"] == laeuft["nr"]), None)
             if eintrag:
@@ -434,6 +489,7 @@ class Hub:
             self.gutscheine.einloesen(eintrag, jetzt)
             self.speichere_konto()
         log.info("Gutschein %s eingelöst (%s, %d min).", eintrag["code"], eintrag["art"], eintrag["minuten"])
+        self.telegram.melde_eltern("gutschein", "🎟️ " + text)
         self.melde(text)
         return True, text
 
@@ -618,13 +674,15 @@ class Hub:
                  if self.aktuell else None),
                 "running": laeuft, "retropie_start": marke,
                 "rest_min": None if rest is None else rest // 60,
-                "ton": self.ton["ziel"], "ton_nummer": self.ton["nr"],
+                "ton": self.ton["ziel"], "ton_nummer": self.ton["nr"], "kopfhoerer": bool(self.kopfhoerer),
                 "meldung": dict(self.meldung), "gesperrt": self.gesperrt,
                 "pin_gesetzt": bool(self.pin_daten.get("hash")),
                 "cec": dict(self.cec), "pause": self.familie.in_pause(),
+                "pause_rest": self.familie.pause_rest(jetzt),
                 "still": self.still(), "nachtruhe": self.nachtruhe,
                 "wecker": {k: v for k, v in self.wecker_laeuft.items() if k != "vorher"} if self.wecker_laeuft else None,
-                "meldungen": [{k: m[k] for k in ("nr", "text", "quelle", "zeit")}
+                "freunde_spaeter": self.familie.gezaehlt_gesperrt(),
+                "meldungen": [{k: m.get(k) for k in ("nr", "text", "quelle", "zeit", "symbol", "medium")}
                               for m in self.familie.offene_meldungen()],
             }
 
@@ -633,8 +691,15 @@ class Hub:
         sicher = bool(self.uhr_sicher())
         with self.lock:
             ergebnis = []
+            handyspiele = bool((self.einstellungen.get("handyspiele") or {}).get("aktiv"))
+            fotoalbum = bool((self.einstellungen.get("fotoalbum") or {}).get("erlaubt"))
+            karaoke = bool(self.klassenkiste_basis())
+            bedingt = {"spiel-handys": handyspiele, "spiel-fotoalbum": fotoalbum, "spiel-karaoke": karaoke,   # 5.0: Seiten von außen
+                       "spiel-wetter": self.wetter.einstellungen()["aktiv"], "spiel-schule": self.schule.bereit(),
+                       "spiel-kinderwelten": self.kinderwelten.einstellungen()["aktiv"], "spiel-news": self.news.aktiv()}
             for kachel in katalog_mod.kacheln(self.katalog) + [
-                    dict(e, typ="spiel", eingerichtet=True) for e in SPIELZIMMER]:
+                    dict(e, typ="spiel", eingerichtet=True) for e in self.spielzimmer()
+                    if e.get("aktiv", True) and bedingt.get(e["id"], True)]:
                 app = self.app(kachel["id"])
                 ok, grund, art = self.konto.darf_starten(app, jetzt, uhr_sicher=sicher)
                 if self.gesperrt:
@@ -648,6 +713,8 @@ class Hub:
         app = self.app(app_id)
         if app is None:
             return False, "Diese App gibt es nicht."
+        if app.get("aktiv", True) is False:
+            return False, "%s ist gerade ausgeschaltet. Bitte Mama oder Papa fragen." % app["name"]
         if self.gesperrt:
             return False, self.gesperrt.get("text") or "Der Fernseher ist gerade gesperrt."
         ok, grund, _ = self.konto.darf_starten(app, self.uhr(), uhr_sicher=bool(self.uhr_sicher()))
@@ -803,6 +870,320 @@ class Hub:
         w["zusatz"] = zusatz
         self.einstellungen_aendern({"whitelist": w})
 
+    # ------------------------------------------------------------ 4.4: Speicherplatz des Kindes, Album, Fotoalbum
+    def _ordner_groesse(self, ordner):
+        try:
+            return sum(os.path.getsize(os.path.join(ordner, n)) for n in os.listdir(ordner)
+                       if os.path.isfile(os.path.join(ordner, n)))
+        except OSError:
+            return 0
+
+    def speicher_status(self):
+        limit = int((self.einstellungen.get("speicher") or {}).get("limit_mb", SPEICHER_VORGABE_MB))
+        belegt = self._ordner_groesse(self._pfad("zeichnungen")) + self._ordner_groesse(self._pfad("album"))
+        return {"belegt_mb": round(belegt / 1048576, 1), "limit_mb": limit, "voll": belegt >= limit * 1048576}
+
+    def speicher_pruefen(self, dazu_bytes=0):
+        s = self.speicher_status()
+        if s["voll"] or s["belegt_mb"] + dazu_bytes / 1048576 > s["limit_mb"]:
+            raise ValueError("Dein Speicher ist voll (%d MB). Lösch erst ein paar alte Bilder im Fotoalbum." % s["limit_mb"])
+
+    def album_liste(self):
+        ordner = self._pfad("album")
+        namen = sorted((n for n in os.listdir(ordner) if ALBUM_NAME.fullmatch(n)), reverse=True) if os.path.isdir(ordner) else []
+        return [{"datei": n, "url": "/album/" + n} for n in namen]
+
+    def album_pfad(self, name):
+        pfad = self._pfad(os.path.join("album", str(name)))
+        return pfad if ALBUM_NAME.fullmatch(str(name or "")) and os.path.isfile(pfad) else None
+
+    def album_uebernehmen(self, datei):
+        """Ein Foto von Telegram ins Album des Kindes (bleibt, zählt zum Speicherplatz)."""
+        quelle = self.telegram.medium_pfad(datei)
+        if not quelle or not quelle.endswith(".jpg"):
+            raise ValueError("Dieses Foto ist nicht mehr da.")
+        self.speicher_pruefen(os.path.getsize(quelle))
+        os.makedirs(self._pfad("album"), exist_ok=True)
+        name = "a" + os.path.basename(quelle)[1:]
+        import shutil
+        shutil.copyfile(quelle, self._pfad(os.path.join("album", name)))
+        log.info("Album: %s übernommen.", name)
+        return name
+
+    def kind_datei_loeschen(self, art, name):
+        """Das Kind löscht eigene Bilder (Album oder Zeichnung), z. B. wenn der Speicher voll ist."""
+        if art == "album" and self.album_pfad(name):
+            os.remove(self.album_pfad(name))
+        elif art == "zeichnung" and ZEICHNUNG_NAME.fullmatch(str(name or "")) and os.path.isfile(self._pfad(os.path.join("zeichnungen", name))):
+            os.remove(self._pfad(os.path.join("zeichnungen", name)))
+        else:
+            raise ValueError("Dieses Bild gibt es nicht.")
+        auswahl = [a for a in self.fotoalbum()["auswahl"] if a != "%s:%s" % (art, name)]
+        self.fotoalbum_kind({"auswahl": auswahl}, intern=True)
+        log.info("Kind hat %s %s gelöscht.", art, name)
+
+    def fotoalbum(self):
+        f = dict({"erlaubt": False, "ordner": "", "bildschirmschoner": False, "auswahl": []}, **(self.einstellungen.get("fotoalbum") or {}))
+        return f
+
+    def fotoalbum_kind(self, aenderung, intern=False):
+        """Das Kind wählt Bilder aus (⭐) und schaltet den Bildschirmschoner ein oder aus - nur, wenn erlaubt."""
+        f = self.fotoalbum()
+        if not intern and not f["erlaubt"]:
+            raise ValueError("Das Fotoalbum ist noch nicht eingeschaltet. Frag Mama oder Papa.")
+        if "bildschirmschoner" in aenderung:
+            f["bildschirmschoner"] = bool(aenderung["bildschirmschoner"])
+        if "auswahl" in aenderung:
+            auswahl = aenderung["auswahl"]
+            if not isinstance(auswahl, list) or len(auswahl) > 300 or not all(isinstance(a, str) and FOTO_AUSWAHL.fullmatch(a) for a in auswahl):
+                raise ValueError("Ungültige Auswahl.")
+            f["auswahl"] = list(dict.fromkeys(auswahl))
+        with self.lock:
+            self.einstellungen["fotoalbum"] = f
+            daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
+        return f
+
+    def fotoalbum_ordner_liste(self, pfad):
+        f = self.fotoalbum()
+        if not f["erlaubt"] or not f["ordner"]:
+            raise ValueError("Es ist noch kein Foto-Ordner eingerichtet.")
+        return hoerbuch.liste(f["ordner"], pfad, endungen=hoerbuch.BILD)
+
+    def fotoalbum_bild_adresse(self, pfad):
+        f = self.fotoalbum()
+        if not f["erlaubt"] or not f["ordner"]:
+            raise ValueError("Es ist noch kein Foto-Ordner eingerichtet.")
+        return hoerbuch.bild_adresse(f["ordner"], pfad)
+
+    def bild_teilen(self, art, name, chat):
+        """4.4: Das Kind schickt ein eigenes Bild (Zeichnung oder Album) an einen freigegebenen Kontakt."""
+        if art == "zeichnung" and ZEICHNUNG_NAME.fullmatch(str(name or "")):
+            pfad = self._pfad(os.path.join("zeichnungen", name))
+        else:
+            pfad = self.album_pfad(name) if art == "album" else None
+        if not pfad or not os.path.isfile(pfad):
+            raise ValueError("Dieses Bild gibt es nicht.")
+        ziel = next((c for c in self.telegram.schreibbar() if c["id"] == chat), None)
+        if ziel is None:
+            raise ValueError("Diesem Kontakt kannst du nicht schreiben.")
+        with open(pfad, "rb") as f:
+            roh = f.read()
+        kind = self.einstellungen.get("name") or "FernsehFranzi"
+        if not self.telegram.sende_bild(ziel["id"], roh, os.path.basename(pfad), "🎨 Von %s" % kind):
+            raise ValueError("Das Bild ist gerade nicht angekommen. Versuch es später nochmal.")
+        self.telegram._merke(ziel["id"], "raus", "🎨 Bild geschickt")
+        if not ziel["eltern"]:
+            self.telegram.melde_eltern("freunde", "%s hat %s %s ein Bild geschickt." % (kind, ziel["symbol"], ziel["name"]))
+        return ziel["name"]
+
+    # ------------------------------------------------------------ 4.4: Karaoke mit den Liedern der Klassenkiste
+    KK_COOKIE_S = 600
+
+    def klassenkiste_basis(self):
+        """https://<host> der Klassenkiste-Kachel (wenn eingerichtet und aktiv), sonst ""."""
+        app = next((a for a in self.katalog if a.get("id") == "klassenkiste" and a.get("aktiv", True) and a.get("start")), None)
+        if not app:
+            return ""
+        teile = urlsplit(app["start"])
+        sicher = teile.scheme == "https" or (teile.scheme == "http" and teile.hostname in ("127.0.0.1", "localhost"))   # http nur für Tests
+        return "%s://%s" % (teile.scheme, teile.netloc) if sicher and teile.netloc else ""
+
+    def kk_anmeldung_empfangen(self, nr, cookie="", fehler=""):
+        with self._kk_neu:
+            if nr == self._kk["nr"]:
+                self._kk.update(cookie=str(cookie or "")[:8000] or None, fehler=str(fehler or "")[:200], zeit=self.monoton())
+            self._kk_neu.notify_all()
+
+    def _kk_cookie(self, neu=False, warten_s=6.0):
+        basis = self.klassenkiste_basis()
+        if not basis:
+            raise ValueError("Die Klassenkiste ist nicht eingerichtet.")
+        with self._kk_neu:
+            if not neu and self._kk["cookie"] and self.monoton() - self._kk["zeit"] < self.KK_COOKIE_S:
+                return basis, self._kk["cookie"]
+            self._kk = {"nr": self._kk["nr"] + 1, "cookie": None, "fehler": "", "zeit": 0.0}
+            nr = self._kk["nr"]
+        self.auftrag("kk_anmeldung", kk=nr, adresse=basis)
+        ende = time.monotonic() + warten_s
+        with self._kk_neu:
+            while self._kk["nr"] == nr and not self._kk["zeit"]:
+                rest = ende - time.monotonic()
+                if rest <= 0:
+                    raise ValueError("Der Fernseher antwortet gerade nicht. Bitte nochmal versuchen.")
+                self._kk_neu.wait(rest)
+            if not self._kk["cookie"]:
+                raise ValueError(self._kk["fehler"] or KK_ANMELDEN)
+            return basis, self._kk["cookie"]
+
+    # ------------------------------------------------------------ 5.0: Designs der Startseite
+    def startseite_anzeige(self):
+        st = self.einstellungen.get("startseite") or {"lieblinge": [], "thema": "weltall"}
+        return dict(st, design=design_mod.fuer_startseite(self.einstellungen.get("design"), st, self.uhr()))
+
+    def startseite_setzen(self, d):
+        """Vom Kind (Meine Startseite): Lieblinge und Design - nur ein Design, das die Eltern erlaubt haben."""
+        if not isinstance(d, dict):
+            raise ValueError("Startseite: ungültige Angaben.")
+        thema = d.get("thema", "weltall")
+        alt = (self.einstellungen.get("startseite") or {}).get("thema", "weltall")
+        erlaubt = design_mod.einstellungen(self.einstellungen.get("design"))
+        if thema != alt and thema not in erlaubt["erlaubt"]:
+            raise ValueError("Dieses Design haben Mama oder Papa ausgeschaltet.")
+        ansicht = d.get("ansicht", (self.einstellungen.get("startseite") or {}).get("ansicht", "konsole"))
+        if ansicht != (self.einstellungen.get("startseite") or {}).get("ansicht", "konsole") and ansicht not in erlaubt["ansichten"]:
+            raise ValueError("Diese Ansicht haben Mama oder Papa ausgeschaltet.")
+        self.einstellungen_aendern({"startseite": {"lieblinge": d.get("lieblinge", []), "thema": thema, "ansicht": ansicht}})
+
+    def klassenkiste_json(self, pfad):
+        """GET an die Klassenkiste mit der Anmeldung des Kindes (5.0: auch für die Schul-Seite). Nur lesen."""
+        if not pfad.startswith("/api/") or any(z in pfad for z in "\r\n #"):
+            raise ValueError("Ungültige Abfrage.")
+        for neu in (False, True):
+            basis, cookie = self._kk_cookie(neu=neu)
+            anfrage = urllib.request.Request(basis + pfad,
+                                             headers={"Cookie": cookie, "Accept": "application/json", "User-Agent": "FernsehFranzi"})
+            try:
+                with urllib.request.urlopen(anfrage, timeout=15) as antwort:
+                    return json.loads(antwort.read(8 * 1024 * 1024).decode("utf-8"))
+            except urllib.error.HTTPError as fehler:
+                if fehler.code in (401, 403) and not neu:
+                    continue
+                raise ValueError(KK_ANMELDEN if fehler.code in (401, 403) else "Die Klassenkiste antwortet gerade nicht (%s)." % fehler.code) from None
+            except (OSError, ValueError) as fehler:
+                raise ValueError("Die Klassenkiste ist gerade nicht erreichbar (%s)." % fehler) from None
+        return None
+
+    def karaoke_liste(self):
+        """Lieder mit Text aus der Klassenkiste (nur lesen, mit der Anmeldung des Kindes)."""
+        daten = self.klassenkiste_json("/api/playlists/karaoke") or {}
+        lieder = []
+        for s in (daten.get("songs") or [])[:500]:
+            kennung = str(s.get("id", ""))
+            if not KK_LIED.fullmatch(kennung) or not str(s.get("lyrics") or "").strip():
+                continue
+            lieder.append({"id": kennung, "titel": str(s.get("title") or "")[:120], "liste": str(s.get("playlist") or "")[:80],
+                           "dauer": s.get("duration") if isinstance(s.get("duration"), int) else None,
+                           "text": str(s.get("lyrics"))[:20000], "musik": bool(s.get("src")),
+                           "marken": _karaoke_marken(s.get("marken"))})
+        return lieder
+
+    def karaoke_musik(self, kennung):
+        """(Adresse, Kopfzeilen) für die Musik eines Liedes - der Server reicht sie mit Range durch."""
+        if not KK_LIED.fullmatch(str(kennung or "")):
+            raise ValueError("Unbekanntes Lied.")
+        basis, cookie = self._kk_cookie()
+        return "%s/api/playlists/song/%s/stream" % (basis, kennung), {"Cookie": cookie, "User-Agent": "FernsehFranzi"}
+
+    # ------------------------------------------------------------ 4.3: Spielraum (Handy-Spiele)
+    def handyspiele(self):
+        hs = self.einstellungen.get("handyspiele") or {}
+        return {"aktiv": bool(hs.get("aktiv")), "port": int(hs.get("port", HANDYSPIELE_PORT))}
+
+    def _eigene_ip(self):
+        import socket
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect(("192.0.2.1", 9))      # Testnetz-Adresse: es wird nichts gesendet, nur die Route gewählt
+                return s.getsockname()[0]
+        except OSError:
+            return "127.0.0.1"
+
+    def raum_oeffnen(self):
+        """Neuer Spielraum (oder der offene). Nur wenn die Eltern Handy-Spiele erlaubt haben und die App gerade geht."""
+        if not self.handyspiele()["aktiv"]:
+            raise ValueError("Handy-Spiele sind ausgeschaltet. Mama oder Papa können sie auf der Eltern-Seite einschalten.")
+        ok, grund, _ = self.konto.darf_starten(self.app("spiel-handys"), self.uhr(), uhr_sicher=bool(self.uhr_sicher()))
+        if not ok or self.gesperrt:
+            raise ValueError(grund if not ok else (self.gesperrt.get("text") or "Der Fernseher ist gerade gesperrt."))
+        with self._raum_lock:
+            if self.raum is None:
+                quiz = (self.einstellungen.get("inhalte") or {}).get("quiz") or []
+                self.raum = raum_mod.Raum(self.einstellungen.get("name") or "Fernseher", eigene_fragen=quiz,
+                                          monoton=self.monoton)
+                log.info("Spielraum geöffnet (Code %s).", self.raum.code)
+            return self.raum_tv()
+
+    def raum_adresse(self):
+        return "http://%s:%d" % (self._eigene_ip(), self.handyspiele()["port"])
+
+    def raum_tv(self, striche_ab=None):
+        with self._raum_lock:
+            if self.raum is None:
+                raise ValueError("Es ist gerade kein Spielraum offen.")
+            self.raum.tick()                       # der Fernseher fragt oft - so laufen Zeiten und Runden flüssig
+            z = self.raum.tv_zustand()
+            adresse = self.raum_adresse()
+            z["adresse"], z["qr"] = adresse, qr.svg("%s/mitspielen?r=%s" % (adresse, self.raum.token))
+            if striche_ab is not None and isinstance(self.raum.spiel, raum_mod.MalenRaten):
+                z["striche"] = self.raum.spiel.striche_ab(striche_ab)
+            return z
+
+    def raum_tv_aktion(self, daten):
+        with self._raum_lock:
+            if self.raum is None:
+                raise ValueError("Es ist gerade kein Spielraum offen.")
+            self.raum.tv_aktion(daten if isinstance(daten, dict) else {})
+
+    # Handys (über den eigenen Server im Heimnetz, siehe web.RaumHandler)
+    def raum_beitreten(self, schluessel, name, symbol, leicht):
+        with self._raum_lock:
+            r = self.raum
+            if r is None or not schluessel or not (secrets.compare_digest(str(schluessel), r.token) or
+                                                     str(schluessel).upper() == r.code):
+                raise ValueError("Diesen Spielraum gibt es nicht (mehr). Bitte den QR-Code am Fernseher neu scannen.")
+            sid, geheim = r.beitreten(name, symbol, leicht)
+            log.info("Spielraum: %s ist dabei.", r.spieler[sid]["name"])
+            return {"geheim": geheim, "id": sid}
+
+    def raum_spieler(self, geheim):
+        with self._raum_lock:
+            sid = self.raum.spieler_von(geheim) if self.raum else None
+            if sid is None:
+                raise ValueError("Du bist nicht (mehr) im Spielraum.")
+            return sid
+
+    def raum_zustand(self, geheim):
+        with self._raum_lock:
+            sid = self.raum_spieler(geheim)
+            self.raum.tick()
+            return self.raum.zustand_fuer(sid)
+
+    def raum_aktion(self, geheim, daten):
+        with self._raum_lock:
+            sid = self.raum_spieler(geheim)
+            self.raum.aktion(sid, daten if isinstance(daten, dict) else {})
+            zustand = self.raum.zustand_fuer(sid)
+        with self.lock:
+            self.letzte_eingabe = self.monoton()    # am Handy wird gespielt = aktiv (fürs Zeitkonto)
+        return zustand
+
+    def raum_schliessen(self, grund=""):
+        with self._raum_lock:
+            if self.raum is not None:
+                log.info("Spielraum geschlossen%s.", (" (%s)" % grund) if grund else "")
+            self.raum = None
+        if grund:
+            self.auftrag("hinweis", text=grund)
+
+    def raum_tick(self):
+        with self._raum_lock:
+            if self.raum is None:
+                return
+            if self.monoton() - self.raum.geoeffnet > raum_mod.RAUM_MAX_S:
+                grund = "Die Handy-Spiele sind nach zwei Stunden beendet."
+            elif not self.handyspiele()["aktiv"]:
+                grund = "Handy-Spiele wurden ausgeschaltet."
+            else:
+                ok, grund, _ = self.konto.darf_starten(self.app("spiel-handys"), self.uhr(), uhr_sicher=bool(self.uhr_sicher()))
+                grund = None if ok and not self.gesperrt else (grund or "Der Fernseher ist gerade gesperrt.")
+            if grund is None:
+                try:
+                    self.raum.tick()
+                except Exception:   # noqa: BLE001 - ein Spielfehler darf den Takt nie stören
+                    log.exception("Spielraum")
+                return
+        self.raum_schliessen(grund)
+
     def lan_adressen(self):
         """Adressen der Eltern-Seite fürs Handy (Name im Heimnetz und IP), nur wenn sie an ist."""
         import socket
@@ -832,6 +1213,7 @@ class Hub:
         jetzt = self.uhr()
         if self.konto.zustand.get("datum") not in (None, jetzt.date().isoformat()):
             self.woche_fortschreiben()             # neuer Tag: gestern in die Wochenübersicht
+            self.ferien_auffrischen()
         laeuft, _ = self.system.retropie_zustand()
         with self.lock:
             if self._retropie_vorher and not laeuft and self.aktuell == "games":
@@ -844,12 +1226,16 @@ class Hub:
             ereignisse = self.konto.tick(jetzt, app, sekunden, aktiv=ruhig < LEERLAUF_S)
             internet_ruhig = app_id == "internet" and ruhig >= INTERNET_LEERLAUF_S
         self.familie.tick(jetzt, app, sekunden, aktiv=ruhig < LEERLAUF_S)
+        self.telegram.tick()                       # 4.3: wartende Nachrichten nach der Sperrzeit zeigen
+        self.raum_tick()                           # 4.3: Spielraum (Zeit, Sperrzeiten, Spielablauf)
         self.nutzung.zaehle(jetzt, app_id, sekunden, ruhig < LEERLAUF_S or self.hoerbuch_laeuft())
         if not self.konto.sonder_aktiv(jetzt):
             self._sperrzeiten(jetzt, app, laeuft)
         self._sonder_ende(jetzt, laeuft)
         self._wecker_takt(jetzt)
         self._scraper_nachts(jetzt, laeuft)
+        self.wetter.tick()                         # 5.0: im Hintergrund, höchstens alle 30 min
+        self.schule.tick(jetzt)                    # 5.0: Klassenkiste alle 15 min, Morgen-Check am Abend
         for art, wert in ereignisse:
             if art == "warnung":
                 self._warne("Noch %d %s!" % (wert, "Minute" if wert == 1 else "Minuten"), laeuft)
@@ -862,6 +1248,12 @@ class Hub:
             self.zurueck()
         if self.monoton() - self._zuletzt_gespeichert >= SPEICHERN_S:
             self.speichere_konto()
+        if self.monoton() - self._kopfhoerer_geprueft >= KOPFHOERER_S:
+            self._kopfhoerer_geprueft = self.monoton()
+            try:
+                self.kopfhoerer_pruefen()
+            except Exception:   # noqa: BLE001 - Ton darf den Takt nie stören
+                log.exception("Kopfhörer")
         if self.monoton() - self._ton_geprueft >= 30:
             self._ton_geprueft = self.monoton()
             try:
@@ -880,6 +1272,7 @@ class Hub:
 
     def _beende_wegen_zeit(self, retropie):
         self.melde("Für heute ist die Spielzeit vorbei. Freie Apps gehen noch.")
+        self.telegram.melde_eltern("zeit", "Die Spielzeit für heute ist aufgebraucht.")
         if retropie:
             self._retro_beenden()
         self.zurueck()
@@ -1029,16 +1422,40 @@ class Hub:
         return wert
 
     def ton_setzen(self, ziel):
-        if ziel not in ("hdmi", "klinke"):
-            raise ValueError("ziel muss hdmi oder klinke sein")
+        if ziel not in ("hdmi", "klinke", "kopfhoerer"):
+            raise ValueError("ziel muss hdmi, klinke oder kopfhoerer sein")
+        if ziel == "kopfhoerer" and not system_mod.waehle_ausgang(self.system.ton_ausgaenge(), "kopfhoerer"):
+            raise ValueError("Kein Bluetooth-Kopfhörer verbunden.")
         ok, name = self.system.ton_setzen(ziel)
         if ok:
             self.system.bestaetigungston(name)
             with self.lock:
                 self.ton = {"ziel": ziel, "nr": self.ton["nr"] + 1}
-                self.einstellungen["ton"] = dict(self.einstellungen.get("ton") or {}, ziel=ziel)
-                daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
+                if ziel != "kopfhoerer":              # gespeichert wird nur HDMI/Klinke (der Kopfhörer kommt und geht)
+                    self.einstellungen["ton"] = dict(self.einstellungen.get("ton") or {}, ziel=ziel)
+                    daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
         return ok, name
+
+    def kopfhoerer_pruefen(self):
+        """4.3: Neu verbundener Bluetooth-Kopfhörer -> Ton dorthin; getrennt -> zurück auf die gespeicherte Wahl.
+        Wählen die Eltern bei verbundenem Kopfhörer HDMI/Klinke, bleibt das so, bis er sich neu verbindet."""
+        jetzt = system_mod.waehle_ausgang(self.system.ton_ausgaenge(), "kopfhoerer")
+        neu = [s for s in jetzt if s not in self.kopfhoerer]
+        weg = self.kopfhoerer and not jetzt
+        self.kopfhoerer = jetzt
+        automatisch = (self.einstellungen.get("ton") or {}).get("kopfhoerer_auto", True)
+        if neu and automatisch and self.ton["ziel"] != "kopfhoerer":
+            ok, _ = self.system.ton_setzen("kopfhoerer")
+            if ok:
+                with self.lock:
+                    self.ton = {"ziel": "kopfhoerer", "nr": self.ton["nr"] + 1}
+                log.info("Kopfhörer verbunden: %s", neu[0])
+        elif weg and self.ton["ziel"] == "kopfhoerer":
+            ziel = (self.einstellungen.get("ton") or {}).get("ziel") or "hdmi"
+            ok, _ = self.system.ton_setzen(ziel)
+            with self.lock:
+                self.ton = {"ziel": ziel, "nr": self.ton["nr"] + 1}
+            log.info("Kopfhörer getrennt - Ton zurück auf %s (%s).", ziel, "ok" if ok else "fehlgeschlagen")
 
     # ------------------------------------------------------------ Eltern
     def pin_gesetzt(self):
@@ -1097,14 +1514,35 @@ class Hub:
             einst = copy.deepcopy(self.einstellungen)
             if (einst.get("telegram") or {}).get("token"):
                 einst["telegram"]["token"] = telegram_mod.VERSTECKT    # Token nie zurück an den Browser
+            if isinstance(einst.get("telegram"), dict):              # 4.3: Kontakte mit allen Feldern (alte = Eltern)
+                einst["telegram"]["chats"] = telegram_mod.einstellungen(einst["telegram"])["chats"]
             return {
                 "version": self.version,
                 "telegram_unbekannt": list(self.telegram.unbekannt),
+                "telegram_verlauf": self.telegram.verlauf_fuer_eltern(),
+                "ton_jetzt": self.ton["ziel"], "kopfhoerer": bool(self.kopfhoerer),
+                "speicher": self.speicher_status(), "album": self.album_liste(),
+                "telegram_meldungen": dict(telegram_mod.MELDUNG_ARTEN),
                 "einstellungen": einst,
                 "regeln": self._regeln(), "apps": copy.deepcopy(self.katalog),
+                "spielzimmer": copy.deepcopy(self.spielzimmer()),           # 4.6: eingebaute Spiele und Kacheln
+                "bundeslaender": ferien_mod.LAENDER, "ferien_bekannt_bis": ferien_mod.bekannt_bis(),
+                # 5.0: Designs, Wetter, Schule, Kinderwelten, Kinder-News (vollständig, mit Vorgaben)
+                "design": dict(design_mod.einstellungen(einst.get("design")),
+                               alle=[{"id": k, "name": n, "hell": h} for k, n, h in design_mod.DESIGNS],
+                               alle_ansichten=[{"id": k, "name": n} for k, n in design_mod.ANSICHTEN],
+                               dunkel=list(design_mod.DUNKEL)),
+                "wetter": dict(wetter_mod.einstellungen(einst.get("wetter")), jetzt=self.wetter.fuer_tv()),
+                "schule": dict(schule_mod.einstellungen(einst.get("schule")), eingerichtet=bool(self.klassenkiste_basis()),
+                               stand=self.schule.fuer_tv()),
+                "kinderwelten": kinderwelten_mod.einstellungen(einst.get("kinderwelten")),
+                "news": {"quellen": self.news.fuer_eltern()},
                 "heute": {"genutzt_min": z["genutzt_s"] // 60, "retropie_min": z["retropie_s"] // 60,
                           "apps_min": {k: v // 60 for k, v in z["app_s"].items()},
                           "bonus_min": z["bonus_min"], "ohne_limit": z["ohne_limit"],
+                          "gaming_min": z["gaming_s"] // 60,
+                          "gaming_rest_min": None if self.konto.gaming_rest_s(jetzt) is None
+                          else self.konto.gaming_rest_s(jetzt) // 60,
                           "rest_min": None if self.konto.rest_s(jetzt) is None
                           else self.konto.rest_s(jetzt) // 60,
                           "tagesart": zeitkonto.tagesart(jetzt.date(), self._regeln())},
@@ -1149,6 +1587,10 @@ class Hub:
                 youtube_mod.pruefe(neu["youtube"])
             _pruefe_inhalte(neu.get("inhalte") or {})
             _pruefe_startseite(neu.get("startseite") or {})
+            for feld, pruefung in (("design", design_mod.pruefe), ("wetter", wetter_mod.pruefe), ("schule", schule_mod.pruefe),
+                                   ("kinderwelten", kinderwelten_mod.pruefe), ("news", news_mod.pruefe)):
+                if feld in aenderungen:
+                    neu[feld] = pruefung(neu[feld])
             if "telegram" in aenderungen:
                 t = dict(neu["telegram"])
                 if t.get("token") == telegram_mod.VERSTECKT:      # Eltern-Seite zeigt den Token nie - alten behalten
@@ -1156,11 +1598,30 @@ class Hub:
                 neu["telegram"] = telegram_mod.pruefe(t)
             _pruefe_sticker_eigen(neu.get("sticker_eigen") or [])
             whitelist.sammle(self.katalog, (neu.get("whitelist") or {}).get("zusatz", []))
+            sp = neu.get("speicher") or {}
+            if set(sp) - {"limit_mb"} or not (isinstance(sp.get("limit_mb", SPEICHER_VORGABE_MB), int) and
+                                                10 <= sp.get("limit_mb", SPEICHER_VORGABE_MB) <= 5000):
+                raise ValueError("Speicherplatz: 10 bis 5000 MB.")
+            fa = neu.get("fotoalbum") or {}
+            if set(fa) - {"erlaubt", "ordner", "bildschirmschoner", "auswahl"} or not isinstance(fa.get("erlaubt", False), bool) \
+                    or not isinstance(fa.get("bildschirmschoner", False), bool) or not isinstance(fa.get("auswahl", []), list):
+                raise ValueError("Fotoalbum: unbekannte oder ungültige Felder.")
+            if fa.get("ordner") and hoerbuch.pruefe_freigabe(fa["ordner"]):
+                raise ValueError("Foto-Ordner " + hoerbuch.pruefe_freigabe(fa["ordner"]))
+            _pruefe_spielzimmer(neu.get("spielzimmer") or {})
+            hs = neu.get("handyspiele") or {}
+            if set(hs) - {"aktiv", "port"} or not isinstance(hs.get("aktiv", False), bool) or \
+                    not (isinstance(hs.get("port", HANDYSPIELE_PORT), int) and 1024 < hs.get("port", HANDYSPIELE_PORT) < 65536):
+                raise ValueError("Handy-Spiele: aktiv (ja/nein) und port (1025-65535).")
             lan = neu.get("eltern_lan") or {}
 
             ton = neu.get("ton") or {}
             if "max" in ton and (not isinstance(ton["max"], int) or not 20 <= ton["max"] <= 100):
                 raise ValueError("Höchstlautstärke: 20 bis 100 %.")
+            if not isinstance(ton.get("kopfhoerer_auto", True), bool):
+                raise ValueError("Kopfhörer automatisch: ja oder nein.")
+            if ton.get("ziel") not in (None, "hdmi", "klinke"):
+                raise ValueError("Ton: Fernseher oder Klinke.")
             if not isinstance(lan.get("aktiv", False), bool) or \
                     not (isinstance(lan.get("port", 8766), int) and 1024 < lan.get("port", 8766) < 65536):
                 raise ValueError("eltern_lan: aktiv (true/false) und port (1025-65535).")
@@ -1174,6 +1635,45 @@ class Hub:
             self.telegram.neu_starten()
         if {"whitelist", "bass", "familie", "youtube"} & set(aenderungen):
             self.richtlinie_aktualisieren()
+
+    # ------------------------------------------------------------ Ferien des Bundeslandes (4.6)
+    def ferien_eintragen(self, land, feiertage=True, auto=False):
+        """Ferien (und Feiertage) des Landes ab heute eintragen; eigene Einträge bleiben, Vergangenes fällt weg."""
+        if land not in ferien_mod.LAENDER:
+            raise ValueError("Bitte zuerst das Bundesland wählen.")
+        heute = self.uhr().date()
+        with self.lock:
+            zeit = copy.deepcopy(self.einstellungen.get("zeit") or {})
+            vorher = {tuple(z) for z in zeit.get("ferien", [])}
+            zeit["ferien"] = ferien_mod.zusammenfuehren(zeit.get("ferien", []),
+                                                        ferien_mod.zeitraeume(land, heute, bool(feiertage)), heute)
+            zeit.update(bundesland=land, ferien_feiertage=bool(feiertage), ferien_auto=bool(auto))
+            self.einstellungen_aendern({"zeit": zeit})
+            neu = len({tuple(z) for z in zeit["ferien"]} - vorher)
+        return {"neu": neu, "ferien": zeit["ferien"], "bekannt_bis": ferien_mod.bekannt_bis(),
+                "land": ferien_mod.LAENDER[land]}
+
+    def ferien_auffrischen(self):
+        """Mit „jedes Jahr automatisch“: beim Start und an jedem neuen Tag fehlende Ferien ergänzen (neue Schuljahre
+        kommen mit den Updates). Ändert die Regeln still, ohne den Hinweis „Regeln prüfen“ zu löschen."""
+        regeln = self._regeln()
+        if not regeln.get("ferien_auto") or regeln.get("bundesland") not in ferien_mod.LAENDER:
+            return
+        heute = self.uhr().date()
+        try:
+            neu = ferien_mod.zusammenfuehren(regeln["ferien"], ferien_mod.zeitraeume(
+                regeln["bundesland"], heute, regeln.get("ferien_feiertage", True)), heute)
+        except (OSError, ValueError) as fehler:
+            log.warning("Ferien automatisch: %s", fehler)
+            return
+        if neu == regeln["ferien"]:
+            return
+        with self.lock:
+            zeit = dict(self.einstellungen.get("zeit") or {}, ferien=neu)
+            self.einstellungen["zeit"] = zeit
+            self.konto.regeln = zeitkonto.neue_regeln(zeit)
+            daten.schreibe_json(self._pfad("einstellungen.json"), self.einstellungen)
+        log.info("Ferien automatisch aufgefrischt (%d Zeiträume).", len(neu))
 
     def katalog_aendern(self, eintraege):
         geprueft = katalog_mod.pruefe_katalog(eintraege)   # wirft KatalogFehler
@@ -1337,17 +1837,45 @@ def _pruefe_sticker_eigen(sticker):
             _text(s["bedingung"], "Sticker %d (wofür)" % nr, 80)
 
 
-THEMEN = ("weltall", "ozean", "wald", "sonne", "bonbon", "nacht")
+THEMEN = design_mod.KENNUNGEN                # 5.0: helle und dunkle Designs (vorher nur dunkle Hintergründe)
+
+
+def _karaoke_marken(marken):
+    """4.6.1: Zeitmarken der Klassenkiste (Sekunde je gesungener Zeile, null = ohne Marke) - nur Zahlen oder null."""
+    if not isinstance(marken, list) or not 0 < len(marken) <= 2000:
+        return None
+    aus = [round(float(m), 2) if isinstance(m, (int, float)) and not isinstance(m, bool) and 0 <= m < 36000 else None
+           for m in marken]
+    return aus if any(m is not None for m in aus) else None
+
+
+SPIELZIMMER_FELDER = {"aktiv", "zeit", "limit_min", "sperr_erlaubt", "bewegung"}
+
+
+def _pruefe_spielzimmer(eigen):
+    """4.6: Einstellungen der Eltern zu den eingebauten Spielen und Kacheln - dieselben Regeln wie im App-Katalog."""
+    ids = {e["id"]: e for e in SPIELZIMMER}
+    for app_id, werte in eigen.items():
+        if app_id not in ids:
+            raise ValueError("Unbekanntes Spiel: %s" % app_id)
+        if not isinstance(werte, dict) or set(werte) - SPIELZIMMER_FELDER:
+            raise ValueError("%s: nur %s." % (ids[app_id]["name"], ", ".join(sorted(SPIELZIMMER_FELDER))))
+        probe = dict(ids[app_id], typ="web", start="", **werte)
+        fehler = katalog_mod._pruefe_eintrag(probe, 1)
+        if fehler:
+            raise ValueError(fehler[0].replace("App '%s'" % app_id, ids[app_id]["name"]))
 
 
 def _pruefe_startseite(st):
     """4.0: vom Kind gestaltet - Lieblinge (App-Kennungen) und Hintergrund."""
-    if not isinstance(st, dict) or set(st) - {"lieblinge", "thema"}:
+    if not isinstance(st, dict) or set(st) - {"lieblinge", "thema", "ansicht"}:
         raise ValueError("Startseite: unbekannte Felder.")
     lieblinge = st.get("lieblinge", [])
     if not isinstance(lieblinge, list) or len(lieblinge) > 12 or not all(
             isinstance(x, str) and re.fullmatch(r"[a-z][a-z0-9-]{0,31}", x) for x in lieblinge):
         raise ValueError("Startseite: höchstens 12 Lieblinge.")
     if st.get("thema", "weltall") not in THEMEN:
-        raise ValueError("Startseite: unbekannter Hintergrund.")
+        raise ValueError("Startseite: unbekanntes Design.")
+    if st.get("ansicht", "konsole") not in design_mod.ANSICHT_IDS:
+        raise ValueError("Startseite: unbekannte Ansicht.")
 

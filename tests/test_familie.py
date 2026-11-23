@@ -122,12 +122,33 @@ class Familie(unittest.TestCase):
         self.hub.starte("spiel-snake")
         self.laufe(21)
         self.assertTrue(self.hub.status()["pause"])
+        self.assertGreater(self.hub.status()["pause_rest"], 0)
         self.assertTrue(any("Bewegungspause" in h for h in self.hinweise()))
-        pausen = [a for a in self.hub.auftraege_nach(0)[0] if a.get("pause")]
-        self.assertEqual(pausen[-1]["pause"], 120)
+        # 4.2.1: Spiel auf der Startseite - die Startseite legt die Pause darüber, kein Neuladen
+        self.assertEqual([a for a in self.hub.auftraege_nach(0)[0] if a.get("pause")], [])
         self.laufe(3)
         self.assertFalse(self.hub.status()["pause"])
         self.assertIn("pause", self.hub.familie.zustand["sticker"])
+
+    def test_bewegungspause_im_youtube_film_ohne_neuladen(self):
+        """4.2.1: Der Film wurde für die Pause geschlossen (Startseite neu geladen) und begann danach von vorn."""
+        self.setze(bewegungspause={"aktiv": True, "nach_min": 20, "dauer_min": 10})
+        self.hub.ort("youtube")
+        self.laufe(21)
+        s = self.hub.status()
+        self.assertTrue(s["pause"])
+        self.assertTrue(540 <= s["pause_rest"] <= 600, s["pause_rest"])
+        self.assertEqual([a for a in self.hub.auftraege_nach(0)[0] if a["art"] == "startseite"], [])
+        self.assertEqual(self.hub.aktuell, "youtube", "der Film bleibt offen")
+
+    def test_bewegungspause_auf_webseite_holt_die_startseite(self):
+        self.setze(bewegungspause={"aktiv": True, "nach_min": 20, "dauer_min": 2})
+        self.hub.kiosk_ort("https://lernseite.beispiel/")
+        self.assertEqual(self.hub.aktuell, "internet")
+        self.laufe(21)
+        pausen = [a for a in self.hub.auftraege_nach(0)[0] if a.get("pause")]
+        self.assertEqual(pausen[-1]["art"], "startseite")
+        self.assertEqual(pausen[-1]["pause"], 120)
 
     def lernbonus(self, **werte):
         lb = {"aktiv": True, "lernen_min": 20, "bonus_min": 10, "max_bonus_min": 20,

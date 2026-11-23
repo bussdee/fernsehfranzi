@@ -173,3 +173,50 @@ details > summary { cursor: pointer; }
 .eh-mehr > summary { cursor: pointer; color: #3b6fd8; font-weight: 600; padding: 8px 0; list-style: none; }
 .eh-mehr > summary::before { content: "▸ "; }
 .eh-mehr[open] > summary::before { content: "▾ "; }
+
+/* 4.3: Telegram-Kontakte mit Symbol und Verlauf */
+.eh-symbol { width: 3.2em; text-align: center; font-size: 1.15em; }
+.eh-verlauf { border-left: 3px solid #3a4a6e; padding: 4px 8px; margin: 6px 0; font-size: .92em; }
+.eh-verlauf.raus { border-left-color: #3f74d9; background: rgba(63, 116, 217, .08); }
+.eh-verlauf small { display: block; opacity: .7; }
+.eh-medium-box { position: fixed; inset: 0; z-index: 50; background: rgba(5, 8, 15, .92); display: flex; flex-direction: column;
+                 align-items: center; justify-content: center; gap: 14px; padding: 16px; }
+.eh-medium-box .eh-foto { max-width: 100%; max-height: 75vh; }
+
+/* ------------------------------------------------------------------ 4.5: Menü und Bereiche */
+.eh-menue-gruss h2, .eh-bereich-kopf h2 { margin: 4px 0 2px; font-size: 26px; }
+.eh-gruppe { display: flex; flex-direction: column; gap: 10px; }
+.eh-gruppe > h3 { margin: 10px 2px 0; font-size: 13px; color: #9fb4d8; letter-spacing: .08em; text-transform: uppercase; }
+.eh-kacheln { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 620px) { .eh-kacheln { grid-template-columns: 1fr 1fr; } }
+.eh-kachel { display: grid; grid-template-columns: 52px 1fr; grid-template-rows: auto auto; align-items: center; gap: 2px 12px;
+  padding: 14px 16px; border-radius: 18px; background: var(--flaeche); border: 1px solid var(--linie); color: var(--text);
+  text-decoration: none; min-height: 72px; position: relative; }
+.eh-kachel:active { transform: scale(.98); background: var(--flaeche-2); }
+.eh-kachel::after { content: "›"; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 26px; color: var(--leise); }
+.eh-kachel-symbol { grid-row: 1 / span 2; font-size: 32px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;
+  border-radius: 14px; background: var(--flaeche-2); }
+.eh-kachel-text { display: flex; flex-direction: column; gap: 2px; padding-right: 22px; }
+.eh-kachel-text b { font-size: 17px; }
+.eh-kachel-text small { color: var(--leise); font-size: 13px; line-height: 1.35; }
+.eh-kachel-status { grid-column: 2; justify-self: start; margin-top: 4px; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  background: #1d2a44; color: #b9c8e8; }
+.eh-kachel-status.warn { background: #4a2a12; color: #ffc98a; }
+.eh-bereich-kopf { display: flex; flex-direction: column; gap: 2px; }
+.eh-zurueck { align-self: flex-start; color: var(--akzent); text-decoration: none; font-weight: 700; font-size: 17px; padding: 6px 0; }
+
+/* ---------------------------------------------------------------- 4.6 */
+.eh-karte h4 { margin: 14px 0 4px; font-size: 14px; color: #b9c8e8; font-weight: 700; }
+.eh-karte h4:first-of-type { margin-top: 4px; }
+.eh-zwischen { margin: 26px 4px 4px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #8ea3c9; }
+.eh-karte.eh-aus .eh-app-name b { opacity: .55; text-decoration: line-through; }
+.eh-bewegung-liste .eh-zeile { padding: 6px 0; }
+.eh-eintrag.spalte .eh-segment { margin-top: 4px; }
+.eh-rechts select { max-width: 52vw; }
+.eh-eintrag.spalte .eh-segment button { padding-left: 8px; padding-right: 8px; }
+.eh-ferien span { font-variant-numeric: tabular-nums; }
+
+/* 5.0: Ortssuche fürs Wetter, Listen der neuen Bereiche */
+.eh-reihe.eh-suche { flex-wrap: nowrap; }
+.eh-reihe.eh-suche input { flex: 1; min-width: 0; }
+.eh-reihe.eh-suche .eh-knopf { flex: none; }

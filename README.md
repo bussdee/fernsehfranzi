@@ -10,8 +10,11 @@ Fernseher und auf dem Handy. Bedient wird alles mit der normalen TV-Fernbedienun
 ![Python](https://img.shields.io/badge/Python-nur%20Standardbibliothek-3776ab?logo=python&logoColor=white)
 
 **[⬇️ Download](https://github.com/bussdee/fernsehfranzi/releases/latest)** ·
+**[📕 Handbuch (PDF)](web/handbuch.pdf)** ·
+**[🗒️ Kurzanleitung zum Ausdrucken (PDF)](web/kurzanleitung.pdf)** ·
 **[📖 Anleitung für Eltern (PDF)](web/anleitung.pdf)** ·
 **[🧒 Anleitung für Kinder (PDF)](web/kinder-anleitung.pdf)** ·
+**[🧰 Installation](docs/INSTALLATION.md)** ·
 **[🛠️ Entwickler-Dokumentation](docs/ENTWICKLUNG.md)** ·
 **[📝 Änderungen](CHANGELOG.md)**
 
@@ -27,13 +30,44 @@ Fernseher und auf dem Handy. Bedient wird alles mit der normalen TV-Fernbedienun
 | 🕹️ **Retro-Spiele** | RetroPie mit C64, Amiga, N64 und mehr. „Zuletzt gespielt“ direkt auf der Startseite, Spielbilder per Knopfdruck. Während eines Spiels ist der Browser ganz aus, damit der Pi genug Speicher hat. |
 | 🎮 **Spielzimmer** | Eigene kleine Spiele: Snake, Memory (auch mit selbst gemalten Bildern), Drei gewinnt, Farben-Echo, Malen, Spiele zu zweit, Sticker-Album. |
 | 🎸 **Musik & Lernen** | Musik-Akademie, Bass-Ecke mit Mikrofon (Stimmgerät, Nachspielen, Tagebuch), Lernspiele. Lernzeit kann Spielzeit verdienen. |
-| ⏱️ **Zeitkonto** | Tages-Timer für Schultage und Wochenende, Limits je App, Sperrzeiten, Schlafenszeit, Gutschein-Codes zum Ausdrucken. |
-| 🔔 **Familie** | Nachrichten und Erinnerungen mit Gong am Fernseher, auch über Telegram. Antworten mit fertigen Texten oder der Tastatur. Wecker. |
+| ⏱️ **Zeitkonto** | Bildschirmzeit und Gaming-Zeit für Schultage und Wochenende, Limits je App, Sperrzeiten, Ferien des Bundeslandes per Knopf, Gutschein-Codes zum Ausdrucken. |
+| 🎨 **Designs und Ansichten** | Helle und dunkle Farben, drei Aufteilungen der Startseite (Konsole, Seitenleiste, Karussell), abends automatisch dunkel. |
+| 🌤️ **Wetter** | Wetter und Regenzeiten oben auf der Startseite und als eigene Seite: „Wann können wir raus?“ (Open-Meteo, ohne Konto). |
+| 🏫 **Schule** | Stundenplan, Hausaufgaben, Termine und Klassennachrichten aus der Klassenkiste, nur lesen, mit Meldung bei Neuem und Morgen-Check. |
+| 📖 **Geschichten & News** | Geschichten, Bücher und Rätsel der Kinderwelten (Familienfabrik) zum Selberlesen, Kinder-News nur aus freigeschalteten Quellen. |
+| 📱 **Mit Handys spielen** | Der Fernseher zeigt einen QR-Code, jeder spielt am eigenen Handy mit: Buzzer-Runde, Familien-Quizrennen, Malen & Raten, Raumschiff-Rettung (gemeinsam), dazu die Mikro-Spiele Ton-Treffer, Lautstärke-Rakete und Klatsch-Rhythmus. Das Kind spielt mit der Fernbedienung. |
+| 🔔 **Familie** | Nachrichten, Fotos, Sprachnachrichten und Videos am Fernseher, auch über Telegram – mit Absender, „An wen?“ und Grenzen je Kontakt (z. B. für die beste Freundin). Die Eltern lesen mit, steuern per Befehl (`/zeit 30`, `/foto` …) und bekommen Meldungen und einen Tagesbericht. Wecker. |
+| 🎤 **Karaoke** | Die Lieder der Klassenkiste mit großem Text im Takt, Musik und Mikro-Sternen. |
+| 🖼️ **Fotoalbum** | Das Kind wählt Bilder aus einem Ordner der Eltern, seinem Album und seinen Zeichnungen und zeigt sie als Bildschirmschoner. |
+| 🎧 **Ton** | HDMI oder Klinke per Farbtaste; ein Bluetooth-Kopfhörer bekommt den Ton automatisch, sobald er verbunden ist. |
 | 🔒 **Kindersicher** | Kiosk ohne Ausweg (kein Desktop, kein Terminal), Whitelist für Internetseiten (auch für Fritzbox oder Pi-hole), Eltern-PIN nur als gesalzener Hash. |
 
 ### Spielzimmer
 
 ![Snake, Drei gewinnt, Malen und Memory](docs/bilder/spielzimmer.png)
+
+### Farben und Ansichten
+
+Das Kind wählt die Farben (hell oder dunkel) und die Aufteilung der Startseite: Konsole, Seitenleiste oder Karussell.
+Die Eltern legen fest, was es gibt, und ab wann abends automatisch Dunkel kommt.
+
+![Helle Farben, Ansicht Seitenleiste und Ansicht Karussell](docs/bilder/designs.png)
+
+### Wetter, Schule und Geschichten
+
+Wetter mit Regenzeiten und „Wann können wir raus?“, der Schultag aus der Klassenkiste und Geschichten zum Selberlesen –
+jede Seite schalten die Eltern einzeln ein. Von außen wird nur gelesen.
+
+![Wetter, Schule und Lesen](docs/bilder/wetter-schule-geschichten.png)
+
+### Mit Handys spielen
+
+Die Eltern schalten die Handy-Spiele frei, dann scannt jeder den QR-Code am Fernseher. Der Zugang ist nur offen, solange
+gespielt wird, und gespeichert wird nichts über die Mitspieler.
+
+![Spielraum mit QR-Code, Quizrennen, Raumschiff-Rettung und Ton-Treffer](docs/bilder/handyspiele.png)
+
+![Am Handy: Buzzer, Quiz, Schalter und Handbuch](docs/bilder/handyspiele-handy.png)
 
 ### Bereiche statt Menüs
 
@@ -44,11 +78,12 @@ zur Startseite.
 
 ### Eltern-Seite am Handy
 
-Im Heimnetz mit PIN: Zeit gutschreiben oder sperren, eine Nachricht an den Fernseher schicken, Regeln und Apps
+Im Heimnetz mit PIN, aufgebaut wie eine App: unten 🏠 Heute, ⚙️ Menü und 📊 Statistik, im Menü alle Einstellungen nach
+Themen sortiert. Zeit gutschreiben oder sperren, eine Nachricht an den Fernseher schicken, Regeln und Apps
 einstellen, die Statistik ansehen, ein Bild vom Fernseher abrufen (am Fernseher erscheint dann ein 📷), Bluetooth-Geräte
 koppeln, eine Sicherung herunterladen. Dasselbe gibt es als Elternbereich direkt am Fernseher (BLAU auf der Fernbedienung).
 
-![Eltern-Seite: Heute, Regeln, Statistik](docs/bilder/eltern-seite.png)
+![Eltern-Seite: Heute, Menü, Statistik](docs/bilder/eltern-seite.png)
 
 ## Bedienung
 
@@ -71,9 +106,9 @@ Controller und Tastatur funktionieren genauso. Alle Tasten, auch für Retro-Spie
 - Fernseher mit HDMI-CEC; optional Controller und Bluetooth-Tastatur
 - Optional im Heimnetz: Plex, Kavita, FileBrowser, ein Telegram-Bot
 
-> **Hinweis:** FernsehFranzi ist für genau dieses Gerät gebaut. Es gibt noch keine Schritt-für-Schritt-Installation für
-> ein frisch aufgesetztes System. Wer es nachbauen möchte, findet Aufbau, Einrichtung und Ausliefern in der
-> [Entwickler-Dokumentation](docs/ENTWICKLUNG.md).
+> **Einrichten:** Die [Installationsanleitung](docs/INSTALLATION.md) führt von der leeren SD-Karte bis zum fertigen
+> Kinder-Fernseher. Sie beschreibt den Weg, auf dem FernsehFranzi entstanden ist; auf einem ganz frischen Gerät ist sie
+> noch nicht vollständig durchgespielt.
 
 ## Ausprobieren am PC
 

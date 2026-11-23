@@ -155,7 +155,7 @@ class Startseite34(unittest.TestCase):
                 break
         seite.keyboard.press("Enter")
         seite.wait_for_timeout(400)
-        self.assertEqual(self.hub.einstellungen["startseite"], {"lieblinge": ["spiel-snake"], "thema": "ozean"})
+        self.assertEqual(self.hub.einstellungen["startseite"], {"lieblinge": ["spiel-snake"], "thema": "ozean", "ansicht": "konsole"})   # 5.0: + Ansicht
         seite.keyboard.press("Escape")
         seite.wait_for_selector(".reihe[data-bereich=start] .kachel[data-id=spiel-snake]")
         erste = seite.locator(".reihe[data-bereich=start] .kachel").first.get_attribute("data-id")

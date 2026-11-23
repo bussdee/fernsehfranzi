@@ -60,6 +60,12 @@ class ElternAmHandy(unittest.TestCase):
         seite.wait_for_selector(".eh-leiste")
         return seite
 
+    def bereich(self, seite, bereich):
+        """4.5: Menü öffnen und einen Bereich antippen."""
+        seite.click(".eh-leiste >> text=Menü")
+        seite.click(".eh-kachel[data-bereich=%s]" % bereich)
+        seite.wait_for_selector(".eh-bereich-kopf")
+
     def gespeichert(self, seite):
         seite.wait_for_selector(".eh-meldung.zeigen:not(.fehler)", timeout=4000)
         seite.wait_for_selector(".eh-meldung:not(.zeigen)", timeout=4000)
@@ -73,12 +79,28 @@ class ElternAmHandy(unittest.TestCase):
             for _ in range(sek // 60):
                 self.hub.nutzung.zaehle(jetzt, app, 60, True)
         seite = self.anmelden()
-        for name in ("Heute", "Regeln", "Apps", "Musik", "Statistik", "Mehr"):
+        for name in ("Heute", "Menü", "Statistik"):
             seite.click(".eh-leiste >> text=" + name)
             seite.wait_for_timeout(250)
             breite = seite.evaluate("document.documentElement.scrollWidth")
             self.assertLessEqual(breite, 390, "%s ist breiter als das Handy" % name)
             seite.screenshot(path=os.path.join(FOTOS, "eltern-%s.png" % name.lower()), full_page=True)
+        # 4.5: jeder Bereich des Menüs öffnet ohne Fehler, „‹ Menü“ und die Zurück-Taste führen zurück
+        seite.click(".eh-leiste >> text=Menü")
+        bereiche = seite.evaluate("[...document.querySelectorAll('.eh-kachel')].map(k => k.dataset.bereich)")
+        self.assertEqual(len(bereiche), 16)          # 5.0: + Designs, Wetter, Schule, Kinderwelten
+        for b in bereiche:
+            seite.click(".eh-kachel[data-bereich=%s]" % b)
+            seite.wait_for_selector(".eh-bereich-kopf")
+            self.assertGreaterEqual(seite.locator(".eh-karte").count(), 1, b)
+            breite = seite.evaluate("document.documentElement.scrollWidth")
+            self.assertLessEqual(breite, 390, "%s ist breiter als das Handy" % b)
+            seite.screenshot(path=os.path.join(FOTOS, "eltern-bereich-%s.png" % b), full_page=True)
+            if b == "zeit":
+                seite.go_back()                                   # Zurück-Taste des Handys
+            else:
+                seite.click("text=‹ Menü")
+            seite.wait_for_selector(".eh-kacheln")
         self.assertEqual(self.fehler, [])
 
     def test_bildschirmfoto_wird_angezeigt(self):
@@ -108,12 +130,13 @@ class ElternAmHandy(unittest.TestCase):
 
     def test_regeln_speichern_von_selbst(self):
         seite = self.anmelden()
-        seite.click(".eh-leiste >> text=Regeln")
-        feld = seite.locator(".eh-karte", has_text="Allgemeiner Timer").locator("input[type=number]").first
+        self.bereich(seite, "zeit")
+        feld = seite.locator(".eh-karte", has_text="Wie viel Spielzeit am Tag?").locator("input[type=number]").first
         feld.fill("75")
         self.gespeichert(seite)
         self.assertEqual(self.hub.eltern_daten()["regeln"]["budget_min"]["schultag"], 75)
-        # Erinnerung mit Wochentagen - ohne "a | b | c"
+        # Erinnerung mit Wochentagen - ohne "a | b | c" (4.5: eigener Bereich „Erinnerungen & Pausen“)
+        self.bereich(seite, "erinnerungen")
         seite.click("text=+ Erinnerung")
         eintrag = seite.locator(".eh-eintrag.spalte").last
         eintrag.locator("input[type=text]").fill("Zähneputzen!")
@@ -125,6 +148,8 @@ class ElternAmHandy(unittest.TestCase):
         self.assertEqual(er[-1]["text"], "Zähneputzen!")
         self.assertEqual(er[-1]["tage"], [0, 1, 2, 3, 4])
         # falscher Wert: Fehler am Feld, nichts kaputt
+        self.bereich(seite, "zeit")
+        feld = seite.locator(".eh-karte", has_text="Wie viel Spielzeit am Tag?").locator("input[type=number]").first
         feld.fill("5000")
         seite.wait_for_selector(".eh-meldung.zeigen.fehler", timeout=4000)
         self.assertIn("eh-falsch", feld.get_attribute("class"))
@@ -134,19 +159,21 @@ class ElternAmHandy(unittest.TestCase):
         feld.fill("80")
         self.gespeichert(seite)
         self.assertNotIn("eh-falsch", feld.get_attribute("class"))
-        seite.locator(".eh-zeile", has_text="Zur Nachtruhe automatisch öffnen").locator(".eh-schalter").click()
-        self.gespeichert(seite)
-        self.assertTrue(self.hub.familie.einstellungen()["gute_nacht"]["automatisch"])
         # Sperrzeit: Uhrzeit ändern, Ferien-Schalter
         nacht = seite.locator(".eh-sperre").first
         nacht.locator("input[type=time]").first.fill("19:00")
         self.gespeichert(seite)
         self.assertEqual(self.hub.eltern_daten()["regeln"]["sperrzeiten"][0]["von"], "19:00")
+        # Gute Nacht steht im Bereich „Gute Nacht & Wecker“
+        self.bereich(seite, "abend")
+        seite.locator(".eh-zeile", has_text="Zur Nachtruhe automatisch öffnen").locator(".eh-schalter").click()
+        self.gespeichert(seite)
+        self.assertTrue(self.hub.familie.einstellungen()["gute_nacht"]["automatisch"])
         self.assertEqual(self.fehler, [])
 
     def test_hoerbuch_app_anlegen_und_plex_mit_limit(self):
         seite = self.anmelden()
-        seite.click(".eh-leiste >> text=Apps")
+        self.bereich(seite, "apps")
         seite.click("text=➕ Neue App anlegen")
         seite.click("text=🎧 Hörbuch-Ordner")
         neu = seite.locator(".eh-neu")
@@ -162,7 +189,7 @@ class ElternAmHandy(unittest.TestCase):
         offen.locator(".eh-chips-breit >> text=Schule").click()
         self.gespeichert(seite)
         self.assertEqual(self.hub.app("plex")["sperr_erlaubt"], ["Schule"])
-        offen.locator(".eh-segment").get_by_role("button", name="Timer", exact=True).click()
+        offen.locator(".eh-segment").get_by_role("button", name="Bildschirmzeit", exact=True).click()
         self.gespeichert(seite)
         offen.locator(".eh-zeile", has_text="höchstens am Schultag").locator("input").fill("60")
         self.gespeichert(seite)
@@ -170,9 +197,56 @@ class ElternAmHandy(unittest.TestCase):
         seite.screenshot(path=os.path.join(FOTOS, "eltern-apps-offen.png"), full_page=True)
         self.assertEqual(self.fehler, [])
 
+    def test_46_zeitarten_spiele_ferien_erinnerungen(self):
+        """4.6: Gaming-Zeit, nur eigenes Limit, eingebaute Spiele aus, Bewegungspause je Angebot, Ferien per Knopf,
+        Erinnerung „nicht in den Ferien“."""
+        seite = self.anmelden()
+        self.bereich(seite, "zeit")
+        seite.locator(".eh-zeile", has_text="Schultag").nth(1).locator("input").fill("40")     # Gaming Schultag
+        self.gespeichert(seite)
+        self.assertEqual(self.hub._regeln()["gaming_min"]["schultag"], 40)
+        seite.select_option(".eh-zeile:has-text('Bundesland') select", "SH")
+        seite.click("text=📅 Ferien eintragen")
+        seite.wait_for_selector(".eh-meldung.zeigen:has-text('Schleswig-Holstein')")
+        self.assertEqual(self.hub._regeln()["bundesland"], "SH")
+        self.assertIn(["2026-12-21", "2027-01-06"], self.hub._regeln()["ferien"])
+        self.assertIn("Mo 21.12.2026 – Mi 06.01.2027", seite.inner_text(".eh-ferienliste"))
+        seite.click("text=+ eigene freie Tage")
+        neu = seite.locator(".eh-ferienliste .eh-eintrag.spalte").first
+        neu.locator("input[type=date]").first.fill("2027-05-07")
+        neu.locator("input[type=date]").last.fill("2027-05-07")
+        self.gespeichert(seite)
+        self.assertIn(["2027-05-07", "2027-05-07"], self.hub._regeln()["ferien"])
+        # Apps: Klassenkiste nur mit eigenem Limit, Snake ausschalten
+        self.bereich(seite, "apps")
+        seite.click(".eh-app[data-app=klassenkiste] summary")
+        offen = seite.locator(".eh-app[open]")
+        offen.locator(".eh-segment").get_by_role("button", name="Nur eigenes Limit", exact=True).click()
+        self.gespeichert(seite)
+        kk = self.hub.app("klassenkiste")
+        self.assertEqual((kk["zeit"], kk["limit_min"]), ("frei", {"schultag": 30, "frei": 60}))
+        seite.locator(".eh-app[data-app=spiel-snake] summary .eh-schalter").click()
+        self.gespeichert(seite)
+        self.assertIs(self.hub.app("spiel-snake")["aktiv"], False)
+        self.assertNotIn("spiel-snake", [k["id"] for k in self.hub.kacheln()])
+        # Bewegungspause nur bei bestimmten Angeboten, Erinnerung nicht in den Ferien
+        self.bereich(seite, "erinnerungen")
+        seite.click(".eh-bewegung-liste summary")
+        seite.locator(".eh-bewegung-liste .eh-zeile", has_text="Memory").locator("input").click()
+        self.gespeichert(seite)
+        self.assertIs(self.hub.app("spiel-memory")["bewegung"], False)
+        seite.click("text=+ Erinnerung")
+        seite.locator(".eh-eintrag.spalte input[type=text]").last.fill("Sportsachen einpacken!")
+        self.gespeichert(seite)
+        seite.locator(".eh-eintrag.spalte").last.get_by_role("button", name="nicht in den Ferien").click()
+        self.gespeichert(seite)
+        self.assertEqual(self.hub.familie.einstellungen()["erinnerungen"][-1]["wann"], "schule")
+        seite.screenshot(path=os.path.join(FOTOS, "eltern-46.png"), full_page=True)
+        self.assertEqual(self.fehler, [])
+
     def test_bass_songs_als_felder(self):
         seite = self.anmelden()
-        seite.click(".eh-leiste >> text=Musik")
+        self.bereich(seite, "musik")
         seite.click("text=+ Song")
         song = seite.locator(".eh-eintrag.spalte").last
         song.locator("input[type=text]").fill("Seven Nation Army")

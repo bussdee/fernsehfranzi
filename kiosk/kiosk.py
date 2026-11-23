@@ -344,6 +344,22 @@ class Kiosk:
         except (urllib.error.URLError, OSError, ValueError) as fehler:
             log.warning("Foto nicht übergeben: %s", fehler)
 
+    def kk_anmeldung(self, nr, adresse):
+        """4.4: Anmelde-Cookie der Klassenkiste aus dem Kiosk-Profil (DevTools, Browser-Ebene) für den Karaoke-Player.
+        Geht nur an den eigenen Server (127.0.0.1); der Server liest damit nur Liedliste und Musik."""
+        daten = {"nr": nr}
+        try:
+            host = urlsplit(adresse).hostname or ""
+            cookies = self.pipe.senden("Storage.getCookies", {}, warten=5).get("cookies", [])
+            passend = [c for c in cookies if host and (c.get("domain", "").lstrip(".") == host or host.endswith("." + c.get("domain", "").lstrip(".")))]
+            daten["cookie"] = "; ".join("%s=%s" % (c["name"], c["value"]) for c in passend if c.get("name"))
+        except (RuntimeError, TimeoutError, KeyError, TypeError, AttributeError) as fehler:
+            daten["fehler"] = "Anmeldung nicht lesbar (%s)." % fehler
+        try:
+            self.server("/api/kiosk/kk-anmeldung", daten, timeout=10)
+        except (urllib.error.URLError, OSError, ValueError) as fehler:
+            log.warning("Klassenkiste-Anmeldung nicht übergeben: %s", fehler)
+
     def zur_startseite(self, eltern=False, pause=0, anker=""):
         self.beende_desktop()
         anker = anker or ("#eltern" if eltern else ("#pause-%d" % int(pause) if pause else ""))
@@ -376,6 +392,8 @@ class Kiosk:
             self.starte_desktop_app(a["befehl"])
         elif art == "desktop_modus":
             self.eltern_desktop()
+        elif art == "kk_anmeldung":       # 4.4: Karaoke mit den Liedern der Klassenkiste
+            threading.Thread(target=self.kk_anmeldung, args=(int(a.get("kk") or 0), str(a.get("adresse") or "")), daemon=True).start()
         elif art == "foto":               # 4.1: Bildschirmfoto für die Eltern-Seite
             threading.Thread(target=self.foto, args=(int(a.get("foto") or 0),), daemon=True).start()
 

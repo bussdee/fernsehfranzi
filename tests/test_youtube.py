@@ -161,7 +161,7 @@ class PlayerImBrowser(unittest.TestCase):
         seite.wait_for_selector(".yt-video")
         seite.keyboard.press("Enter")
         seite.wait_for_selector(".yt-buehne iframe")
-        seite.wait_for_function("() => window.__yt.befehle.includes('play')")
+        seite.wait_for_function("() => window.__yt && window.__yt.befehle.includes('play')")
         opt = seite.evaluate("window.__yt.opt")
         self.assertEqual(opt["host"], "https://www.youtube-nocookie.com")
         for schluessel, wert in (("controls", 0), ("disablekb", 1), ("rel", 0), ("fs", 0)):
@@ -196,6 +196,68 @@ class PlayerImBrowser(unittest.TestCase):
         seite.keyboard.press("Escape")
         seite.wait_for_selector(".yt-video")
         self.assertEqual(fehler, [])
+
+    def test_bewegungspause_haelt_den_film_nur_an_und_merkt_die_stelle(self):
+        """4.2.1: Die Bewegungspause schloss den Film (Startseite neu geladen), danach begann er von vorn."""
+        from datetime import timedelta
+        attrappe = (YT_ATTRAPPE.replace("this.getCurrentTime = () => 20;",
+                                        "this.getCurrentTime = () => (window.__yt.t ?? 20); this.getDuration = () => 2400;")
+                    .replace("this.getVideoData = () => ({ title: 'Titel' });",
+                             "this.getVideoData = () => ({ title: 'Titel', video_id: opt.videoId });"))
+        seite = self.browser.new_page(viewport={"width": 1600, "height": 900})
+        self.addCleanup(seite.close)
+        fehler = []
+        seite.on("pageerror", lambda e: fehler.append(str(e)))
+        seite.route("https://www.youtube.com/iframe_api", lambda r: r.fulfill(body=attrappe, content_type="text/javascript"))
+        seite.goto("http://127.0.0.1:8765/")
+        seite.evaluate("localStorage.clear()")
+        seite.click(".kachel[data-id=youtube]")
+        seite.wait_for_selector(".yt-kategorie")
+        seite.keyboard.press("Enter")
+        seite.wait_for_selector(".yt-video")
+        seite.keyboard.press("Enter")
+        seite.wait_for_function("() => window.__yt && window.__yt.befehle.includes('play')")
+        seite.evaluate("window.__yt.t = 1500")                        # 25 Minuten im Film
+        nachrichten_vorher = len(seite.evaluate("window.__yt.befehle"))
+
+        self.hub.familie.pause_bis = self.hub.uhr() + timedelta(seconds=3)
+        seite.wait_for_selector(".pause-ebene", timeout=5000)
+        self.hub.familie.pause_bis = None                              # Testuhr steht - sonst käme die Pause erneut
+        befehle = seite.evaluate("window.__yt.befehle")[nachrichten_vorher:]
+        self.assertIn("pause", befehle)
+        self.assertNotIn("destroy", befehle, "der Film bleibt offen")
+        self.assertEqual(seite.locator(".yt-buehne iframe").count(), 1)
+        self.assertIn("genau hier weiter", seite.inner_text(".pause-ebene"))
+        self.assertNotIn("null", seite.inner_text(".pause-ebene"))
+        vor_ende = len(seite.evaluate("window.__yt.befehle"))
+        seite.wait_for_selector(".pause-ebene", state="detached", timeout=8000)
+        self.assertIn("play", seite.evaluate("window.__yt.befehle")[vor_ende:], "nach der Pause läuft der Film weiter")
+        self.assertEqual(seite.locator(".yt-buehne iframe").count(), 1)
+
+        # Die Stelle ist gemerkt: STOP und wieder öffnen -> ab 25:00 weiter, 0 = von vorn
+        seite.keyboard.press("Escape")
+        seite.wait_for_selector(".yt-video")
+        seite.keyboard.press("Enter")
+        seite.wait_for_function("() => window.__yt.opt.playerVars.start === 1500")
+        seite.wait_for_function("() => window.__yt.befehle.filter(b => b === 'play').length >= 3")
+        seite.keyboard.press("0")
+        seite.wait_for_function("() => window.__yt.befehle.includes('seek 0')")
+        self.assertEqual(fehler, [])
+
+    def test_bewegungspause_auf_der_startseite_ohne_null(self):
+        """4.2.1: Ohne Film darunter stand unten in der Pause „null“."""
+        from datetime import timedelta
+        seite = self.browser.new_page(viewport={"width": 1600, "height": 900})
+        self.addCleanup(seite.close)
+        seite.goto("http://127.0.0.1:8765/")
+        seite.wait_for_selector(".kachel")
+        self.hub.familie.pause_bis = self.hub.uhr() + timedelta(seconds=60)
+        self.addCleanup(setattr, self.hub.familie, "pause_bis", None)
+        seite.wait_for_selector(".pause-ebene", timeout=5000)
+        text = seite.inner_text(".pause-ebene")
+        self.assertIn("Bewegungspause", text)
+        self.assertNotIn("null", text)
+        self.assertNotIn("genau hier weiter", text)
 
 
 if __name__ == "__main__":

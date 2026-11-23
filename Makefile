@@ -55,7 +55,7 @@ help:
 	@echo "  make retro-einrichten-plan / retro-einrichten  Kickstarts, C64-Schnelllauf, CD32 entpacken – fragt ZWEIMAL"
 	@echo "  make amiga-bibliothek-plan / amiga-bibliothek  fehlende Bibliothek für Amiberry (apt) – fragt ZWEIMAL"
 	@echo "  make admin-einrichten Admin-Konto anlegen, Kiosk-Benutzer ohne volles sudo – fragt je Schritt ZWEIMAL"
-	@echo "  make anleitung      Anleitungen als PDF neu erzeugen · make bildschirmfotos  Bilder für README/Doku (docs/bilder)"
+	@echo "  make anleitung      Anleitungen, Handbuch und Kurzanleitung als PDF · make bildschirmfotos  Bilder für README/Doku (docs/bilder)"
 	@echo ""
 
 venv:
