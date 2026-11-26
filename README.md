@@ -1,7 +1,7 @@
 # 📺 FernsehFranzi
 
 **Ein Raspberry Pi am Fernseher wird zum Smart-TV für Kinder.** Eine schnelle Startseite für Filme, Bücher, Hörbücher,
-Retro-Spiele und Lern-Apps, ein eigenes Spielzimmer, ein Zeitkonto mit den Regeln der Eltern und ein Elternbereich am
+Retro-Spiele und Lern-Apps, ein eigenes Spielzimmer, **Franzi – ein Haustier zum Pflegen**, ein Zeitkonto mit den Regeln der Eltern und ein Elternbereich am
 Fernseher und auf dem Handy. Bedient wird alles mit der normalen TV-Fernbedienung, einem Controller oder einer Tastatur.
 
 [![Version](https://img.shields.io/github/v/release/bussdee/fernsehfranzi?label=Version)](https://github.com/bussdee/fernsehfranzi/releases/latest)
@@ -24,23 +24,31 @@ Fernseher und auf dem Handy. Bedient wird alles mit der normalen TV-Fernbedienun
 
 | | |
 |---|---|
+| 🐾 **Franzi (neu in v8)** | Ein kleiner Fernseher mit Armen und Antennen als Haustier: füttern, waschen, streicheln, schlafen legen, spielen. Eigene Räume (Kinderzimmer bis Bad), gezeichnete Gegenstände aus dem Sterne-Shop frei platzieren und anfassen (Mikrofon, Gitarre, Musikbox …), Franzi tanzt und spielt Gitarre, schickt Postkarten von Abenteuerreisen, wird mit Level 10 golden und wächst. Sie spricht auf der Startseite (Witze, Tipps, eigene Sätze der Eltern), zeigt passende Gefühle und taucht in Musik, Filmen, Wetter und Spielen auf. |
 | 🏠 **Startseite** | Große Kacheln in Bereichen (Start, Spiele, Lernen, Musik, Filme & YouTube, Retro). Uhr, Begrüßung und die Restzeit („Noch 90 Minuten“) immer im Blick. |
-| 🎬 **Filme & YouTube** | Plex und eigene Video-Ordner aus dem Heimnetz. YouTube nur mit den Videos und Playlisten, die die Eltern ausgesucht haben, in einem eigenen Player ohne Vorschläge. |
+| 🎬 **Filme & YouTube** | Plex und eigene Video-Ordner aus dem Heimnetz im Stil einer Streaming-App (Weiterschauen, Serien mit Staffeln, Meine Liste, nächste Folge); Musik wie in einer Musik-App; Archiv-Ordner als Belohnung. YouTube nur mit den Videos und Playlisten, die die Eltern ausgesucht haben, in einem eigenen Player ohne Vorschläge. |
 | 📚 **Bücher & Hörbücher** | Kavita für Bücher und Comics, Hörbücher aus einem freigegebenen Ordner, „Gute Nacht“ mit Einschlaf-Timer. |
 | 🕹️ **Retro-Spiele** | RetroPie mit C64, Amiga, N64 und mehr. „Zuletzt gespielt“ direkt auf der Startseite, Spielbilder per Knopfdruck. Während eines Spiels ist der Browser ganz aus, damit der Pi genug Speicher hat. |
 | 🎮 **Spielzimmer** | Eigene kleine Spiele: Snake, Memory (auch mit selbst gemalten Bildern), Drei gewinnt, Farben-Echo, Malen, Spiele zu zweit, Sticker-Album. |
 | 🎸 **Musik & Lernen** | Musik-Akademie, Bass-Ecke mit Mikrofon (Stimmgerät, Nachspielen, Tagebuch), Lernspiele. Lernzeit kann Spielzeit verdienen. |
-| ⏱️ **Zeitkonto** | Bildschirmzeit und Gaming-Zeit für Schultage und Wochenende, Limits je App, Sperrzeiten, Ferien des Bundeslandes per Knopf, Gutschein-Codes zum Ausdrucken. |
+| ⏱️ **Zeitkonto** | Bildschirmzeit und Gaming-Zeit für Schultage und Wochenende, „Erst-dann“ (Spiele erst nach Lernen oder Mein Tag), Limits je App, Sperrzeiten, Ferien des Bundeslandes per Knopf, Gutschein-Codes zum Ausdrucken. |
 | 🎨 **Farben** | Zehn klare Farben (dunkel und hell), abends wird hell automatisch dunkel; Startseite „Zuhause“ mit Lieblingen, „Weiter“ und Bereichen. |
 | 🌤️ **Wetter** | Wetter und Regenzeiten oben auf der Startseite und als eigene Seite: „Wann können wir raus?“ (Open-Meteo, ohne Konto). |
 | 🏫 **Schule** | Stundenplan, Hausaufgaben, Termine und Klassennachrichten aus der Klassenkiste, nur lesen, mit Meldung bei Neuem und Morgen-Check. |
 | 📖 **Geschichten & News** | Geschichten, Bücher und Rätsel der Kinderwelten (Familienfabrik) zum Selberlesen, Kinder-News nur aus freigeschalteten Quellen. |
 | 📱 **Mit Handys spielen** | Der Fernseher zeigt einen QR-Code, jeder spielt am eigenen Handy mit: Buzzer-Runde, Familien-Quizrennen, Malen & Raten, Raumschiff-Rettung (gemeinsam), dazu die Mikro-Spiele Ton-Treffer, Lautstärke-Rakete und Klatsch-Rhythmus. Das Kind spielt mit der Fernbedienung. |
 | 🔔 **Familie** | Nachrichten, Fotos, Sprachnachrichten und Videos am Fernseher, auch über Telegram – mit Absender, „An wen?“ und Grenzen je Kontakt (z. B. für die beste Freundin). Die Eltern lesen mit, steuern per Befehl (`/zeit 30`, `/foto` …) und bekommen Meldungen und einen Tagesbericht. Wecker. |
+| 🧱 **Eigene Spiele** | Neben Snake, Memory & Co. jetzt auch Steine-Brecher (Level als Bilder aus Steinen), ein 3D-Labyrinth (Feld für Feld mit der Fernbedienung) und das Jump'n'Run „Franzi hüpft“. |
+| 🎤 **Stimm-Spiele** | Möwenflug (je höher der Ton, desto höher die Möwe), „Pst – der Drache schläft“, Klatsch-Läufer und Ton-Kanone – mit dem USB-Mikro, ohne Mikro mit den Pfeilen. |
+| 📋 **Mein Tag** | Morgen- und Abend-Listen der Eltern, die das Kind mit der Fernbedienung abhakt – mit Zeit-Scheibe („noch 10 Minuten“), Zahnputz-Timer mit Musik; die Liste öffnet sich zur Uhrzeit von selbst (auch nach dem Wecker), erinnert alle 10 Minuten bis geschafft und meldet den Eltern, wenn nicht; Ranzen-Check aus dem Stundenplan, Aufgaben mit Sternen (die Eltern bestätigen, auch per Telegram); mit Sternen steigt Franzi im Level (neue Räume, goldene Franzi); Vorlese-Zeit mit Lesepass (das Mikro misst nur, nimmt nichts auf). |
 | 🎤 **Karaoke** | Die Lieder der Klassenkiste mit großem Text im Takt, Musik und Mikro-Sternen. |
 | 🖼️ **Fotoalbum** | Das Kind wählt Bilder aus einem Ordner der Eltern, seinem Album und seinen Zeichnungen und zeigt sie als Bildschirmschoner. |
 | 🎧 **Ton** | HDMI oder Klinke per Farbtaste; ein Bluetooth-Kopfhörer bekommt den Ton automatisch, sobald er verbunden ist. |
 | 🔒 **Kindersicher** | Kiosk ohne Ausweg (kein Desktop, kein Terminal), Whitelist für Internetseiten (auch für Fritzbox oder Pi-hole), Eltern-PIN nur als gesalzener Hash. |
+
+### Franzi, das Haustier
+
+![Franzis Zimmer: pflegen, einrichten, anfassen](docs/bilder/franzi.png)
 
 ### Spielzimmer
 
@@ -78,12 +86,12 @@ zurück. EXIT auf der Fernbedienung führt von überall zurück zur Startseite.
 
 ### Eltern-Seite am Handy
 
-Im Heimnetz mit PIN, aufgebaut wie eine App: unten die Reiter 🏠 Heute, ⏰ Zeit, 🧩 Inhalte, 💬 Familie und 🔧 Gerät,
-jeder Bereich klappt mit einem Tipp auf. Zeit gutschreiben oder sperren, eine Nachricht an den Fernseher schicken, Regeln und Apps
+Im Heimnetz mit PIN, aufgebaut wie eine App: unten die Reiter 🏠 Heute, ⏰ Regeln, 🧩 Apps, ⭐ Franzi, 🎨 Aussehen und
+⚙️ Mehr, jeder Bereich klappt mit einem Tipp auf; am PC zweispaltig. Zeit gutschreiben oder sperren, eine Nachricht an den Fernseher schicken, Regeln und Apps
 einstellen, die Statistik ansehen, ein Bild vom Fernseher abrufen (am Fernseher erscheint dann ein 📷), Bluetooth-Geräte
 koppeln, eine Sicherung herunterladen. Dasselbe gibt es als Elternbereich direkt am Fernseher (BLAU auf der Fernbedienung).
 
-![Eltern-Seite: Heute, Zeit und Inhalte](docs/bilder/eltern-seite.png)
+![Eltern-Seite](docs/bilder/eltern-seite.png)
 
 ## Bedienung
 

@@ -88,7 +88,7 @@ class Attrappe:
     def gong(self, klang=None):
         self.aufrufe.append(("gong",) if klang is None else ("gong", klang))
 
-    def gong_datei(self, pfad, hoechstens_s=10):
+    def gong_datei(self, pfad, hoechstens_s=600):
         self.aufrufe.append(("gong_datei", pfad))
 
     lautstaerke_wert = 40

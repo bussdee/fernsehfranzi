@@ -45,6 +45,13 @@ class Nach(unittest.TestCase):
         nach["ports"] = ["0.0.0.0:22"]
         self.assertIn("rot", stufen(pi_check.pruefe_nach(VOR, nach)))
 
+    def test_spielraum_port_ist_nur_zeitweise(self):
+        """6.8.8: 8767 lauscht nur bei offenem Spielraum - auf oder zu ist kein Fehler (Deploy 24.11.)."""
+        vor = copy.deepcopy(VOR)
+        vor["ports"] = vor["ports"] + ["0.0.0.0:8767"]
+        self.assertNotIn("rot", stufen(pi_check.pruefe_nach(vor, copy.deepcopy(VOR))))
+        self.assertNotIn("rot", stufen(pi_check.pruefe_nach(copy.deepcopy(VOR), vor)))
+
     def test_falsche_version_und_neustart(self):
         nach = copy.deepcopy(VOR)
         nach["version"] = "2.3.0"

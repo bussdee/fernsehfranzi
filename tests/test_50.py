@@ -34,7 +34,8 @@ class Designs(unittest.TestCase):
         self.assertEqual(design.jetzt_design({}, "sonne", datetime(2026, 11, 18, 12)), "rot")
         einst = {"startseite": {"thema": "zuckerwatte"}, "design": {"erlaubt": ["weltall", "himmel"], "abend_design": "nacht"}}
         self.assertTrue(design.migriere(einst))
-        self.assertEqual(einst, {"startseite": {"thema": "rosa"}, "design": {"erlaubt": ["blau", "hellblau"]}})
+        self.assertEqual(einst, {"startseite": {"thema": "rosa"}, "migration_6946": True,       # 6.9.46: neue Designs einmalig dazu
+                                 "design": {"erlaubt": ["blau", "hellblau", "berge", "liebe", "system", "weltraum"]}})
         self.assertFalse(design.migriere(einst), "nur einmal")
 
     def test_pruefen(self):

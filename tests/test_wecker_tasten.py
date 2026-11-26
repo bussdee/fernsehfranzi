@@ -36,6 +36,7 @@ class WeckerTasten(unittest.TestCase):
     def klingeln(self, seite):
         self.hub.wecker_laeuft = {"nr": 1, "zeit": "07:00", "ton": "", "laut": 50, "seit": 0, "vorher": None}
         seite.wait_for_selector(".wecker-klingelt .wecker-knoepfe")
+        seite.screenshot(path=os.path.join(REPO, ".local", "bildschirm", "wecker-klingelt.png"))   # 6.9.33
 
     def test_pfeil_dann_ok_schaltet_aus(self):
         with sync_playwright() as pw:

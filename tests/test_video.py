@@ -32,9 +32,12 @@ def testvideo():
 @unittest.skipUnless(port_frei(8765), "Port 8765 belegt (läuft make v3-lokal?)")
 class VideoPlayer(unittest.TestCase):
     def test_filme_abspielen_und_weiterschauen(self):
+        """6.9.51: Streaming-Seite - Poster, Film öffnen, abspielen, Stelle merken, „Weiterschauen“, nächste Folge."""
         alt = dict(test_hoerbuch.BAUM)
         test_hoerbuch.BAUM.clear()
-        test_hoerbuch.BAUM.update({"Filme": {"Testfilm.webm": testvideo(), "cover.png": test_hoerbuch.PNG}})
+        film = testvideo()
+        test_hoerbuch.BAUM.update({"Filme": {"Testfilm.webm": film, "cover.png": test_hoerbuch.PNG},
+                                   "Serie": {"Folge 1.webm": film, "Folge 2.webm": film}})
         self.addCleanup(lambda: (test_hoerbuch.BAUM.clear(), test_hoerbuch.BAUM.update(alt)))
         attrappe, link = test_hoerbuch.starte_attrappe()
         self.addCleanup(attrappe.shutdown)
@@ -55,20 +58,33 @@ class VideoPlayer(unittest.TestCase):
             seite.goto("http://127.0.0.1:8765/")
             seite.wait_for_function("window.FernsehFranzi && FernsehFranzi.zeige('filme')")
             seite.click(".kachel[data-id=filme]")
-            seite.wait_for_selector(".vid-liste .hb-eintrag img.hb-cover")             # Ordner mit Cover
-            seite.keyboard.press("Enter")
-            seite.wait_for_selector("text=Testfilm")
-            seite.keyboard.press("ArrowDown")
+            seite.wait_for_selector(".st-reihe .st-karte img")                          # Poster mit Cover
+            self.assertEqual(seite.locator(".st-reihe:has-text('Alle Filme') .st-karte").count(), 2)
+            seite.keyboard.press("Enter")                                               # „Filme“ öffnen (ein Film)
+            seite.wait_for_selector(".st-ordner .st-knopf.gewaehlt:has-text('Abspielen')")
+            self.assertEqual(seite.locator(".st-folge").count(), 0, "ein Film: keine Folgenliste")
             seite.keyboard.press("Enter")
             seite.wait_for_function("() => { const v = document.querySelector('.vid-video'); return v && v.currentTime > 1; }", timeout=15000)
             seite.keyboard.press("ArrowRight")                                          # 10 s vor
             self.assertGreater(seite.evaluate("document.querySelector('.vid-video').currentTime"), 9)
-            seite.keyboard.press("Escape")                                              # zurück zur Liste, Stelle gemerkt
+            seite.keyboard.press("Escape")                                              # zurück, Stelle gemerkt
             seite.wait_for_selector(".vid-video", state="detached")
             seite.wait_for_timeout(500)
             self.assertGreater(hub.hoerbuch_liste("filme")["stand"]["sekunde"], 9)
-            seite.keyboard.press("ArrowLeft")                                           # Ordner hoch
-            seite.wait_for_selector("text=Weiterschauen")
+            seite.keyboard.press("Escape")                                              # zur Startansicht
+            seite.wait_for_selector(".st-held:has-text('Weiterschauen')")
+            # nächste Folge: Folge 1 zu Ende -> Hinweis -> OK -> Folge 2
+            seite.keyboard.press("ArrowDown"); seite.keyboard.press("ArrowDown")
+            seite.keyboard.press("ArrowRight")                                          # „Serie“ in „Alle Filme & Serien“
+            seite.keyboard.press("Enter")
+            seite.wait_for_selector(".st-folge")
+            seite.keyboard.press("Enter")                                               # Abspielen: Folge 1
+            seite.wait_for_function("() => { const v = document.querySelector('.vid-video'); return v && v.duration > 0; }", timeout=15000)
+            seite.evaluate("(() => { const v = document.querySelector('.vid-video'); v.currentTime = v.duration - 0.5; })()")
+            seite.wait_for_selector(".st-naechste:has-text('Folge 2')", timeout=15000)
+            seite.keyboard.press("Enter")
+            seite.wait_for_selector(".vid-titel:has-text('Folge 2')")
+            self.assertTrue(hub.hoerbuch_liste("filme", "Serie")["fortschritt"]["Serie/Folge 1.webm"]["gesehen"])
             self.assertEqual(fehler, [])
             browser.close()
 

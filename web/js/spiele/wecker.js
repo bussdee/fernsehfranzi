@@ -59,8 +59,9 @@ export default {
     }
 
     /* ------------------------------------------------ Bearbeiten */
-    const FELDER = ["stunde", "minute", "tage", "ton", "laut", "sonne", "speichern", "loeschen"];
+    const FELDER = ["stunde", "minute", "tage", "ton", "laut", "sonne", "szene", "speichern", "loeschen"];
     const SONNE = [0, 5, 10, 15, 20, 30];
+    const SZENEN = [["huegel", "⛰️ Hügel"], ["ostsee", "🌊 Ostsee mit Wellen und Möwen"], ["wald", "🌲 Wald mit Vögeln"]];   /* 6.6 */
     function bearbeite(e) {
       const nr = Math.max(0, ...z.wecker.liste.map((x) => x.nr)) + 1;
       z.bearbeiten = e ? { ...e, tage: [...e.tage] } : { nr, zeit: "07:00", tage: [0, 1, 2, 3, 4], ton: SANFT, laut: z.wecker.max_laut, an: true, sonne: 10 };
@@ -81,7 +82,8 @@ export default {
         feld(3, el("span", { text: "Ton: " + name(b.ton) + "  ◀ ▶  (OK = anhören)" })),
         feld(4, el("span", { text: `Lautstärke: ${b.laut} %` }), el("div", { class: "hb-balken" }, el("span", { style: `width:${b.laut}%` }))),
         feld(5, el("span", { text: b.sonne ? `🌅 Sonnenaufgang: ${b.sonne} Minuten vorher` : "🌅 Sonnenaufgang: aus" })),
-        el("div", { class: "knopfreihe" }, feld(6, el("span", { text: "✔ Speichern" })), z.neu ? null : feld(7, el("span", { text: "🗑 Löschen" })))));
+        feld(6, el("span", { text: `Szene: ${(SZENEN.find(([k]) => k === (b.szene || "huegel")) || SZENEN[0])[1]}  ◀ ▶` })),
+        el("div", { class: "knopfreihe" }, feld(7, el("span", { text: "✔ Speichern" })), z.neu ? null : feld(8, el("span", { text: "🗑 Löschen" })))));
     }
     function aendern(richtung) {
       const b = z.bearbeiten;
@@ -92,6 +94,7 @@ export default {
       else if (f === "tage") z.tag = (z.tag + richtung + 7) % 7;
       else if (f === "ton") { const i = z.toene.indexOf(b.ton); b.ton = z.toene[(Math.max(0, i) + richtung + z.toene.length) % z.toene.length]; stopProbe(); }
       else if (f === "laut") b.laut = Math.max(5, Math.min(z.wecker.max_laut, b.laut + richtung * 5));
+      else if (f === "szene") { const i = SZENEN.findIndex(([k]) => k === (b.szene || "huegel")); b.szene = SZENEN[(i + richtung + SZENEN.length) % SZENEN.length][0]; }
       else if (f === "sonne") { const i = SONNE.indexOf(b.sonne || 0); b.sonne = SONNE[Math.max(0, Math.min(SONNE.length - 1, i + richtung))]; }
       b.zeit = `${String(h).padStart(2, "0")}:${String(m - (m % 5)).padStart(2, "0")}`;
       ton("bewegen");
@@ -136,7 +139,7 @@ export default {
           if (t === "Escape" || t === "Backspace") { liste(); return true; }
           /* Stunde und Minute stehen nebeneinander: OK springt von der Stunde zur Minute */
           if (t === "ArrowUp") { z.feld = z.feld === 2 ? 0 : Math.max(0, z.feld - 1); zeichneBearbeiten(); return true; }
-          if (t === "ArrowDown") { z.feld = Math.min(z.neu ? 6 : 7, z.feld <= 1 ? 2 : z.feld + 1); zeichneBearbeiten(); return true; }
+          if (t === "ArrowDown") { z.feld = Math.min(z.neu ? 7 : 8, z.feld <= 1 ? 2 : z.feld + 1); zeichneBearbeiten(); return true; }
           if (t === "ArrowLeft" || t === "ArrowRight") { aendern(t === "ArrowLeft" ? -1 : 1); return true; }
           if (t === "Tab") { z.feld = z.feld === 0 ? 1 : 0; zeichneBearbeiten(); return true; }
           if (t === "Enter" || t === " ") { if (z.feld === 0) { z.feld = 1; zeichneBearbeiten(); } else ok(); return true; }

@@ -4,12 +4,15 @@
  * Zeitkonto). Eingabe: Tastatur-Ereignisse - Fernbedienung und Controller übersetzt
  * eingabe.py in Tasten, die Startseite liest keine Gamepads selbst (ein Besitzer pro Aufgabe).
  */
-import { hole, sende, el, pause, bild, mitBild, franzi } from "./gemeinsam.js";
+import { hole, sende, el, pause, bild, mitBild, franzi, setzeFranzi, kleidungZuSachen, BEREICHE, bereichVon } from "./gemeinsam.js";
 import { oeffneElternbereich } from "./eltern.js";
 import { oeffneHoerbuch } from "./hoerbuch.js";
+import { oeffneMusik } from "./musik.js";
+import { starte as sternenhimmel } from "./sternenhimmel.js";
+import { starte as weckklang } from "./weckklang.js";
 import { oeffneYoutube } from "./youtube.js";
 import { oeffneVideo } from "./video.js";
-import { ton } from "./spiele/kern.js";
+import { ton, setzeKlaenge } from "./spiele/kern.js";
 import snake from "./spiele/snake.js";
 import memory from "./spiele/memory.js";
 import drei from "./spiele/drei.js";
@@ -31,19 +34,30 @@ import wetter from "./spiele/wetter.js";
 import schule from "./spiele/schule.js";
 import kinderwelten from "./spiele/kinderwelten.js";
 import news from "./spiele/news.js";
+import meintag from "./spiele/meintag.js";
+import stimmspiele from "./spiele/stimmspiele.js";
+import steine from "./spiele/steine.js";
+import labyrinth from "./spiele/labyrinth.js";
+import huepfen from "./spiele/huepfen.js";
+import hilfe from "./spiele/hilfe.js";
+import franziHaus from "./spiele/franzi.js";
 
 const SPIELE = { "spiel-snake": snake, "spiel-memory": memory, "spiel-drei": drei,
                  "spiel-echo": echo, "spiel-malen": malen, "spiel-witz": witz, "spiel-bass": bass,
                  "spiel-duell": duell, "spiel-sticker": sticker, "spiel-lernen": lernen, "spiel-gutschein": gutschein, "spiel-wecker": wecker,
                  "spiel-nachrichten": nachrichten, "spiel-gestalten": gestalten, "spiel-handys": handys, "spiel-fotoalbum": fotoalbum, "spiel-karaoke": karaoke,
-                 "spiel-wetter": wetter, "spiel-schule": schule, "spiel-kinderwelten": kinderwelten, "spiel-news": news };
+                 "spiel-wetter": wetter, "spiel-schule": schule, "spiel-kinderwelten": kinderwelten, "spiel-news": news,
+                 "spiel-meintag": meintag, "spiel-stimme": stimmspiele,
+                 "spiel-steine": steine, "spiel-labyrinth": labyrinth, "spiel-huepfen": huepfen,
+                 "spiel-hilfe": hilfe, "spiel-franzi": franziHaus };
 const SYMBOLE = { video: "▶️", film: "🎬", spiel: "🕹️", haus: "🏠", buch: "📚", lernen: "🎓", musik: "🎵",
                   malen: "🎨", web: "🌐", stern: "⭐", mond: "🌙", tier: "🐾", ball: "⚽" };
 const FARBEN = { "spiel-snake": "#1d7a5e", "spiel-memory": "#8a3b8a", "spiel-drei": "#a8791c",
                  "spiel-echo": "#2a6b9e", "spiel-malen": "#6d3fa8", "spiel-witz": "#b06520",
                  "spiel-bass": "#8d2f2f", "spiel-duell": "#2f6d8d", "spiel-sticker": "#8d7a2f", "spiel-lernen": "#00897b", "spiel-handys": "#2f5fa8", "spiel-fotoalbum": "#2f7a8d", "spiel-karaoke": "#a8326b",
                  "spiel-gutschein": "#c2453a", "spiel-wecker": "#d0782a", "spiel-nachrichten": "#c99a1e", "spiel-gestalten": "#8a4fc2",
-                 "spiel-wetter": "#2f86c9", "spiel-schule": "#3a7d44", "spiel-kinderwelten": "#e07b1a", "spiel-news": "#6b4fb3",
+                 "spiel-wetter": "#2f86c9", "spiel-schule": "#3a7d44", "spiel-kinderwelten": "#e07b1a", "spiel-news": "#6b4fb3", "spiel-meintag": "#e0a020", "spiel-stimme": "#2f8ab0", "spiel-steine": "#b0472f", "spiel-labyrinth": "#6b5a2f", "spiel-huepfen": "#3f9a4f", "spiel-hilfe": "#c62f3e", "spiel-franzi": "#ff7a59",
+                 "archiv-video": "#b23a3a", "archiv-musik": "#a8326b",
                  "gute-nacht": "#2b2f6b", "retro": "#4a2b6b" };
 const TON_NAMEN = { hdmi: "Fernseher (HDMI)", klinke: "Klinke (Kopfhörer / Anlage)", kopfhoerer: "🎧 Bluetooth-Kopfhörer" };
 
@@ -109,33 +123,13 @@ function baueKachel(app, nummer) {
   return knoten;
 }
 
-/* Bereiche („Ordner“). Eltern können eine App einem Bereich zuordnen (Feld "bereich", auch alte Namen), sonst automatisch. */
-const BEREICHE = [
-  { id: "spiele", name: "Spiele", symbol: "🎮", farbe: "#2f8a5e" },
-  { id: "filme", name: "Filme", symbol: "🎬", farbe: "#b0442f" },
-  { id: "musik", name: "Musik", symbol: "🎵", farbe: "#a8326b" },
-  { id: "lernen", name: "Lernen", symbol: "🎓", farbe: "#2f6db5" },
-  { id: "zimmer", name: "Mein Zimmer", symbol: "📨", farbe: "#8a4fc2" },
-  { id: "retro", name: "Retro", symbol: "🕹️", farbe: "#5a3d8a" },
-];
-const BEREICH_ALT = { start: "zimmer", medien: "filme" };
-const ZIMMER_IDS = ["spiel-nachrichten", "spiel-wecker", "spiel-gutschein", "familie", "spiel-gestalten", "spiel-fotoalbum",
-                    "spiel-sticker", "spiel-wetter", "spiel-news"];
-function bereichVon(app) {
-  const eigen = BEREICH_ALT[app.bereich] || app.bereich;
-  if (eigen && BEREICHE.some((b) => b.id === eigen)) return eigen;
-  if (ZIMMER_IDS.includes(app.id)) return "zimmer";
-  if (app.typ === "hoerbuch" || app.id === "spiel-bass" || app.id === "spiel-karaoke") return "musik";   /* 6.0: getrennt */
-  if (app.typ === "youtube" || app.typ === "video" || app.id === "plex") return "filme";
-  if (app.typ === "konsole" || app.typ === "retro") return "retro";
-  if (app.lernen || app.id === "buecher" || app.id === "spiel-schule") return "lernen";
-  if (app.typ === "spiel") return "spiele";
-  return "zimmer";
-}
+/* Bereiche („Ordner“): 6.9.38 nach gemeinsam.js umgezogen (die Eltern-Seite gruppiert die Apps genauso) */
 const BESCHREIBUNG = { "gute-nacht": "Hörbuch zum Einschlafen", "spiel-wecker": "Deine Wecker", "spiel-gutschein": "Code vom Zettel einlösen",
                        "spiel-bass": "Bass, Gitarre, Keyboard, Singen", youtube: "Deine Videos", games: "Alle Retro-Spiele",
                        "spiel-wetter": "Wann kann ich raus?", "spiel-schule": "Stundenplan und Hausaufgaben",
-                       "spiel-kinderwelten": "Geschichten lesen, Rätsel, Draußen-Spiele", "spiel-news": "Nachrichten für Kinder",
+                       "spiel-kinderwelten": "Geschichten lesen, Rätsel, Draußen-Spiele", "spiel-news": "Nachrichten für Kinder", "spiel-meintag": "Deine Listen für heute", "spiel-franzi": "Dein Haustier – pflegen, spielen, Shop", "archiv-video": "Filme von Mama und Papa", "archiv-musik": "Deine Musik", "spiel-stimme": "Möwenflug und Drache – mit der Stimme",
+                       "spiel-steine": "Bilder aus Steinen abräumen", "spiel-labyrinth": "Finde den Schatz in 3D", "spiel-huepfen": "Laufen, springen, Sterne sammeln",
+                       "spiel-hilfe": "Mama und Papa sofort Bescheid sagen",
                        "spiel-gestalten": "Lieblinge und Farben aussuchen", "spiel-fotoalbum": "Deine Bilder und die Diashow" };
 const LIEBLINGE_MAX = 6, ZULETZT_MAX = 4, SPALTEN = 6;
 const freiZuerst = (liste) => liste.filter((a) => a.frei !== false && a.eingerichtet !== false)
@@ -158,6 +152,15 @@ async function ladeKacheln() {
   let gestaltung = { lieblinge: [], thema: "blau", zuletzt: [] };
   try { gestaltung = await hole("/api/startseite"); } catch (_) { /* Vorgabe */ }
   designZeigen(gestaltung.design?.jetzt || gestaltung.thema, gestaltung.design?.hell);   /* 6.0: Farbe (abends dunkel) */
+  document.documentElement.dataset.animation = gestaltung.design?.animation || "sparsam";   /* 6.8.12: aus/sparsam/hoch */
+  setzeKlaenge(gestaltung.klang);                                   /* 6.9.40: Klang je Ereignis */
+  zustand.bildschirm = gestaltung.bildschirm || { schoner_min: 5 };    /* 6.9.47: Franzi-Schoner nach X Minuten */
+  /* 6.9.42: eigenes Hintergrundbild der Eltern für diese Farbe (sonst das gezeichnete Motiv aus start.css) */
+  /* leicht abgedunkelt, damit Schrift und Kacheln auf jedem Foto lesbar bleiben (helle Farben etwas weniger) */
+  if (gestaltung.design?.bild) document.body.style.setProperty("--motiv",
+    `linear-gradient(rgba(0,0,0,${gestaltung.design.hell ? ".18" : ".38"}), rgba(0,0,0,${gestaltung.design.hell ? ".18" : ".38"})), url("${gestaltung.design.bild}")`);
+  else document.body.style.removeProperty("--motiv");
+  zustand.musik = gestaltung.klang?.musik || {};
   zustand.alle = alle;
   zustand.gestaltung = gestaltung;
   const vorherId = zustand.reihen[zustand.zeile]?.[zustand.spalte]?.knoten?.dataset.id;
@@ -215,7 +218,11 @@ function baueSeite(fokusId) {
   } else {
     const b = BEREICHE.find((x) => x.id === zustand.ordner);
     pfad.textContent = `🏠 Zuhause  ›  ${b.symbol} ${b.name}`;
-    const drin = freiZuerst(alle.filter((a) => bereichVon(a) === b.id));
+    /* 6.9.52: Reihenfolge der Eltern je Bereich (Elternbereich → Apps, ↑↓); nicht Genannte danach wie bisher */
+    const reihe = (st.reihenfolge || {})[b.id] || [];
+    const rang = (a) => { const i = reihe.indexOf(a.id); return i < 0 ? 1e6 : i; };
+    const drin = freiZuerst(alle.filter((a) => bereichVon(a) === b.id).map((a, i) => [a, i])
+      .sort((x, y) => rang(x[0]) - rang(y[0]) || x[1] - y[1]).map(([a]) => a));
     for (let i = 0; i < drin.length; i += SPALTEN) neueReihe("", drin.slice(i, i + SPALTEN), "raster");
     if (!drin.length) reihenBox.append(el("div", { class: "seite-leer" }, franzi("staunen", "franzi-leer"), el("div", { text: "Hier ist gerade nichts." })));
   }
@@ -322,6 +329,7 @@ async function oeffne(app) {
     return;
   }
   if (app.typ === "spiel") return oeffneSpiel(app);
+  if (app.id === "archiv-musik") return oeffneMusikSeite(app);                     /* 6.9.48: Musik-App statt Hörbuch-Player */
   if (app.typ === "hoerbuch") return oeffneHoerbuecher(app, { weiter: app.id === GUTE_NACHT });
   if (app.typ === "youtube") return oeffneYoutubeBereich(app);
   if (app.typ === "video") return oeffneVideoBereich(app);
@@ -370,6 +378,16 @@ async function oeffneHoerbuecher(app, opt = {}) {
   if (!opt.automatisch) ton("ok");
 }
 
+/* 6.9.48: Musik-Seite (Musik-Archiv) - ohne Schlaf-Timer, mit Alben, Lieblingsliedern, Zufall und Wiederholen */
+async function oeffneMusikSeite(app) {
+  if (zustand.overlay) schliesseOverlay();
+  try { await sende("/api/start", { id: app.id }); } catch (fehler) { hinweis(fehler.message); ton("fehler"); return; }
+  const box = el("section", { class: "overlay" });
+  document.getElementById("overlay-wurzel").replaceChildren(box);
+  zustand.overlay = { ...oeffneMusik(box, { hinweis, sende, hole }, app), id: app.id };
+  ton("ok");
+}
+
 /* 3.5: YouTube-Bereich (eigener Player, nur Videos/Playlists der Eltern) */
 async function oeffneYoutubeBereich(app) {
   if (zustand.overlay) schliesseOverlay();
@@ -399,6 +417,18 @@ async function guteNachtOeffnen(automatisch) {
 }
 
 /* 3.4: Beginn der Nachtruhe ohne automatische Gute Nacht - 15 s Countdown mit drei Knöpfen */
+/* 6.9.21: Nachtszene hinter der Nachtruhe-Frage (fester Inhalt) - Sterne funkeln nur in der Stufe „hoch“ */
+const NACHT_SZENE = '<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' +
+  '<defs><linearGradient id="nfh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050a1f"/><stop offset="1" stop-color="#1c2552"/></linearGradient></defs>' +
+  '<rect width="1600" height="900" fill="url(#nfh)"/>' +
+  Array.from({ length: 60 }, (_, i) => `<circle class="fzs-funkeln" style="animation-delay:${(i % 7) * 0.4}s" cx="${(i * 263) % 1600}" cy="${(i * 137) % 560}" r="${1 + (i % 3) * 0.6}" fill="#fff" opacity="${0.35 + (i % 4) * 0.15}"/>`).join("") +
+  '<mask id="nfm"><rect width="1600" height="900" fill="#fff"/><circle cx="1326" cy="132" r="56" fill="#000"/></mask>' +
+  '<circle cx="1300" cy="150" r="60" fill="#fff4cf" mask="url(#nfm)"/>' +
+  '<path d="M0 700 C 300 600 600 640 900 690 S 1400 610 1600 660 V900 H0Z" fill="#141c3e"/>' +
+  '<path d="M0 790 C 400 730 800 760 1200 780 S 1500 750 1600 770 V900 H0Z" fill="#0c1230"/>' +
+  '<path d="M1330 676 h110 v-60 l-55 -44 l-55 44 Z" fill="#0c1230"/><rect x="1352" y="628" width="22" height="22" rx="3" fill="#ffd27a"/>' +
+  '<rect x="1396" y="628" width="22" height="22" rx="3" fill="#ffd27a" opacity=".6"/></svg>';
+
 function nachtFrage() {
   if (zustand.overlay) schliesseOverlay();
   const box = el("section", { class: "overlay nacht-frage" });
@@ -406,15 +436,21 @@ function nachtFrage() {
   const wahl = [["aus", "📴 Fernseher aus"], ["an", "📺 Fernseher an"], ["gute-nacht", "🌙 Gute Nacht"]];
   const knoepfe = wahl.map(([w, t]) => { const k = el("button", { class: "knopf", type: "button", tabindex: "-1", text: t });
     k.addEventListener("click", () => fertig(w)); return k; });
-  box.append(el("div", { class: "nacht-mond", text: "🌙" }), el("h2", { text: "Jetzt ist Nachtruhe" }), zahl,
-    el("div", { class: "knopfreihe" }, ...knoepfe));
+  const szene = el("div", { class: "nf-szene" });
+  szene.innerHTML = NACHT_SZENE;                                          /* fester Inhalt aus diesem Modul */
+  const ring = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  ring.setAttribute("viewBox", "0 0 100 100"); ring.setAttribute("class", "nf-ring");
+  ring.innerHTML = '<circle cx="50" cy="50" r="44" class="nf-ring-grund"/><circle cx="50" cy="50" r="44" class="nf-ring-rest" pathLength="100" transform="rotate(-90 50 50)"/>';
+  box.append(szene, el("div", { class: "nf-inhalt" }, franzi("schlaf", "nf-franzi"), el("h2", { text: "Jetzt ist Nachtruhe" }),
+    el("div", { class: "nf-uhr" }, ring, zahl), el("div", { class: "knopfreihe" }, ...knoepfe)));
   document.getElementById("overlay-wurzel").replaceChildren(box);
   let i = 2, rest = 15;
   const zeige = () => knoepfe.forEach((k, n) => k.classList.toggle("gewaehlt", n === i));
   const takt = () => {
     zahl.textContent = String(rest);
+    ring.querySelector(".nf-ring-rest").setAttribute("stroke-dasharray", `${(rest / 15 * 100).toFixed(1)} 100`);
     if (rest <= 0) return fertig("aus");
-    if (!zustand.still) ton(rest <= 5 ? "punkt" : "bewegen");
+    if (!zustand.still) ton(rest <= 5 ? "glocke" : "leise");                 /* 6.9.21: sanft statt Spieltöne */
     rest--;
   };
   const timer = setInterval(takt, 1000);
@@ -440,11 +476,16 @@ function nachtFrage() {
 function weckerKlingelt(info) {
   if (zustand.overlay?.id === "wecker-klingelt") return;
   if (zustand.overlay) schliesseOverlay();
-  zustand.nachtSchwarz?.remove(); zustand.nachtSchwarz = null;
+  nachtSchwarzWeg();
   if (zustand.schoner) schonerAus();
   const box = el("section", { class: "overlay wecker-klingelt" });
   const uhr = el("div", { class: "wecker-uhr" });
-  box.append(el("div", { class: "wecker-sonne", text: "☀️" }), uhr, el("h2", { text: "Guten Morgen!" }),
+  /* 6.9.33: Morgenszene - Hügel unten, Sonne hinter einer jubelnden Franzi */
+  const szene = el("div", { class: "wecker-szene" });
+  szene.innerHTML = '<svg viewBox="0 0 1600 300" preserveAspectRatio="none" aria-hidden="true">' +
+    '<path d="M0 150 C 250 60 450 80 700 140 S 1200 60 1600 120 V300 H0Z" fill="#7cc070"/>' +
+    '<path d="M0 220 C 300 150 600 170 900 210 S 1400 150 1600 190 V300 H0Z" fill="#5aa85a"/></svg>';     /* fester Inhalt */
+  box.append(szene, el("div", { class: "wecker-kopf" }, el("div", { class: "wecker-sonne" }), franzi("jubel", "wecker-franzi")), uhr, el("h2", { text: "Guten Morgen!" }),
     el("div", { class: "knopfreihe wecker-knoepfe" }, el("div", { class: "knopf gewaehlt", "data-aktion": "schlummern", text: "😴 Noch 5 Minuten" }),
       el("div", { class: "knopf", "data-aktion": "aus", text: "⏹ Wecker aus" })),
     el("div", { class: "leise", text: "◀ ▶ wählen · OK bestätigen · STOP = aus" }));
@@ -494,29 +535,109 @@ function weckerKlingelt(info) {
 }
 
 /* 4.0: Sonnenaufgang - der Bildschirm wird über einige Minuten von schwarz über dunkelrot und orange zu warmweiß
-   (das Zimmer wird langsam hell). Eine Taste beendet ihn; der Wecker klingelt trotzdem zur Weckzeit. */
-const SONNE_FARBEN = [[0, [0, 0, 0]], [0.25, [60, 8, 4]], [0.5, [150, 40, 10]], [0.75, [235, 130, 50]], [1, [255, 236, 205]]];
-function sonnenaufgang(minuten) {
+   (das Zimmer wird langsam hell). Eine Taste beendet ihn; der Wecker klingelt trotzdem zur Weckzeit.
+   6.1: als kleine Szene - Sterne verblassen, die Sonne steigt hinter Hügeln auf, Himmel und Hügel färben sich, am Ende
+   ziehen Vögel vorbei. Alle 2 s neue Werte, dazwischen gleitet CSS (transform/opacity/Farben). */
+const SONNE_HIMMEL = [   /* Anteil, Farbe oben, Farbe am Horizont */
+  [0, [0, 0, 0], [5, 2, 8]], [0.25, [11, 8, 32], [60, 12, 8]], [0.5, [42, 26, 64], [168, 53, 12]],
+  [0.75, [90, 122, 176], [240, 144, 58]], [1, [188, 216, 245], [255, 233, 200]]];
+const SONNE_KUGEL = [[0, [255, 58, 16]], [0.5, [255, 120, 40]], [1, [255, 244, 208]]];
+const SONNE_HUEGEL = [[0, [0, 0, 0]], [0.4, [20, 12, 14]], [1, [61, 107, 58]]];
+function mische(liste, p, feld = 1) {
+  let i = 0;
+  while (i < liste.length - 2 && p > liste[i + 1][0]) i++;
+  const a = liste[i], b = liste[i + 1], t = Math.min(1, Math.max(0, (p - a[0]) / (b[0] - a[0])));
+  return `rgb(${a[feld].map((x, k) => Math.round(x + (b[feld][k] - x) * t)).join(",")})`;
+}
+/* 6.6: Weckszenen - Vordergrund je Szene (fester Inhalt), gefärbt wie die Hügel; Ostsee und Wald mit eigenen Geräuschen */
+const SONNE_MEER = [[0, [0, 0, 0]], [0.4, [10, 18, 40]], [1, [40, 110, 170]]];
+const SONNE_SAND = [[0, [0, 0, 0]], [0.4, [40, 30, 20]], [1, [230, 205, 150]]];
+function tannen(y, hoehe, abstand, versatz) {
+  let d = "";
+  for (let x = versatz; x < 1640; x += abstand) {
+    const h = hoehe * (0.75 + ((x * 37) % 50) / 100);
+    d += `M${x - h * 0.32} ${y} L${x} ${y - h} L${x + h * 0.32} ${y}Z`;
+  }
+  return d + `M0 ${y} H1600 V300 H0Z`;
+}
+/* 6.9.20: Szenen mit mehr Tiefe (blasse Hügel weit hinten) und kleinen Dingen, die mit dem Morgen wechseln */
+const SA_FERN = '<path class="sa-h0" d="M0 110 C 200 70 380 90 560 100 S 900 50 1100 80 S 1400 60 1600 90 V300 H0Z"/>';
+const SA_HAUS = '<g class="sa-haus"><path class="sa-hf" d="M1180 112 h70 v-38 l-35 -28 l-35 28 Z"/><rect class="sa-hf" x="1232" y="44" width="9" height="20"/>' +
+  '<rect class="sa-fenster" x="1197" y="84" width="14" height="14" rx="2"/><rect class="sa-fenster" x="1220" y="84" width="14" height="14" rx="2"/></g>' +
+  '<g class="sa-hf"><circle cx="420" cy="92" r="22"/><rect x="416" y="100" width="8" height="30"/><circle cx="470" cy="100" r="16"/><rect x="467" y="106" width="6" height="24"/></g>';
+const SA_TURM = '<path class="sa-turm" d="M1330 70 l10 -120 h24 l10 120 Z"/><path class="sa-turm-band" d="M1335 10 h34 l1.5 18 h-37 Z M1339 -30 h26 l1.5 16 h-29 Z"/>' +
+  '<rect class="sa-turm-band" x="1336" y="-62" width="32" height="14" rx="3"/>' +
+  '<path class="sa-strahl" d="M1352 -55 L1600 -110 L1600 0 Z M1352 -55 L1100 -110 L1100 0 Z"/>' +
+  '<g class="sa-glitzer"><path d="M760 90h80M740 120h120M720 155h160M700 195h200M690 235h220"/></g>';
+const SA_NEBEL = '<rect class="sa-nebel" x="0" y="150" width="1600" height="90"/>';
+const SZENE_BILD = {
+  huegel: '<svg viewBox="0 0 1600 300" preserveAspectRatio="none">' + SA_FERN +
+    '<path class="sa-h1" d="M0 150 C 250 60 450 80 700 140 S 1200 60 1600 120 V300 H0Z"/>' + SA_HAUS +
+    '<path class="sa-h2" d="M0 220 C 300 150 600 170 900 210 S 1400 150 1600 190 V300 H0Z"/></svg>',
+  ostsee: '<svg viewBox="0 -120 1600 420" preserveAspectRatio="none"><path class="sa-h1 sa-meer" d="M0 70 H1600 V300 H0Z"/>' + SA_TURM +
+    '<g class="sa-wellen"><path d="M100 120h180M520 150h240M980 115h160M1250 165h220M300 200h260M820 215h200"/></g>' +
+    '<path class="sa-h2 sa-sand" d="M0 245 C 400 215 900 235 1600 220 V300 H0Z"/></svg>',
+  wald: '<svg viewBox="0 0 1600 300" preserveAspectRatio="none">' + SA_FERN +
+    `<path class="sa-h1" d="${tannen(200, 170, 70, 10)}"/>` + SA_NEBEL + `<path class="sa-h2" d="${tannen(300, 190, 95, 40)}"/></svg>`,
+};
+const SA_TURM_WEISS = [[0, [0, 0, 0]], [0.4, [40, 30, 36]], [1, [245, 244, 240]]];
+const SA_TURM_ROT = [[0, [0, 0, 0]], [0.4, [60, 20, 24]], [1, [214, 64, 60]]];
+const SA_WOLKE = [[0, [40, 30, 50]], [0.45, [255, 150, 140]], [0.75, [255, 220, 200]], [1, [255, 255, 255]]];
+const SA_WOLKEN = '<svg viewBox="0 0 1600 400" preserveAspectRatio="xMidYMid slice">' +
+  [[260, 120, 1.3], [820, 70, 1], [1260, 150, 1.6]].map(([x, y, s]) => `<g class="sa-wolke"><g transform="translate(${x} ${y}) scale(${s})">` +
+    '<ellipse cx="0" cy="0" rx="90" ry="26"/><circle cx="-40" cy="-14" r="34"/><circle cx="20" cy="-26" r="44"/><circle cx="70" cy="-8" r="26"/></g></g>').join("") + "</svg>";
+
+function sonnenaufgang(minuten, szene = "huegel") {
   if (zustand.overlay) schliesseOverlay();
-  zustand.nachtSchwarz?.remove(); zustand.nachtSchwarz = null;
+  nachtSchwarzWeg();
   if (zustand.schoner) schonerAus();
-  const box = el("section", { class: "overlay sonne" });
+  const sterne = el("div", { class: "sa-sterne" });
+  const sonne = el("div", { class: "sa-sonne" });
+  const huegel = el("div", { class: "sa-huegel" });
+  if (!SZENE_BILD[szene]) szene = "huegel";
+  huegel.innerHTML = SZENE_BILD[szene];                                 /* fester Inhalt aus diesem Modul */
+  const wolken = el("div", { class: "sa-wolken" });
+  wolken.innerHTML = SA_WOLKEN;                                           /* fester Inhalt aus diesem Modul */
+  const strahlen = el("div", { class: "sa-strahlen" });                   /* nur Stufe „hoch“ sichtbar (CSS) */
+  const voegel = el("div", { class: "sa-voegel" });
+  voegel.innerHTML = '<svg viewBox="0 0 160 40"><path d="M5 20q8-8 16 0q8-8 16 0M60 10q7-7 14 0q7-7 14 0M110 26q6-6 12 0q6-6 12 0" ' +
+    'fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';            /* fester Inhalt */
+  const box = el("section", { class: "overlay sonne szene-" + szene }, sterne, strahlen, sonne, wolken, huegel, voegel);
   document.getElementById("overlay-wurzel").replaceChildren(box);
   const start = Date.now(), dauer = minuten * 60000;
-  const farbe = (p) => {
-    let i = 0;
-    while (i < SONNE_FARBEN.length - 2 && p > SONNE_FARBEN[i + 1][0]) i++;
-    const [p0, a] = SONNE_FARBEN[i], [p1, b] = SONNE_FARBEN[i + 1];
-    const t = Math.min(1, Math.max(0, (p - p0) / (p1 - p0)));
-    return `rgb(${a.map((x, k) => Math.round(x + (b[k] - x) * t)).join(",")})`;
-  };
   const schritt = () => {
     const p = Math.min(1, (Date.now() - start) / dauer);
-    box.style.background = `radial-gradient(ellipse at 50% 110%, ${farbe(Math.min(1, p * 1.15))} 0, ${farbe(p * 0.8)} 70%)`;
+    box.style.background = `linear-gradient(180deg, ${mische(SONNE_HIMMEL, p, 1)} 0%, ${mische(SONNE_HIMMEL, Math.min(1, p * 1.1), 2)} 78%)`;
+    sterne.style.opacity = String(Math.max(0, 1 - p * 2.2));
+    sonne.style.transform = `translate(-50%, ${Math.round(70 - p * 95)}vh) scale(${(1.25 - p * 0.35).toFixed(2)})`;
+    sonne.style.background = `radial-gradient(circle, #fff8e0 0, ${mische(SONNE_KUGEL, p)} 45%, rgba(255,140,60,0) 72%)`;
+    sonne.style.opacity = String(Math.min(1, p * 3));
+    huegel.querySelector(".sa-h1").style.fill = mische(szene === "ostsee" ? SONNE_MEER : SONNE_HUEGEL, p * 0.85);
+    const vorn = mische(SONNE_HUEGEL, p * 0.8);
+    huegel.querySelectorAll(".sa-hf, .sa-hf *").forEach((t) => { t.style.fill = vorn; });
+    huegel.querySelectorAll(".sa-turm").forEach((t) => { t.style.fill = mische(SA_TURM_WEISS, p); });
+    huegel.querySelectorAll(".sa-turm-band").forEach((t) => { t.style.fill = mische(SA_TURM_ROT, p); });
+    const fern = huegel.querySelector(".sa-h0");
+    if (fern) fern.style.fill = mische(SONNE_HIMMEL, Math.min(1, p * 1.1), 2);
+    huegel.querySelectorAll(".sa-fenster").forEach((t) => { t.style.opacity = String(Math.max(0, 1 - p * 2.2)); });
+    const strahl = huegel.querySelector(".sa-strahl");
+    if (strahl) strahl.style.opacity = String(Math.max(0, 0.5 - p * 0.9));
+    const glitzer = huegel.querySelector(".sa-glitzer");
+    if (glitzer) glitzer.style.opacity = String(Math.max(0, Math.min(1, p * 1.6 - 0.4)));
+    const nebel = huegel.querySelector(".sa-nebel");
+    if (nebel) nebel.style.opacity = String(Math.max(0.05, 0.75 - p * 0.8));
+    wolken.style.fill = mische(SA_WOLKE, p);
+    wolken.style.opacity = String(Math.min(0.9, 0.35 + p));
+    strahlen.style.opacity = String(Math.max(0, Math.min(0.5, (p - 0.3) * 1.2)));
+    huegel.querySelector(".sa-h2").style.fill = mische(szene === "ostsee" ? SONNE_SAND : SONNE_HUEGEL, p * (szene === "wald" ? 0.55 : 0.7));
+    voegel.classList.toggle("an", p > 0.65);
+    const wellen = huegel.querySelector(".sa-wellen");
+    if (wellen) wellen.style.opacity = String(Math.max(0, p * 1.4 - 0.3));
   };
   schritt();
   const timer = setInterval(schritt, 2000);
-  zustand.overlay = { id: "sonne", schliesse: () => clearInterval(timer), taste() { schliesseOverlay(); return true; } };
+  const geraeusch = weckklang(szene, dauer);
+  zustand.overlay = { id: "sonne", schliesse: () => { clearInterval(timer); geraeusch?.(); }, taste() { schliesseOverlay(); return true; } };
 }
 
 /* Fernseher aus: zusätzlich schwarzes Bild (falls der Fernseher CEC nicht befolgt); eine Taste weckt */
@@ -524,6 +645,12 @@ function nachtSchwarz() {
   const box = el("div", { id: "nacht-schwarz" });
   document.body.append(box);
   zustand.nachtSchwarz = box;
+  setTimeout(() => { if (zustand.nachtSchwarz === box && zustand.nachthimmel && !box.stopp) himmelIn(box); }, 2500);
+}
+function nachtSchwarzWeg() {
+  zustand.nachtSchwarz?.stopp?.();
+  zustand.nachtSchwarz?.remove();
+  zustand.nachtSchwarz = null;
 }
 
 /* 3.4: Erinnerungen und Nachrichten bleiben stehen, bis OK gedrückt wird */
@@ -534,6 +661,14 @@ function zeigeMeldungen(liste) {
     return;
   }
   if (zustand.meldungen?.nummern === nummern) return;
+  /* 6.9.1: Ist Franzis Zimmer offen, sagt sie die Meldung selbst (in der Sprechblase) - dann gilt sie als gesehen */
+  if (zustand.overlay?.sagen && liste.every((m) => !m.medium) && zustand.overlay.sagen(liste.map((m) => (m.quelle ? m.quelle + ": " : "") + m.text).join("  ·  "))) {
+    zustand.meldungen?.box.remove();
+    zustand.meldungen = null;
+    sende("/api/meldungen/gesehen", { nummern: liste.map((m) => m.nr) }).catch(() => {});
+    ton("ok");
+    return;
+  }
   zustand.meldungen?.box.remove();
   const uhr = (iso) => iso.slice(11, 16);
   const box = el("div", { id: "meldungen" },
@@ -576,6 +711,7 @@ function schliesseOverlay() {
   if (war && war !== "eltern") sende("/api/ort", { app: null }).catch(() => {});
   if (location.hash) history.replaceState(null, "", location.pathname);
   ladeKacheln();
+  kopfFranzi();                                    /* 6.9.59: z. B. nach Mein Tag gleich mit Herzaugen */
 }
 
 function oeffneEltern() {
@@ -621,7 +757,7 @@ document.addEventListener("keydown", (event) => {
   if (taste !== event.key || /^(BrowserHome|BrowserSearch|ContextMenu)$/.test(taste)) event.preventDefault();
   eingabeMelden(taste);
   zustand.letzteTaste = Date.now();
-  if (zustand.nachtSchwarz) { event.preventDefault(); zustand.nachtSchwarz.remove(); zustand.nachtSchwarz = null; ladeKacheln(); return; }
+  if (zustand.nachtSchwarz) { event.preventDefault(); nachtSchwarzWeg(); ladeKacheln(); return; }
   if (zustand.meldungen && (taste === "Enter" || taste === " " || taste === "Escape" || taste === "Backspace")) {
     event.preventDefault(); meldungenBestaetigen(); return;
   }
@@ -692,7 +828,9 @@ async function statusAbfrage() {
   gruessen(s.name);
   zeigeRestzeit(s.rest_min, s.budget_min);
 
-  if (zustand.meldungNr !== null && s.meldung.nr !== zustand.meldungNr && s.meldung.text) hinweis(s.meldung.text, 6000);
+  if (zustand.meldungNr !== null && s.meldung.nr !== zustand.meldungNr && s.meldung.text) {
+    if (!zustand.overlay?.sagen?.(s.meldung.text)) hinweis(s.meldung.text, 6000);    /* 6.9.7: bei Franzi in der Sprechblase */
+  }
   zustand.meldungNr = s.meldung.nr;
   if (zustand.tonNr !== null && s.ton_nummer !== zustand.tonNr && s.ton && Date.now() - tonZeit > 3000) {
     hinweis("Ton: " + (TON_NAMEN[s.ton] || s.ton));
@@ -716,6 +854,12 @@ async function statusAbfrage() {
   if (s.pause_rest > 0 && !zustand.pauseLaeuft) bewegungspause(Math.min(900, s.pause_rest));   /* 4.2.1: ohne Neuladen */
 
   zustand.still = Boolean(s.still);
+  /* 6.1: Sperrzeit und Nacht - keine Diashow; nachts statt dessen der Nachthimmel */
+  zustand.sperrzeit = s.sperrzeit || null;
+  zustand.nacht = Boolean(s.nachtruhe || s.still || s.sperrzeit?.nacht);
+  zustand.nachthimmel = Boolean(s.nachthimmel);
+  if (zustand.schoner && !zustand.schoner.nacht && (zustand.nacht || zustand.sperrzeit || s.gesperrt)) schonerAus();
+  if (zustand.nachthimmel && zustand.nachtSchwarz && !zustand.nachtSchwarz.stopp) himmelIn(zustand.nachtSchwarz);
   zeigeMeldungen(s.meldungen || []);
   /* 3.5: Glocke oben mit Zahl der neuen Nachrichten (und auf der Kachel) */
   /* 4.4: Nachrichten von Freunden in der Sperrzeit zählen nur mit (lesen erst danach) */
@@ -723,13 +867,14 @@ async function statusAbfrage() {
   if (anzahl !== (zustand.meldungenAnzahl || 0)) {          /* 6.0: „🔔 2 neu“ auf der Kachel „Mein Zimmer“ */
     zustand.meldungenAnzahl = anzahl;
     const z = document.querySelector('.kachel[data-id="ordner-zimmer"]');
-    if (z) { z.querySelector(".kachel-hinweis")?.remove(); if (anzahl) z.append(el("div", { class: "kachel-hinweis", text: `🔔 ${anzahl} neu` })); }
+    if (z) { z.querySelector(".kachel-hinweis:not(.routine)")?.remove(); if (anzahl) z.append(el("div", { class: "kachel-hinweis", text: `🔔 ${anzahl} neu` })); }
   }
   const glocke = document.getElementById("glocke");
   glocke.hidden = !anzahl;
   glocke.textContent = `🔔 ${anzahl}`;
   document.querySelector('.kachel[data-id="spiel-nachrichten"]')?.classList.toggle("hat-neue", anzahl > 0);
   if (s.wecker && zustand.overlay?.id !== "wecker-klingelt") weckerKlingelt(s.wecker);
+  routineJetzt(s);
 
   /* 5.3: Wartungsmodus (Ausliefern läuft) - Warnbildschirm über allem, offene Spiele und Player schließen */
   const warAn = Boolean(zustand.wartung);
@@ -746,6 +891,37 @@ async function statusAbfrage() {
   auszeitZeigen(s.gesperrt);
 }
 
+/* 6.9.58: Morgen-/Abend-Routine deutlich auslösen. Läuft eine Liste von Mein Tag (und ist noch nicht geschafft), leuchtet
+   die Kachel, und steht der Fernseher auf der Startseite (kein Spiel, kein Player, kein Wecker), öffnet sich Mein Tag von
+   selbst - zu Beginn und bei jeder Erinnerung (alle 10 Minuten), auch direkt nach dem Wecker. Je Runde nur einmal: wer
+   Mein Tag schließt, wird erst bei der nächsten Erinnerung wieder geholt. Eltern schalten das je Liste ab („oeffnen“). */
+const routineGeoeffnet = new Set();
+function routineJetzt(s) {
+  const r = s.routine;
+  /* liegt Mein Tag in einem Bereich, leuchtet der Ordner (und im Ordner die Kachel selbst) */
+  const app = (zustand.alle || []).find((a) => a.id === "spiel-meintag");
+  document.querySelectorAll(".kachel.routine-jetzt").forEach((k) => {
+    if (!r || (k.dataset.id !== "spiel-meintag" && k.dataset.id !== `ordner-${app && bereichVon(app)}`)) {
+      k.classList.remove("routine-jetzt"); k.querySelector(".kachel-hinweis.routine")?.remove();
+    }
+  });
+  for (const kachel of document.querySelectorAll(`.kachel[data-id="spiel-meintag"]${app ? `, .kachel[data-id="ordner-${bereichVon(app)}"]` : ""}`)) {
+    kachel.classList.toggle("routine-jetzt", Boolean(r));
+    const alt = kachel.querySelector(".kachel-hinweis.routine");
+    const text = r ? `⏰ ${r.name} · ${r.offen}` : "";
+    if (alt && alt.textContent !== text) alt.remove();
+    if (r && (!alt || alt.textContent !== text)) kachel.append(el("div", { class: "kachel-hinweis routine", text }));
+  }
+  if (!r || !r.oeffnen || !SPIELE["spiel-meintag"]) return;
+  const runde = `${r.schluessel}-${r.runde}`;
+  if (routineGeoeffnet.has(runde)) return;
+  /* Sperrzeit (auch nachts) hält Mein Tag nicht auf - es kostet keine Zeit; nur Nachtruhe/Still, Spiel, Player, Auszeit */
+  if (zustand.overlay || s.aktuell || s.running || zustand.gesperrt || zustand.wartung || s.nachtruhe || s.still || zustand.nachtSchwarz) return;
+  routineGeoeffnet.add(runde);
+  if (zustand.schoner) schonerAus();
+  oeffneSpiel({ id: "spiel-meintag" });
+}
+
 /* 5.3: Vorwarnung - Countdown oben rechts (über Spielen und Playern), zählt jede Sekunde selbst weiter */
 let vorwarnEnde = 0, vorwarnTimer = 0;
 function vorwarnung(sekunden) {
@@ -759,7 +935,7 @@ function vorwarnung(sekunden) {
     document.getElementById("wartung-bald-zahl").textContent = String(rest);
   };
   zeichne();
-  if (!vorwarnTimer) vorwarnTimer = setInterval(zeichne, 250);
+  if (!vorwarnTimer) vorwarnTimer = setInterval(zeichne, 1000);
 }
 
 /* 5.1: Auszeit - alles gesperrt, groß nur der Countdown (läuft jede Sekunde, der Status bringt alle 2 s den genauen Rest) */
@@ -771,7 +947,8 @@ function auszeitZeigen(g) {
   const sym = document.getElementById("sperre-symbol"), soll = auszeit ? "⏳" : "franzi";
   if (sym.dataset.bild !== soll) {                                                              /* nicht alle 2 s neu */
     sym.dataset.bild = soll;
-    sym.replaceChildren(auszeit ? bild(soll) : franzi("schlaf", "franzi-sperre"));
+    sym.replaceChildren(auszeit ? el("span", { class: "sperre-auszeit" }, franzi("muede", "franzi-sperre"), el("span", { class: "fe-zeichen", text: "⏳" }))   /* 6.9.62 */
+      : franzi("schlaf", "franzi-sperre"));
   }
   document.getElementById("sperre-klein").textContent = auszeit
     ? `Bis ${g.bis_uhr} Uhr · Mama oder Papa können sie früher beenden.` : "Mama oder Papa können ihn wieder freigeben.";
@@ -787,40 +964,136 @@ function auszeitZeigen(g) {
   if (!auszeitTimer) auszeitTimer = setInterval(zeichne, 1000);
 }
 
-/* ------------------------------------------------------------ Bildschirmschoner (3.1): eigene Zeichnungen */
-/* 4.4: oder die im Fotoalbum ausgesuchten Bilder, wenn das Kind „Bildschirmschoner“ eingeschaltet hat */
-const SCHONER_NACH_MS = 5 * 60 * 1000;
+/* ------------------------------------------------------------ Diashow (3.1 Zeichnungen, 4.4 Fotoalbum)
+   6.8.7: startet nur noch von Hand („▶ Diashow jetzt“ im Fotoalbum) - die automatische Diashow nach 5 Minuten hat den Pi 3
+   auf 60 °C gebracht. Sparsam: jedes Bild wird einmal auf Bildschirmgröße verkleinert (createImageBitmap) und auf eine
+   von zwei Leinwänden gemalt, der Wechsel ist eine einzige Überblendung (opacity) alle 10 s, dazwischen ruht alles.
+   Das nächste Bild wird vorher vorbereitet, alte Bilder werden freigegeben. Nachts kommt weiter der Nachthimmel. */
+const DIA_TAKT_MS = 10000;
 function auswahlUrl(id) {
   const [art, ...rest] = id.split(":"), wert = rest.join(":");
   if (art === "ordner") return "/api/fotoalbum/bild?pfad=" + encodeURIComponent(wert);
   return (art === "album" ? "/album/" : "/zeichnung/") + encodeURIComponent(wert);
 }
+const NACHTHIMMEL_NACH_MS = 60 * 1000;
+function bildElement(url) {
+  return new Promise((ja, nein) => { const img = new Image(); img.onload = () => ja(img); img.onerror = nein; img.src = url; });
+}
+async function bildFuerSchirm(url, breite, hoehe) {
+  const blob = await (await fetch(url)).blob();
+  const roh = await createImageBitmap(blob).catch(() => bildElement(url).then((img) => createImageBitmap(img)));
+  const faktor = Math.min(1, breite / roh.width, hoehe / roh.height);
+  if (faktor >= 1) return roh;
+  const klein = await createImageBitmap(roh, { resizeWidth: Math.round(roh.width * faktor), resizeHeight: Math.round(roh.height * faktor),
+                                               resizeQuality: "medium" });
+  roh.close();
+  return klein;
+}
 async function schonerPruefen(sofort = false) {
-  if (zustand.schoner || zustand.overlay || zustand.gesperrt?.auszeit || zustand.wartung) return;
-  if (!sofort && Date.now() - zustand.letzteTaste < SCHONER_NACH_MS) return;
+  if (zustand.schoner || zustand.overlay || zustand.gesperrt?.auszeit || zustand.wartung || zustand.nachtSchwarz) return;
+  /* 6.1: In Sperrzeiten keine Diashow (stört beim Schlafen); nachts nach einer Minute der dunkle Nachthimmel */
+  if (zustand.nacht || zustand.sperrzeit || zustand.gesperrt) {
+    if (zustand.nacht && Date.now() - zustand.letzteTaste >= NACHTHIMMEL_NACH_MS) nachthimmelSchoner();
+    return;
+  }
+  if (!sofort) {                                         /* 6.8.7: keine automatische Diashow mehr - 6.9.47: Franzi + Uhr */
+    const min = zustand.bildschirm?.schoner_min ?? 5;
+    if (min > 0 && Date.now() - zustand.letzteTaste >= min * 60 * 1000) franziSchoner();
+    return;
+  }
   let bilder = [];
   try {
     const fa = await hole("/api/fotoalbum").catch(() => null);
-    if (fa?.erlaubt && (fa.bildschirmschoner || sofort) && fa.auswahl.length) bilder = fa.auswahl.map((id) => ({ url: auswahlUrl(id) }));
-    else bilder = (await hole("/api/zeichnungen")).zeichnungen;
+    if (fa?.erlaubt && fa.auswahl.length) bilder = fa.auswahl.map((id) => auswahlUrl(id));
+    else bilder = (await hole("/api/zeichnungen")).zeichnungen.map((z_) => z_.url);
   } catch (_) { return; }
   const box = el("div", { id: "schoner" });
-  const bild = el("img", { alt: "" });
-  box.append(bild, el("div", { class: "schoner-uhr" }));
+  const B = Math.min(1280, innerWidth), H = Math.min(720, innerHeight);
+  const leinwand = [0, 1].map(() => el("canvas", { class: "dia-bild", width: B, height: H }));
+  const uhr = el("div", { class: "schoner-uhr" });
+  box.append(...leinwand, uhr);
+  if (!bilder.length) box.append(el("div", { class: "schoner-leer", text: "Noch keine Bilder – such dir im Fotoalbum welche aus (⭐)." }));
   document.body.append(box);
-  let i = 0;
-  const weiter = () => {
-    box.querySelector(".schoner-uhr").textContent = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-    if (bilder.length) { bild.src = bilder[i % bilder.length].url; i++; } else bild.hidden = true;
+  let i = 0, vorn = 0, naechstes = null, aus = false, diaMini = null;
+  const vorbereiten = () => {
+    if (!bilder.length) return null;
+    const url = bilder[i++ % bilder.length];
+    return bildFuerSchirm(url, B, H).catch(() => null);
   };
-  weiter();
-  zustand.schoner = { box, timer: setInterval(weiter, 8000) };
+  const zeigen = async () => {
+    const jetzt = new Date();
+    uhr.replaceChildren(el("b", { text: jetzt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) }),
+      el("small", { text: jetzt.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" }) }));
+    const bild = await (naechstes || vorbereiten());
+    if (aus) { bild?.close?.(); return; }
+    if (bild) {
+      const hinten = leinwand[1 - vorn], g = hinten.getContext("2d");
+      g.fillStyle = "#000"; g.fillRect(0, 0, B, H);
+      /* 6.9.22: Ränder mit demselben Foto füllen - unscharf und dunkel. Unschärfe billig über ein winziges Zwischenbild
+         (der Browser vergrößert weich) - geht auch auf dem Pi 3, einmal je Bild */
+      if (bild.width < B - 4 || bild.height < H - 4) {
+        const mini = diaMini || (diaMini = document.createElement("canvas"));
+        mini.width = 32; mini.height = Math.max(1, Math.round(32 * H / B));
+        const m = mini.getContext("2d"), f = Math.max(mini.width / bild.width, mini.height / bild.height);
+        m.drawImage(bild, (mini.width - bild.width * f) / 2, (mini.height - bild.height * f) / 2, bild.width * f, bild.height * f);
+        g.imageSmoothingQuality = "low"; g.drawImage(mini, 0, 0, B, H);
+        g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(0, 0, B, H);
+        g.save(); g.shadowColor = "rgba(0,0,0,.6)"; g.shadowBlur = 40; g.fillStyle = "#000";
+        g.fillRect(Math.round((B - bild.width) / 2), Math.round((H - bild.height) / 2), bild.width, bild.height); g.restore();
+      }
+      g.drawImage(bild, Math.round((B - bild.width) / 2), Math.round((H - bild.height) / 2));
+      hinten.dataset.zoom = String((i % 4));                         /* Stufe „hoch“: Richtung des langsamen Zooms */
+      bild.close?.();
+      hinten.classList.add("an"); leinwand[vorn].classList.remove("an");
+      vorn = 1 - vorn;
+    }
+    naechstes = bilder.length > 1 ? vorbereiten() : null;          /* das nächste schon jetzt, in Ruhe */
+  };
+  zeigen();
+  zustand.schoner = { box, timer: setInterval(zeigen, DIA_TAKT_MS), stopp: () => { aus = true; naechstes?.then((b) => b?.close?.()); } };
+}
+
+/* 6.9.47: Bildschirmschoner tagsüber - ruhig: große Uhr, Franzi döst (später schläft sie). Alle 30 s wandert alles sanft
+   an eine andere Stelle (schont den Fernseher vor Einbrennen), sonst bewegt sich nichts - kaum Last für den Pi 3. */
+function franziSchoner() {
+  const box = el("div", { id: "schoner", class: "franzi-schoner" });
+  const wandern = el("div", { class: "fs-wandern" });
+  const figur = el("div", { class: "fs-franzi" }, franzi("muede"));
+  const uhr = el("div", { class: "schoner-uhr fs-uhr" });
+  wandern.append(figur, uhr);
+  box.append(wandern);
+  document.body.append(box);
+  const seit = Date.now();
+  const takt = () => {
+    const jetzt = new Date();
+    uhr.replaceChildren(el("b", { text: jetzt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) }),
+      el("small", { text: jetzt.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" }) }));
+    if (Date.now() - seit > 2 * 60 * 1000 && !figur.dataset.schlaeft) { figur.dataset.schlaeft = "1"; figur.replaceChildren(franzi("schlaf")); }
+    const x = Math.round((Math.random() - 0.5) * 36), y = Math.round((Math.random() - 0.5) * 30);
+    wandern.style.transform = `translate(${x}vw, ${y}vh)`;
+  };
+  takt();
+  zustand.schoner = { box, timer: setInterval(takt, 30000) };
 }
 
 function schonerAus() {
   clearInterval(zustand.schoner.timer);
+  zustand.schoner.stopp?.();
   zustand.schoner.box.remove();
   zustand.schoner = null;
+}
+
+/* 6.1: Nachthimmel als „Schoner“ in der Nacht - sehr dunkel, eine Taste beendet ihn */
+function himmelIn(box) {
+  const canvas = el("canvas", { class: "nacht-himmel" });
+  box.append(canvas);
+  box.stopp = sternenhimmel(canvas);
+  return box.stopp;
+}
+function nachthimmelSchoner() {
+  const box = el("div", { id: "schoner", class: "nacht" });
+  document.body.append(box);
+  zustand.schoner = { box, timer: 0, nacht: true, stopp: himmelIn(box) };
 }
 
 /* ------------------------------------------------------------ Bewegungspause (3.1) */
@@ -877,22 +1150,93 @@ function hashPruefen() {
   const gn = location.hash.match(/^#gute-nacht(-auto)?$/);
   if (gn) { history.replaceState(null, "", location.pathname); guteNachtOeffnen(Boolean(gn[1])); }
   if (location.hash === "#nacht") { history.replaceState(null, "", location.pathname); nachtFrage(); }
-  const sonne = location.hash.match(/^#sonne-(\d+)$/);
-  if (sonne) { history.replaceState(null, "", location.pathname); sonnenaufgang(Math.min(60, Math.max(1, +sonne[1]))); }
+  const sonne = location.hash.match(/^#sonne-(\d+)(?:-(huegel|ostsee|wald))?$/);
+  if (sonne) { history.replaceState(null, "", location.pathname); sonnenaufgang(Math.min(60, Math.max(1, +sonne[1])), sonne[2] || "huegel"); }
   if (location.hash === "#wecker") { history.replaceState(null, "", location.pathname); statusAbfrage(); }   /* Status bringt den Wecker */
   if (location.hash === "#zurueck") { history.replaceState(null, "", location.pathname); hinweis("Willkommen zurück!"); }   /* 4.1: nach dem Retro-Spiel */
   const pause = location.hash.match(/^#pause-(\d+)$/);
   if (pause) { history.replaceState(null, "", location.pathname); bewegungspause(Math.min(900, +pause[1])); }
+  /* 6.9.8: ein Spiel direkt öffnen (#spiel-franzi) - der Server prüft beim Start, ob es gerade erlaubt ist */
+  const spiel = location.hash.match(/^#(spiel-[a-z]+)$/);
+  if (spiel && SPIELE[spiel[1]]) { history.replaceState(null, "", location.pathname); oeffneSpiel({ id: spiel[1] }); }
+}
+
+/* 6.4: was Franzi trägt (aus „Mein Tag“) - danach den Kopf neu zeichnen */
+export async function franziAnziehen() {
+  try { setzeFranzi((await hole("/api/meintag")).franzi); } catch (_) { return; }
+  kopfFranzi();
+}
+
+/* 6.9.32: Franzi oben im Kopf passt zur Tageszeit (nachts schläft sie, früh staunt sie). Ist Franzi als Haustier an,
+   zeigt sie ihre echte Stimmung und Kleidung. Abfrage nur alle 15 Minuten. */
+const KOPF_GESICHT = { muede: "muede", schlaefrig: "schlaf", vertraeumt: "schlaf", hungrig: "staunen", gelangweilt: "staunen",
+                       anhaenglich: "verliebt", trotzig: "grummelig", genervt: "genervt", grummelig: "grummelig" };
+const WETTER_GESICHT = { sonne: "jubel", schnee: "staunen", regen: "muede", kalt: "grummelig" };
+if (typeof window !== "undefined" && !window.__ffKopf) window.__ffKopf = setInterval(() => { if (!document.hidden && !zustand.overlay) kopfFranzi(); }, 30000);
+async function kopfFranzi() {
+  const stunde = new Date().getHours();
+  let gesicht = stunde >= 21 || stunde < 6 ? "schlaf" : stunde < 8 ? "staunen" : "froh", sachen = null, f = null;
+  try {
+    f = await hole("/api/franzi");
+    /* 6.9.59: Reihenfolge - Schlafenszeit, Lob (Stern in den letzten 45 Min. = Herzaugen), was Franzi braucht, Wetter, Uhrzeit */
+    if (f?.aktiv && !f.abenteuer) {
+      sachen = { ...kleidungZuSachen(f.angezogen) };
+      if (gesicht !== "schlaf") gesicht = f.lob ? "verliebt" : KOPF_GESICHT[f.stimmung] || WETTER_GESICHT[f.wetter] || gesicht;
+    }
+  } catch (_) { /* dann eben nach der Uhr */ }
+  /* 6.9.61: Franzi sagt etwas - alle paar Minuten für ein paar Sekunden (nur auf der Startseite, nicht nachts) */
+  const neu = spruchFaellig(f, gesicht);
+  if (neu) spruchJetzt = { ...neu, bis: Date.now() + SPRUCH_SICHTBAR_MS };
+  const blase = spruchJetzt && Date.now() < spruchJetzt.bis && gesicht !== "schlaf" ? spruchJetzt : null;
+  if (blase) gesicht = blase.gesicht || gesicht;
+  const kopf = document.getElementById("franzi-kopf");
+  kopf?.replaceChildren(franzi(gesicht, "", sachen && Object.keys(sachen).length ? sachen : null),
+    ...(blase ? [el("div", { class: "kopf-blase" + (neu ? "" : " ruhig"), text: blase.text })] : []));
+  if (blase) { clearTimeout(kopfFranzi.blaseWeg); kopfFranzi.blaseWeg = setTimeout(() => kopf?.querySelector(".kopf-blase")?.classList.add("weg"), blase.bis - Date.now()); }
+}
+let spruchJetzt = null;
+const SPRUCH_ABSTAND_MS = 3 * 60 * 1000, SPRUCH_SICHTBAR_MS = 12000;
+let spruchZuletzt = Date.now() - SPRUCH_ABSTAND_MS + 20000;      /* erster Satz kurz nach dem Start */
+function spruchFaellig(f, gesicht) {
+  if (!f?.spruch?.text || gesicht === "schlaf" || zustand.overlay || zustand.schoner || document.hidden) return null;
+  if (Date.now() - spruchZuletzt < SPRUCH_ABSTAND_MS) return null;
+  spruchZuletzt = Date.now();
+  return f.spruch;
+}
+
+/* 6.9.40: Hintergrundmusik (Eltern: Aussehen → Klänge) - auf der Startseite oder in Franzis Zimmer, in Schleife.
+   Nur, wenn nichts anderes läuft (kein Spiel, kein Video, keine Sperre, Seite sichtbar). Ab Werk aus. */
+let musikSpieler = null, musikKlang = "";
+function musikPruefen() {
+  const m = zustand.musik || {};
+  const ov = zustand.overlay;
+  const ort = document.hidden || zustand.schoner || !document.getElementById("sperre")?.hidden || !document.getElementById("wartung")?.hidden ? null
+    : !ov ? "start" : null;                                        /* 6.9.50: im Zimmer spielt die Musikbox */
+  const wahl = ort && m[ort];
+  if (!wahl) { if (musikSpieler && !musikSpieler.paused) musikSpieler.pause(); return; }
+  if (!musikSpieler || musikKlang !== wahl.klang) {
+    musikSpieler?.pause();
+    musikSpieler = new Audio("/api/klang?id=" + encodeURIComponent(wahl.klang));
+    musikSpieler.loop = true;
+    musikKlang = wahl.klang;
+  }
+  musikSpieler.volume = Math.max(0, Math.min(1, (wahl.laut ?? 30) / 100));
+  if (musikSpieler.paused) musikSpieler.play().catch(() => { /* Autoplay verweigert: beim nächsten Mal */ });
 }
 
 async function start() {
   /* 6.0: feste Symbole der Seite als 3D-Bilder */
   document.querySelectorAll("#wartung .gross, #sperre .gross").forEach((g) => g.replaceChildren(bild(g.textContent.trim())));
-  document.getElementById("franzi-kopf").replaceChildren(franzi("froh"));     /* 6.0: Maskottchen winkt zur Begrüßung */
+  document.getElementById("franzi-kopf").replaceChildren(franzi("hallo"));    /* 6.0: Maskottchen winkt zur Begrüßung (6.9.45: danach Arme unten) */
   uhrStellen();
   setInterval(uhrStellen, 10000);
+  setInterval(musikPruefen, 2000);                                  /* 6.9.40: billig, nur ein Vergleich */
+  document.addEventListener("visibilitychange", musikPruefen);
   gruessen("");
   while (!(await ladeKacheln())) await pause(2000);
+  franziAnziehen();
+  setTimeout(kopfFranzi, 5000);                                    /* 6.9.45: nach dem Winken Arme runter (Stimmung/Tageszeit) */
+  setInterval(kopfFranzi, 15 * 60 * 1000);
   await statusAbfrage();
   setInterval(() => { if (!document.hidden) statusAbfrage(); }, 2000);
   setInterval(() => { if (!document.hidden && !zustand.overlay) ladeKacheln(); }, 60000);

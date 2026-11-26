@@ -197,5 +197,57 @@ class Logik(unittest.TestCase):
         self.assertTrue(eingabe.LOS.search("TRAFFIC: [ 1300] >> 04:45"))
 
 
+
+class CecZustand(unittest.TestCase):
+    """6.1: Fernseher aus/an mit Abfrage des Zustands ("pow 0") - ohne echtes CEC."""
+
+    def ausgabe(self, antworten):
+        import threading
+        a = eingabe.Ausgabe.__new__(eingabe.Ausgabe)
+        a.strom, a.strom_neu, a.cec_pruefung = None, threading.Event(), False
+        befehle, gemeldet = [], []
+
+        class Stdin:
+            def write(self, text):
+                befehle.append(text.strip())
+                if text.strip() == "pow 0":
+                    a.strom_gemeldet(antworten.pop(0))
+
+            def flush(self):
+                pass
+
+        a.cec_client = type("C", (), {"stdin": Stdin()})()
+        a.server = lambda pfad, daten=None, methode="POST": gemeldet.append((pfad, daten))
+        return a, befehle, gemeldet
+
+    def setUp(self):
+        self.vorher, eingabe.CEC_WARTEN_S = eingabe.CEC_WARTEN_S, 0
+        self.addCleanup(setattr, eingabe, "CEC_WARTEN_S", self.vorher)
+
+    def test_antwort_wird_erkannt(self):
+        self.assertEqual(eingabe.STROM.search("power status: standby").group(1), "standby")
+        self.assertEqual(eingabe.STROM.search("power status: on\n").group(1), "on")
+
+    def test_test_klappt(self):
+        a, befehle, gemeldet = self.ausgabe(["standby", "on"])
+        a._cec_test()
+        self.assertEqual(befehle, ["standby 0", "pow 0", "on 0", "as", "pow 0"])
+        self.assertEqual(gemeldet, [("/api/geraet/cec-test", {"aus": True, "an": True})])
+
+    def test_fernseher_bleibt_aus(self):
+        a, _, gemeldet = self.ausgabe(["standby", "standby"])
+        a._cec_test()
+        self.assertEqual(gemeldet[0][1], {"aus": True, "an": False})
+
+    def test_wecker_lernt_nur_wenn_vorher_aus(self):
+        a, befehle, gemeldet = self.ausgabe(["on"])
+        a._an_und_lernen()
+        self.assertEqual(befehle, ["pow 0", "on 0", "as"])
+        self.assertEqual(gemeldet, [], "war schon an - nichts gelernt")
+        a, _, gemeldet = self.ausgabe(["standby", "on"])
+        a._an_und_lernen()
+        self.assertEqual(gemeldet, [("/api/geraet/cec-test", {"aus": True, "an": True})])
+
+
 if __name__ == "__main__":
     unittest.main()

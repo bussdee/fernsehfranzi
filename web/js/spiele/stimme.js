@@ -22,6 +22,35 @@ export function pegel(puffer) {
   return Math.max(0, Math.min(1, (Math.sqrt(summe / puffer.length) - 0.02) * 4));
 }
 
+/** 6.8.1: Tonhöhe einer Stimme (80-1000 Hz) oder null. Normierte Autokorrelation; genommen wird der erste Gipfel, der fast
+    so hoch ist wie der beste - so rät sie bei hohen Kinderstimmen nicht eine Oktave zu tief (tonhoehe() in bass.js kann
+    nur bis 400 Hz). Rechnet auf höchstens 2048 Werten, etwa 12-mal je Sekunde (Pi 3). */
+export function stimmHz(puffer, rate) {
+  const n = Math.min(2048, puffer.length);
+  const summe = new Float64Array(n + 1);                          /* laufende Energie für die Normierung je Ausschnitt */
+  for (let i = 0; i < n; i++) summe[i + 1] = summe[i] + puffer[i] * puffer[i];
+  if (Math.sqrt(summe[n] / n) < 0.01) return null;
+  const min = Math.floor(rate / 1000), max = Math.min(Math.floor(rate / 80), Math.floor(n / 2));
+  const werte = new Float32Array(max + 2);
+  let bester = 0;
+  for (let lag = min; lag <= max + 1; lag++) {
+    let kreuz = 0;
+    for (let i = 0; i + lag < n; i++) kreuz += puffer[i] * puffer[i + lag];
+    const e = Math.sqrt(summe[n - lag] * (summe[n] - summe[lag]));
+    werte[lag] = e > 0 ? kreuz / e : 0;
+    if (lag <= max && werte[lag] > bester) bester = werte[lag];
+  }
+  if (bester < 0.5) return null;                                   /* kein klarer Ton (Rauschen, Klatschen) */
+  for (let lag = min + 1; lag <= max; lag++) {
+    if (werte[lag] >= bester * 0.9 && werte[lag] >= werte[lag - 1] && werte[lag] >= werte[lag + 1]) {
+      /* zwischen den Abtastwerten genauer (Parabel durch drei Punkte) */
+      const a = werte[lag - 1], b = werte[lag], c = werte[lag + 1], nenner = a - 2 * b + c;
+      return rate / (lag + (nenner ? 0.5 * (a - c) / nenner : 0));
+    }
+  }
+  return null;
+}
+
 export function stimmSpur({ breite = 720, hoehe = 300, punkte = 60 } = {}) {
   const canvas = el("canvas", { class: "stimm-spur" });
   const ring = el("div", { class: "stimm-ring" }, el("span"));

@@ -1,4 +1,8 @@
-/* FernsehFranzi 4.4 - Fotoalbum: Bilder aussuchen und als Bildschirmschoner zeigen (z. B. wenn Freunde zu Besuch sind).
+/* FernsehFranzi 4.4 - Fotoalbum: Bilder aussuchen und als Diashow zeigen (z. B. wenn Freunde zu Besuch sind).
+ *
+ * 6.8.7: Mosaik mit vollständigen Miniaturen im Originalformat. Die Miniaturen werden einmal (nacheinander) verkleinert
+ * und für die Sitzung gemerkt; ein Pfeildruck verschiebt nur die Markierung - vorher wurde bei jedem Druck alles neu
+ * aufgebaut und jedes Foto in voller Größe neu entpackt (kurz schwarzer Bildschirm). Die Diashow startet nur noch von Hand.
  *
  * Drei Quellen: 📁 der Foto-Ordner der Eltern (FileBrowser-Freigabe), 📷 das eigene Album (Fotos von Telegram, mit
  * „⭐ Ins Album“ übernommen) und 🎨 die eigenen Zeichnungen. Oben schaltet das Kind den Bildschirmschoner ein und aus.
@@ -7,7 +11,24 @@
 import { el } from "../gemeinsam.js";
 import { kopf, ton } from "./kern.js";
 
-const SPALTEN = 5;
+const MINI_H = 220;                         /* Höhe der Miniaturen in Pixeln (Breite nach Seitenverhältnis) */
+const miniaturen = new Map();               /* url -> {canvas, verhaeltnis} - bleibt für die Sitzung */
+let warteschlange = Promise.resolve();
+function miniatur(url) {
+  if (miniaturen.has(url)) return miniaturen.get(url);
+  const versprechen = (warteschlange = warteschlange.then(async () => {      /* eins nach dem anderen (Pi 3) */
+    const roh = await createImageBitmap(await (await fetch(url)).blob());
+    const h = Math.min(MINI_H, roh.height), w = Math.max(1, Math.round(roh.width * h / roh.height));
+    const klein = await createImageBitmap(roh, { resizeWidth: w, resizeHeight: h, resizeQuality: "medium" });
+    roh.close();
+    const canvas = el("canvas", { width: w, height: h });
+    canvas.getContext("2d").drawImage(klein, 0, 0);
+    klein.close();
+    return { canvas, verhaeltnis: w / h };
+  }).catch(() => null));           /* nicht zu entpacken: dann das Bild selbst (siehe baueRaster) */
+  miniaturen.set(url, versprechen);
+  return versprechen;
+}
 
 export default {
   symbol: "🖼️",
@@ -42,32 +63,63 @@ export default {
         try { z.speicher = await api.hole("/api/speicher"); } catch (_) { /* egal */ }
       }
       z.wahl = Math.min(z.wahl, z.eintraege.length - 1);
+      raster = null;                                     /* neuer Ordner: Raster neu bauen (Miniaturen bleiben gemerkt) */
       zeige();
     }
 
     const kopfKnoepfe = () => [
       ...(z.fa.ordner ? [{ text: "📁 Fotos", quelle: "ordner" }] : []),
       { text: "📷 Mein Album", quelle: "album" }, { text: "🎨 Meine Bilder", quelle: "zeichnungen" },
-      { text: z.fa.bildschirmschoner ? "🖥️ Bildschirmschoner: AN" : "🖥️ Bildschirmschoner: aus", schoner: true },
-      { text: "▶ Diashow jetzt", diashow: true },              /* 6.0: Bildschirmschoner sofort starten */
+      { text: "▶ Diashow", diashow: true },                     /* 6.8.7: nur noch von Hand */
     ];
 
+    /* Raster einmal je Ordner bauen; danach nur Markierung, Sterne, Leiste und Menü auffrischen */
+    let raster = null, kacheln = [], leer = null;
+    function baueRaster() {
+      kacheln = z.eintraege.map((e) => {
+        const k = el("div", { class: "fa-kachel" + (e.art === "bild" ? " fa-foto" : "") },
+          e.art === "bild" ? el("div", { class: "fa-platz" }) : el("div", { class: "fa-ordner", text: e.art === "hoch" ? "⬆" : "📁" }),
+          el("span", { class: "fa-name", text: e.art === "bild" ? "" : e.name }),
+          el("span", { class: "fa-stern", text: "⭐" }));
+        if (e.art === "bild") {
+          miniatur(e.url).then((m) => {
+            if (!m) {                                    /* Notweg: das Bild selbst, vollständig im Originalformat */
+              const img = el("img", { src: e.url, alt: "" });
+              img.addEventListener("load", () => k.style.setProperty("--verhaeltnis", (img.naturalWidth / Math.max(1, img.naturalHeight)).toFixed(3)));
+              img.addEventListener("error", () => { k.querySelector(".fa-platz, img")?.replaceWith(el("div", { class: "fa-platz", text: "🖼️" })); });
+              k.querySelector(".fa-platz").replaceWith(img);
+              return;
+            }
+            const bild = m.canvas.cloneNode(false);
+            bild.getContext("2d").drawImage(m.canvas, 0, 0);
+            k.style.setProperty("--verhaeltnis", m.verhaeltnis.toFixed(3));
+            k.querySelector(".fa-platz").replaceWith(bild);
+          });
+        }
+        return k;
+      });
+      raster = el("div", { class: "fa-raster fa-mosaik" }, ...kacheln);
+      leer = !z.eintraege.length ? el("div", { class: "witz", text: z.quelle === "album" ? "Noch keine Fotos im Album. Fotos aus Nachrichten kommen mit „⭐ Ins Album“ hierher." :
+        z.quelle === "zeichnungen" ? "Noch keine gemalten Bilder." : "Dieser Ordner ist leer." }) : null;
+    }
     function zeige() {
+      if (!raster) baueRaster();
       const gewaehlt = new Set(z.fa.auswahl);
-      punkte.textContent = `⭐ ${gewaehlt.size} ausgesucht` + (z.speicher ? ` · Speicher ${z.speicher.belegt_mb} von ${z.speicher.limit_mb} MB${z.speicher.voll ? " – voll!" : ""}` : "");
+      punkte.textContent = `⭐ ${gewaehlt.size} für die Diashow` + (z.speicher ? ` · Speicher ${z.speicher.belegt_mb} von ${z.speicher.limit_mb} MB${z.speicher.voll ? " – voll!" : ""}` : "");
       const kk = kopfKnoepfe();
       const leiste = el("div", { class: "knopfreihe fa-leiste" }, ...kk.map((k, i) => el("span", {
-        class: "knopf" + (z.wahl < 0 && i === z.kopfWahl ? " gewaehlt" : "") + ((k.quelle && k.quelle === z.quelle) || (k.schoner && z.fa.bildschirmschoner) ? " an" : ""), text: k.text })));
-      const raster = el("div", { class: "fa-raster" }, ...z.eintraege.map((e, i) => el("div", { class: "fa-kachel" + (i === z.wahl ? " gewaehlt" : "") },
-        e.art === "bild" ? el("img", { src: e.url, alt: "", loading: "lazy" }) : el("div", { class: "fa-ordner", text: e.art === "hoch" ? "⬆" : "📁" }),
-        el("span", { class: "fa-name", text: e.art === "bild" ? "" : e.name }),
-        e.art === "bild" && gewaehlt.has(e.id) ? el("span", { class: "fa-stern", text: "⭐" }) : null)));
-      const leer = !z.eintraege.length ? el("div", { class: "witz", text: z.quelle === "album" ? "Noch keine Fotos im Album. Fotos aus Nachrichten kommen mit „⭐ Ins Album“ hierher." :
-        z.quelle === "zeichnungen" ? "Noch keine gemalten Bilder." : "Dieser Ordner ist leer." }) : null;
+        class: "knopf" + (z.wahl < 0 && i === z.kopfWahl ? " gewaehlt" : "") + (k.quelle && k.quelle === z.quelle ? " an" : ""), text: k.text })));
       const menue = z.menue ? el("div", { class: "knopfreihe fa-menue" }, ...z.menue.eintraege.map((m, i) => el("span", { class: "knopf" + (i === z.menue.wahl ? " gewaehlt" : ""), text: m.text }))) : null;
-      inhalt.replaceChildren(...[leiste, menue, leer, raster].filter(Boolean));
-      inhalt.querySelector(".fa-kachel.gewaehlt")?.scrollIntoView({ block: "nearest" });
-      hilfe.textContent = z.menue ? "← → wählen · OK · STOP zurück" : "Pfeile wählen · OK: ⭐ aussuchen / öffnen · STOP zurück";
+      kacheln.forEach((k, i) => {
+        k.classList.toggle("gewaehlt", i === z.wahl);
+        k.classList.toggle("mit-stern", z.eintraege[i].art === "bild" && gewaehlt.has(z.eintraege[i].id));
+      });
+      const teile = [leiste, menue, leer, raster].filter(Boolean);
+      if (inhalt.children.length !== teile.length || [...inhalt.children].some((c, i) => c !== teile[i])) {
+        inhalt.replaceChildren(...teile);                 /* das Raster selbst wird nur umgehängt, nicht neu gebaut */
+      }
+      kacheln[z.wahl]?.scrollIntoView({ block: "nearest" });
+      hilfe.textContent = z.menue ? "← → wählen · OK · STOP zurück" : "Pfeile wählen · OK: ⭐ für die Diashow / öffnen · STOP zurück";
     }
 
     async function speichereAuswahl(neu) {
@@ -83,7 +135,7 @@ export default {
 
     function bildMenue(e) {
       z.menue = { wahl: 0, eintraege: [
-        { text: z.fa.auswahl.includes(e.id) ? "🚫 Nicht mehr zeigen" : "⭐ Im Bildschirmschoner zeigen", tun: () => stern(e) },
+        { text: z.fa.auswahl.includes(e.id) ? "🚫 Nicht mehr zeigen" : "⭐ In der Diashow zeigen", tun: () => stern(e) },
         ...z.kontakte.map((k) => ({ text: `📤 an ${k.symbol} ${k.name}`, tun: () => api.sende("/api/bild/teilen", { art: e.eigen, name: e.datei, chat: k.id })
           .then((a) => { api.hinweis(a.meldung); ton("sieg"); }) })),
         { text: "🗑 Löschen", tun: () => api.sende("/api/kind/loeschen", { art: e.eigen, name: e.datei }).then(async (a) => {
@@ -100,8 +152,21 @@ export default {
         if (dy > 0 && z.eintraege.length) { z.wahl = 0; zeige(); ton("bewegen"); }
         return;
       }
-      let neu = z.wahl + dx + dy * SPALTEN;
-      if (neu < 0 && dy < 0) { z.wahl = -1; zeige(); return; }
+      let neu = z.wahl + dx;
+      if (dy) {                                          /* Mosaik: nächste Reihe nach Lage auf dem Bildschirm */
+        const jetzt = kacheln[z.wahl].getBoundingClientRect(), mitte = jetzt.left + jetzt.width / 2;
+        let beste = -1, abstand = Infinity;
+        kacheln.forEach((k, i) => {
+          const r = k.getBoundingClientRect();
+          const reihe = dy > 0 ? r.top > jetzt.top + 4 : r.top < jetzt.top - 4;
+          if (!reihe) return;
+          const d = Math.abs(r.top - jetzt.top) * 4 + Math.abs(r.left + r.width / 2 - mitte);
+          if (d < abstand) { abstand = d; beste = i; }
+        });
+        if (beste < 0 && dy < 0) { z.wahl = -1; zeige(); return; }
+        neu = beste < 0 ? z.wahl : beste;
+      }
+      if (neu < 0) { z.wahl = -1; zeige(); return; }
       neu = Math.max(0, Math.min(z.eintraege.length - 1, neu));
       if (neu !== z.wahl) { z.wahl = neu; zeige(); ton("bewegen"); }
     }
@@ -124,11 +189,7 @@ export default {
           if (z.wahl < 0) {
             const k = kopfKnoepfe()[z.kopfWahl];
             if (k.diashow) { api.diashow?.(); ton("ok"); return true; }
-            if (k.schoner) {
-              api.sende("/api/fotoalbum", { bildschirmschoner: !z.fa.bildschirmschoner }).then((fa) => {
-                z.fa = fa; api.hinweis(fa.bildschirmschoner ? (fa.auswahl.length ? "Deine Bilder sind jetzt der Bildschirmschoner." : "An – such dir noch Bilder aus (⭐).") : "Bildschirmschoner: wieder deine Zeichnungen."); zeige();
-              }).catch((f) => api.hinweis(f.message, 5000));
-            } else { z.quelle = k.quelle; z.pfad = ""; z.wahl = -1; ladeQuelle().catch((f) => api.hinweis(f.message, 5000)); }
+            z.quelle = k.quelle; z.pfad = ""; z.wahl = -1; ladeQuelle().catch((f) => api.hinweis(f.message, 5000));
             ton("ok");
             return true;
           }

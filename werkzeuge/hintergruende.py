@@ -170,7 +170,46 @@ def winter(r):
     return svg(teile)
 
 
-MOTIVE = {"blau": weltraum, "gruen": wald, "lila": zaubernacht, "rot": abendrot, "schwarz": schwarz,
+def rock(r):
+    """6.7: Bühne mit Lautsprechern, Scheinwerfern und Gitarre (die Flammen bewegt die Startseite selbst)."""
+    kegel = "".join(f'<path d="M{x} 0 L{x - 160} {H} L{x + 160} {H}Z" fill="#ff5a36" opacity=".07"/>' for x in (300, 800, 1300))
+    boxen = "".join(f'<rect x="{x}" y="640" width="150" height="200" rx="10" fill="#1a0808"/>'
+                    f'<circle cx="{x + 75}" cy="700" r="38" fill="#2b0f0f" stroke="#4a1a14" stroke-width="6"/>'
+                    f'<circle cx="{x + 75}" cy="790" r="26" fill="#2b0f0f" stroke="#4a1a14" stroke-width="5"/>' for x in (40, 1410))
+    gitarre = ('<g transform="translate(1250 520) rotate(-30)" opacity=".55"><rect x="-6" y="-220" width="12" height="200" fill="#3a1410"/>'
+               '<path d="M0 -20 C-70 -20 -80 60 -40 80 C-90 120 -60 200 0 200 C60 200 90 120 40 80 C80 60 70 -20 0 -20Z" fill="#7a1f16"/>'
+               '<circle cx="0" cy="90" r="16" fill="#1a0808"/></g>')
+    return svg([kegel, '<rect x="0" y="840" width="1600" height="60" fill="#1f0a08"/>', boxen, gitarre]
+               + sterne(r, 20, "#ffb199", 1.6, (.15, .4), .4))
+
+
+def unterwasser(r):
+    """6.7: Meeresgrund mit Seegras, Steinen, Muscheln und Fisch-Schatten (die Blasen steigen auf der Startseite)."""
+    teile = ['<path d="M0 820 C 300 790 600 830 900 805 S 1400 790 1600 815 V900 H0Z" fill="#c9a96b" opacity=".35"/>']
+    for x in list(range(30, 400, 55)) + list(range(1200, 1600, 60)):
+        h = r.uniform(120, 300)
+        teile.append(f'<path d="M{x} 900 C{x - 30} {900 - h * .4} {x + 30} {900 - h * .7} {x} {900 - h}" stroke="#2e8b57" '
+                     f'stroke-width="{r.uniform(8, 14):.0f}" fill="none" stroke-linecap="round" opacity=".55"/>')
+    for x, y in ((520, 850), (1050, 860), (760, 870)):
+        teile.append(f'<ellipse cx="{x}" cy="{y}" rx="{r.uniform(30, 60):.0f}" ry="22" fill="#3b5560" opacity=".6"/>')
+    for x, y, s in ((300, 260, 1), (1150, 180, .8), (900, 420, .6)):
+        teile.append(f'<path d="M{x} {y} q{40 * s} {-25 * s} {80 * s} 0 q{-40 * s} {25 * s} {-80 * s} 0Z M{x + 80 * s} {y} '
+                     f'l{20 * s} {-14 * s} v{28 * s}Z" fill="#0d3b5c" opacity=".45"/>')
+    return svg(teile + [funkeln(1450, 120, 30, "#bff4ff", .25)])
+
+
+def raumstation(r):
+    """6.7: Planet mit Ring, Raumstation und viele Sterne."""
+    station = ('<g transform="translate(1180 240)" opacity=".7"><rect x="-40" y="-18" width="80" height="36" rx="8" fill="#9aa7bd"/>'
+               '<rect x="-150" y="-12" width="90" height="24" fill="#2f5aa8"/><rect x="60" y="-12" width="90" height="24" fill="#2f5aa8"/>'
+               '<rect x="-60" y="-3" width="120" height="6" fill="#c9d3e3"/><circle cx="0" cy="0" r="8" fill="#ffd54f"/></g>')
+    return svg(['<circle cx="260" cy="760" r="210" fill="#5b3fa8" opacity=".55"/>',
+                '<ellipse cx="260" cy="760" rx="330" ry="60" fill="none" stroke="#c6a8ff" stroke-width="10" opacity=".35"/>',
+                '<circle cx="1420" cy="760" r="70" fill="#2a8c8c" opacity=".45"/>', station]
+               + sterne(r, 140, "#fff", 2.0, (.2, .7)))
+
+
+MOTIVE = {"rock": rock, "unterwasser": unterwasser, "raumstation": raumstation,"blau": weltraum, "gruen": wald, "lila": zaubernacht, "rot": abendrot, "schwarz": schwarz,
           "hellblau": himmel, "mint": wiese, "rosa": zuckerwatte, "gelb": strand, "weiss": winter}
 
 

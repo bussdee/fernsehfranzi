@@ -16,6 +16,7 @@ VORGABE = {"aktiv": True, "fruehestens": "06:00", "max_laut": 60, "toene": "", "
 HOECHSTENS = 5
 SCHLUMMERN_MIN = 5
 SONNE_WAHL = (0, 5, 10, 15, 20, 30)          # 4.0: Minuten Sonnenaufgang vor dem Wecken (0 = aus)
+SZENEN = ("huegel", "ostsee", "wald")          # 6.6: Weckszene (Ostsee und Wald mit selbst erzeugten Geräuschen)
 
 
 def _uhr(text, wo):
@@ -48,7 +49,7 @@ def pruefe(w):
         raise ValueError("Höchstens %d Wecker." % HOECHSTENS)
     nummern = set()
     for e in w["liste"]:
-        if not isinstance(e, dict) or set(e) - {"nr", "zeit", "tage", "ton", "laut", "an", "sonne"}:
+        if not isinstance(e, dict) or set(e) - {"nr", "zeit", "tage", "ton", "laut", "an", "sonne", "szene"}:
             raise ValueError("Wecker: unbekannte Felder.")
         nr = e.get("nr")
         if not isinstance(nr, int) or nr in nummern or not 0 < nr < 1000:
@@ -68,6 +69,8 @@ def pruefe(w):
             raise ValueError("Wecker %s: Lautstärke 5 bis 100 %%." % e["zeit"])
         if e.get("sonne", 0) not in SONNE_WAHL:
             raise ValueError("Wecker %s: Sonnenaufgang 0, 5, 10, 15, 20 oder 30 Minuten." % e["zeit"])
+        if e.get("szene", "huegel") not in SZENEN:
+            raise ValueError("Wecker %s: Szene Hügel, Ostsee oder Wald." % e["zeit"])
         if not isinstance(e.get("an", True), bool):
             raise ValueError("Wecker: an/aus muss ja/nein sein.")
     return w
@@ -107,6 +110,25 @@ def sonnenaufgang_faellig(w, jetzt, erledigt):
             erledigt.add(schluessel)
             ergebnis.append((e, minuten))
     return ergebnis
+
+
+def naechster(w, jetzt, tage=7):
+    """6.1: Wann der Fernseher als Nächstes für einen Wecker angehen muss (Weckzeit minus Sonnenaufgang) - oder None."""
+    if not w["aktiv"]:
+        return None
+    beste = None
+    for e in w["liste"]:
+        if not e.get("an", True):
+            continue
+        for plus in range(tage + 1):
+            tag = jetzt.date() + timedelta(days=plus)
+            if tag.weekday() not in e.get("tage", []):
+                continue
+            beginn = datetime.combine(tag, _uhr(e["zeit"], "Wecker")) - timedelta(minutes=int(e.get("sonne", 0) or 0))
+            if beginn > jetzt:
+                beste = beginn if beste is None or beginn < beste else beste
+                break
+    return beste
 
 
 def lautstaerke(w, eintrag):

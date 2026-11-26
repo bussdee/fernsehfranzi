@@ -20,6 +20,7 @@ log = logging.getLogger("fernsehfranzi.schule")
 
 ABFRAGE_S = 15 * 60
 FEHLER_PAUSE_S = 5 * 60
+KIOSK_PAUSE_S = 60          # 6.9.35: antwortete nur der Fernseher-Browser nicht (z. B. nach dem Hochfahren) - bald nochmal
 VORGABE = {"aktiv": False, "tv_hinweis": True, "telegram": True, "morgen_check": True, "morgen_check_um": "18:00",
            "klang": None, "klang_morgen": None}        # 5.2: Klänge für Neues aus der Schule und den Morgen-Check
 FELDER = set(VORGABE)
@@ -213,6 +214,7 @@ class Schule:
         self.zustand.setdefault("bekannt", None)          # {"hausaufgaben": [...], "nachrichten": [...], "ausfaelle": [...]}
         self.zustand.setdefault("morgen_check", "")        # Datum, an dem er zuletzt kam
         self.stand, self.geholt, self.fehler, self._laeuft = None, 0.0, "", False
+        self.stand_zeit = 0.0                     # 6.9.35: wann der Stand zuletzt erfolgreich geholt wurde
         self._lock = threading.Lock()
 
     def einstellungen(self):
@@ -248,6 +250,7 @@ class Schule:
         neu = self._neues(stand, heute, morgen)
         with self._lock:
             self.stand, self.geholt, self.fehler = stand, time.time(), ""
+            self.stand_zeit = self.geholt
         if neu:
             self._melden(neu)
         return stand
@@ -302,7 +305,7 @@ class Schule:
     def tick(self, jetzt, gleich=False):
         if not self.bereit() or self._laeuft:
             return
-        pause = FEHLER_PAUSE_S if self.fehler else ABFRAGE_S
+        pause = (KIOSK_PAUSE_S if "Fernseher antwortet" in self.fehler else FEHLER_PAUSE_S) if self.fehler else ABFRAGE_S
         if self.stand is None and not self.fehler:
             pause = 0
         if time.time() - self.geholt >= pause:
@@ -350,8 +353,13 @@ class Schule:
         if not self.hub.klassenkiste_basis():
             return {"aktiv": True, "stand": None, "fehler": "Die Klassenkiste-Kachel ist nicht eingerichtet."}
         with self._lock:
-            stand, geholt, fehler = self.stand, self.geholt, self.fehler
-        return {"aktiv": True, "stand": stand, "fehler": fehler,
+            stand, geholt, fehler = self.stand, self.stand_zeit or self.geholt, self.fehler
+        if fehler and stand and self.stand_zeit:              # 6.9.35: es gibt einen Stand - kein Fehler, nur ein Hinweis
+            fehler = ""
+            hinweis = "Der letzte Abruf hat nicht geklappt – ich versuche es gleich wieder."
+        else:
+            hinweis = ""
+        return {"aktiv": True, "stand": stand, "fehler": fehler, "hinweis": hinweis,
                 "zeit": datetime.fromtimestamp(geholt).strftime("%H:%M") if geholt else None}
 
     def jetzt_holen(self):

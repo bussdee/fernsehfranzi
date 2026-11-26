@@ -193,11 +193,18 @@ class System:
         except OSError as fehler:
             log.warning("Gong: %s", fehler)
 
-    def gong_datei(self, pfad, hoechstens_s=10):
-        """6.0: eigener Klang (Datei aus dem Klang-Ordner) - nach hoechstens_s Sekunden ist Schluss."""
+    KLANG_LANG_S = 600
+
+    def gong_datei(self, pfad, hoechstens_s=KLANG_LANG_S):
+        """6.0: eigener Klang (Datei aus dem Klang-Ordner). 6.8.11: so lang wie die Datei (vorher nach 10 s abgeschnitten),
+        als Sicherung höchstens 10 Minuten; ein neuer eigener Klang beendet den vorigen, damit sich nichts überlagert."""
+        alt = getattr(self, "_klang_prozess", None)
+        if alt is not None and alt.poll() is None:
+            alt.kill()
         try:
             prozess = subprocess.Popen(["pw-play", pfad], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                        env=dict(os.environ, **sitzungs_umgebung()))
+            self._klang_prozess = prozess
             timer = threading.Timer(hoechstens_s, lambda: prozess.poll() is None and prozess.kill())
             timer.daemon = True
             timer.start()

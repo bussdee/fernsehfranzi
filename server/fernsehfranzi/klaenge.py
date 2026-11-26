@@ -52,12 +52,61 @@ def liste():
 EIGEN = "eigen:"          # 6.0: eigener Klang aus dem Klang-Ordner der Eltern, z. B. "eigen:Hupe.mp3"
 EIGEN_ENDUNGEN = (".mp3", ".ogg", ".oga", ".opus", ".wav", ".flac", ".m4a")
 
+# 6.9.40: ein Klang-Ordner je Art (FileBrowser-Freigaben, die die Eltern eintragen). Ein Klang daraus heißt
+# "eigen@<art>:<pfad>"; "eigen:<pfad>" bleibt der allgemeine Klang-Ordner von früher.
+ARTEN = [("klingel", "Klingeltöne & Nachrichten", "🔔"), ("wecker", "Wecker", "⏰"), ("erinnerung", "Erinnerungen", "📌"),
+         ("tasten", "Tastenklänge (Bedienung)", "🎛️"), ("belohnung", "Belohnungen", "🌟"), ("musik", "Hintergrundmusik", "🎶"),
+         ("franzi", "Franzi-Laute", "🐾"), ("timer", "Timer- & Routine-Musik", "⏳")]
+ART_IDS = [a[0] for a in ARTEN]
+
+# 6.9.40: Ereignisse, deren Klang die Eltern wählen: (id, Gruppe, Name, passende Art).
+# Leer = eingebaut (wie bisher), "stumm" = still, sonst ein Klang aus dem Archiv oder einem Ordner.
+EREIGNISSE = [
+    ("tasten", "Bedienung", "Pfeiltasten (wählen)", "tasten"),
+    ("ok", "Bedienung", "OK (öffnen, abhaken)", "tasten"),
+    ("fehler", "Bedienung", "Geht nicht", "tasten"),
+    ("stern", "Belohnung", "Stern bekommen", "belohnung"),
+    ("geschafft", "Belohnung", "Liste geschafft", "belohnung"),
+    ("franzi", "Franzi", "Franzi freut sich (Pflege)", "franzi"),
+    ("kauf", "Franzi", "Im Sterne-Shop gekauft", "franzi"),
+    ("meldung", "Meldungen", "Nachrichten und Erinnerungen ohne eigenen Klang", "klingel"),
+]
+EREIGNIS_IDS = [e[0] for e in EREIGNISSE]
+TV_EREIGNISSE = ("tasten", "ok", "fehler", "stern", "geschafft", "franzi", "kauf")   # spielt der Fernseher-Browser
+
+# Pakete setzen alle Ereignisse auf einmal (danach einzeln änderbar)
+PAKETE = {
+    "standard": {"name": "Standard", "ereignisse": {}, "bedienung_laut": 100},
+    "sanft": {"name": "Sanft", "ereignisse": {"stern": "harfe", "geschafft": "spieluhr", "franzi": "sanft", "kauf": "glocke",
+                                              "meldung": "glocke"}, "bedienung_laut": 40},
+    "froehlich": {"name": "Fröhlich", "ereignisse": {"stern": "xylophon", "geschafft": "fanfare", "franzi": "vogel", "kauf": "levelup",
+                                                     "meldung": "xylophon"}, "bedienung_laut": 100},
+    "still": {"name": "Still", "ereignisse": {"tasten": STUMM, "ok": STUMM, "fehler": STUMM, "stern": STUMM, "geschafft": STUMM,
+                                              "franzi": STUMM, "kauf": STUMM}, "bedienung_laut": 0},
+}
+MUSIK_ORTE = ("start", "franzi")
+
+
+def eigen_art(klang):
+    """Art des Ordners eines eigenen Klangs ("klingel" …) oder None (allgemeiner Klang-Ordner / kein eigener Klang)."""
+    if isinstance(klang, str) and klang.startswith("eigen@"):
+        art = klang[6:].split(":", 1)[0]
+        return art if art in ART_IDS else None
+    return None
+
 
 def eigen_pfad(klang):
     """Pfad innerhalb des Klang-Ordners oder None (kein eigener Klang / ungültig)."""
-    if not isinstance(klang, str) or not klang.startswith(EIGEN) or len(klang) > 220:
+    if not isinstance(klang, str) or len(klang) > 240:
         return None
-    pfad = klang[len(EIGEN):]
+    if klang.startswith("eigen@"):
+        art, _, pfad = klang[6:].partition(":")
+        if art not in ART_IDS:
+            return None
+    elif klang.startswith(EIGEN):
+        pfad = klang[len(EIGEN):]
+    else:
+        return None
     teile = [t for t in pfad.replace("\\", "/").split("/") if t not in ("", ".")]
     if not teile or ".." in teile or not pfad.lower().endswith(EIGEN_ENDUNGEN):
         return None
@@ -72,6 +121,65 @@ def pruefe(klang, wo="Klang"):
     if not gueltig(klang):
         raise ValueError("%s: unbekannter Klang." % wo)
     return klang or None
+
+
+def einstellungen(kl):
+    """6.9.40: vollständige Klang-Einstellungen (fehlende Felder mit Vorgaben; alles aus = wie bisher)."""
+    kl = kl if isinstance(kl, dict) else {}
+    arten = kl.get("ordner_arten") if isinstance(kl.get("ordner_arten"), dict) else {}
+    erg = kl.get("ereignisse") if isinstance(kl.get("ereignisse"), dict) else {}
+    musik = kl.get("musik") if isinstance(kl.get("musik"), dict) else {}
+    return {"ordner": str(kl.get("ordner") or ""),
+            "ordner_arten": {a: str(arten.get(a) or "") for a in ART_IDS},
+            "ereignisse": {e: (erg.get(e) or "") for e in EREIGNIS_IDS},
+            "bedienung_laut": kl.get("bedienung_laut", 100) if isinstance(kl.get("bedienung_laut"), int) else 100,
+            "musik": {o: {"an": bool((musik.get(o) or {}).get("an")), "klang": str((musik.get(o) or {}).get("klang") or ""),
+                          "laut": (musik.get(o) or {}).get("laut", 30) if isinstance((musik.get(o) or {}).get("laut"), int) else 30}
+                      for o in MUSIK_ORTE}}
+
+
+def pruefe_einstellungen(kl, freigabe_fehler):
+    """6.9.40: Prüfung der Eltern-Eingabe. freigabe_fehler(link) -> Fehlertext oder "" (FileBrowser-Freigabe)."""
+    if not isinstance(kl, dict) or set(kl) - {"ordner", "ordner_arten", "ereignisse", "bedienung_laut", "musik"}:
+        raise ValueError("Klänge: ungültige Angaben.")
+    links = [("Klang-Ordner", kl.get("ordner", ""))]
+    arten = kl.get("ordner_arten", {})
+    if not isinstance(arten, dict) or set(arten) - set(ART_IDS):
+        raise ValueError("Klang-Ordner je Art: unbekannte Art.")
+    namen = {a: n for a, n, _ in ARTEN}
+    links += [("Klang-Ordner „%s“" % namen[a], v) for a, v in arten.items()]
+    for wo, link in links:
+        if not isinstance(link, str) or (link and freigabe_fehler(link)):
+            raise ValueError("%s %s" % (wo, (freigabe_fehler(link) if isinstance(link, str) else "") or "ungültig."))
+    erg = kl.get("ereignisse", {})
+    if not isinstance(erg, dict) or set(erg) - set(EREIGNIS_IDS):
+        raise ValueError("Klänge: unbekanntes Ereignis.")
+    for e, k in erg.items():
+        pruefe(k, "Klang für „%s“" % next(x[2] for x in EREIGNISSE if x[0] == e))
+    laut = kl.get("bedienung_laut", 100)
+    if isinstance(laut, bool) or not isinstance(laut, int) or not 0 <= laut <= 100:
+        raise ValueError("Lautstärke der Bedienung: 0 bis 100.")
+    musik = kl.get("musik", {})
+    if not isinstance(musik, dict) or set(musik) - set(MUSIK_ORTE):
+        raise ValueError("Hintergrundmusik: unbekannter Ort.")
+    for o, m in musik.items():
+        if not isinstance(m, dict) or set(m) - {"an", "klang", "laut"} or not isinstance(m.get("an", False), bool):
+            raise ValueError("Hintergrundmusik: ungültige Angaben.")
+        if m.get("klang") and eigen_pfad(m["klang"]) is None:
+            raise ValueError("Hintergrundmusik: bitte ein Stück aus einem Klang-Ordner wählen.")
+        if m.get("an") and not m.get("klang"):
+            raise ValueError("Hintergrundmusik: erst ein Stück wählen, dann einschalten.")
+        lt = m.get("laut", 30)
+        if isinstance(lt, bool) or not isinstance(lt, int) or not 0 <= lt <= 100:
+            raise ValueError("Hintergrundmusik: Lautstärke 0 bis 100.")
+    return kl
+
+
+def fuer_tv(kl):
+    """Was der Fernseher-Browser braucht: Klänge seiner Ereignisse, Lautstärke der Bedienung, Hintergrundmusik."""
+    e = einstellungen(kl)
+    return {"ereignisse": {k: v for k, v in e["ereignisse"].items() if k in TV_EREIGNISSE and v},
+            "bedienung_laut": e["bedienung_laut"], "musik": {o: m for o, m in e["musik"].items() if m["an"] and m["klang"]}}
 
 
 def _probe(art, freq, t, dauer, ziel):

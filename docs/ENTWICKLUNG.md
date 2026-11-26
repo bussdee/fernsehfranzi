@@ -1,6 +1,6 @@
 # FernsehFranzi – Entwickler-Dokumentation
 
-Stand: Version 6.0.0 (November 2026). Diese Datei beschreibt, wie FernsehFranzi aufgebaut ist, nach welchen Grundsätzen
+Stand: Version 8.0.0 (November 2026). Diese Datei beschreibt, wie FernsehFranzi aufgebaut ist, nach welchen Grundsätzen
 es gebaut wurde und wie man es weiterentwickelt, testet und ausliefert. Die Bedienung für Eltern und Kinder steht in den
 Anleitungen (`docs/anleitung/`, als PDF in `web/`), die Änderungen je Version im [CHANGELOG](../CHANGELOG.md).
 
@@ -183,14 +183,19 @@ Kiosk-Server auf `127.0.0.1:8765`, bei Bedarf den LAN-Server für die Eltern-Sei
 | `system.py` | Alle Systemaufrufe: RetroPie, Ton (`wpctl`), Lautstärke, RetroArch-Netzwerkbefehle, Neustart, Bluetooth, Scraper. In Tests eine Attrappe. |
 | `daten.py` | Datenordner, atomares Schreiben, Schema-Version und Migration |
 | `katalog.py` | App-Katalog `apps.json`: Prüfung mit verständlichen Fehlern, Vorgabe-Kacheln ohne Adressen |
-| `zeitkonto.py` | Tages-Timer (Bildschirmzeit), 4.6: Gaming-Zeit als Teil davon (`zeit: "gaming"`, `gaming_min`) und „nur eigenes Limit“ (`zeit: "frei"` + `limit_min`), App-Limits, Sperrzeiten, Warnungen, Kulanz, Bonus, Leerlauf, Lernzeit verdient Spielzeit |
+| `zeitkonto.py` | Tages-Timer (Bildschirmzeit), 4.6: Gaming-Zeit als Teil davon (`zeit: "gaming"`, `gaming_min`) und „nur eigenes Limit“ (`zeit: "frei"` + `limit_min`), App-Limits, Sperrzeiten, Warnungen, Kulanz, Bonus, Leerlauf, Lernzeit verdient Spielzeit; v8: „Erst-dann“ sitzt davor in `Hub._start_app` (`erst_dann()`, `_erst_dann_offen()`: Gaming erst nach Lernminuten oder geschaffter Mein-Tag-Liste) |
 | `ferien.py` (4.6) | Ferien des Bundeslandes aus `ferien_daten.json` (KMK-Tabellen, mit `werkzeuge/ferien_uebernehmen.py` aus der Ferienliste der Klassenkiste erzeugt – nur lesen), gesetzliche Feiertage (Osterformel), Zusammenführen mit eigenen Einträgen; jährlich nach dem Ferien-Import der Klassenkiste neu erzeugen |
 | `design.py` (5.0) | Farben (`DESIGNS`, hell/dunkel) und Ansichten (`ANSICHTEN`: Konsole, Seitenleiste, Karussell) der Startseite, Erlaubtes und Abend-Automatik der Eltern; `fuer_startseite()` liefert das gerade gültige Design |
 | `wetter.py` (5.0) | Open-Meteo (ohne Schlüssel) im Hintergrund höchstens alle 30 min; Regen-Satz aus Viertelstunden, Trockenfenster (≥ 1,5 h bei Tageslicht, 0,1 mm / 55 %) wie im Familien Dashboard, Anzieh-Tipp; Ortssuche für die Eltern-Seite |
 | `schule.py` (5.0) | Klassenkiste nur lesen (`/api/overview`, `/api/homework/mine`, `/api/messages`, `/api/timetable`) mit der Anmeldung des Kindes (`Hub.klassenkiste_json`); alle 15 min, Neues einmal melden (Merkliste in `schule.json`), Morgen-Check am Abend vor einem Schultag |
 | `kinderwelten.py` (5.0) | Öffentliche Schnittstelle der Familienfabrik (`familienfabrik.at/api`, nur lesen, 30 min Zwischenspeicher); HTML wird zu schlichten Absätzen, Bilder nur von `familienfabrik.at/bilder/` über `/api/kinderwelten/bild` |
 | `news.py` (5.0, 6.0) | Kinder-News: nur RSS-Adressen, die die Eltern selbst eintragen (höchstens 10, ab Werk keine), reiner Text |
-| `klaenge.py` (5.2) | Klang-Archiv: Rezepte aus Tönen mit Klangfarbe und Hüllkurve, daraus WAV (22 kHz, mono, deterministisch), beim Start im Hintergrund vorgerechnet; `system.gong(klang)` spielt sie mit pw-play, `/api/klang?id=` liefert sie zum Probehören |
+| `klaenge.py` (5.2) | Klang-Archiv: Rezepte aus Tönen mit Klangfarbe und Hüllkurve, daraus WAV (22 kHz, mono, deterministisch), beim Start im Hintergrund vorgerechnet; `system.gong(klang)` spielt sie mit pw-play, `/api/klang?id=` liefert sie zum Probehören; 6.9.40: Klang-Ordner je Art (`ARTEN`, Klang-ID `eigen@<art>:<pfad>`), Klang je Ereignis (`EREIGNISSE`, im Browser `kern.js` `ereignis()`/`setzeKlaenge()`), Pakete, Hintergrundmusik (`start.js` `musikPruefen()`) |
+| `meintag.py` (6.2) | Mein Tag: Routinen-Listen der Eltern (Prüfung, welche heute gelten, Ferien), Abhaken, Erinnerung zur Uhrzeit (v8: alle `WIEDER_MIN` Minuten bis geschafft, `nicht_geschafft` → Telegram, `laufende_liste` im Status → Startseite öffnet Mein Tag von selbst), Zeit-Scheibe (`rest_s`/`dauer_s`); 6.3: Packliste aus dem Stundenplan (`packliste`), Aufgaben mit Bestätigung und Sternen; 6.4: Level (`LEVEL_STERNE`), Franzi-Sachen (`SACHEN`, gezeichnet in `gemeinsam.js` `franzi()`/`setzeFranzi()`), Tausch gegen Spielzeit, Wochenrückblick; 6.5: Lesepass (`lesen_melden`, die Startseite misst nur den Mikro-Pegel); Tagesstand in `meintag.json` |
+| `franzi.py` (6.9) | Franzi als Haustier: Werte (`ABBAU_STUNDE`, ~1 Tag bis leer; `fernsehzeit()` für aktive TV-Zeit), Stimmung inkl. genervt/grummelig (`_genug`), Wesenszüge/Typ, Tagebuch, Abenteuerreise mit Postkarten, Räume, frei platzierte Gegenstände (`zimmer[raum] = {item: [x, y, rang]}`, `setzen`/`wegraeumen`, `NUR_IN`), Sterne-Shop (`KATALOG`, Preise, Angebote), Geschenke; v8: `LEVEL_BELOHNUNG` nur Räume (Level 2–7, plus `MIN_TAGE` Sternentage) und goldene Franzi (10, wächst 10/20 – `franzi-wachsen-*`); `SPIEL_DURCH` (Gegenstand startet Spiel), `DING_BONUS` (Gegenstand im Raum verstärkt Pflege); Zustand in `franzi.json`, Sterne bleiben in `meintag.json` |
+| `sprueche.py` (v8) | Was Franzi auf der Startseite sagt: `kandidaten(einst, jetzt, lage)` aus Routine, Lob, geschafft/nicht geschafft, Aufgaben, Wetter, Tageszeit; Arten Witze/Ordnung/Schule und eigene Sätze der Eltern (`franzi.sprueche`); `Hub._franzi_spruch` baut die Lage, `/api/franzi` liefert `spruch` und `lob` |
+| `archiv.py` (6.9.41) | Archiv-Ordner der Eltern für Filme und Musik: Freigaben je Eintrag der obersten Ebene, Belohnungs-Filme (`frei` = kein Limit, `sperre` = auch in Sperrzeiten, `als_belohnung`); Kacheln `archiv-video`/`archiv-musik` (Spielzimmer mit `typ` video/hoerbuch, Player `video.js`/`hoerbuch.js`), Filter in `Hub.hoerbuch_liste`/`hoerbuch_datei`, Belohnung im Takt über `hoerbuch_stand` |
+| `bilder.py` (6.9.42) | Eigene Bilder der Eltern: Format und Größe aus dem Dateikopf (PNG/JPEG/WebP, nur Standardbibliothek), Prüfung der Hintergründe; Ablage `bilder/hintergruende/` in den Gerätedaten, Zuordnung je Farbe in `design.hintergruende`, Startseite setzt `--motiv` |
 | `pin.py` | PBKDF2-SHA256 mit Salz, Vergleich in konstanter Zeit, wachsende Sperre nach Fehlversuchen |
 | `familie.py` | Nachrichten ans TV, Erinnerungen, Schlafenszeit, Sticker, Bass-Tagebuch |
 | `gutschein.py` | Gutschein-Codes (normal: +Minuten, besonders: alles frei), Schutz gegen Raten |
@@ -204,7 +209,8 @@ Kiosk-Server auf `127.0.0.1:8765`, bei Bedarf den LAN-Server für die Eltern-Sei
 | `whitelist.py` | Domainliste aus dem Katalog, Export für Fritzbox und Pi-hole |
 | `raum.py` | 4.3: Spielraum für Handy-Spiele – Raum, Spieler, die fünf Spiele (Buzzer, Quizrennen, Malen & Raten, Raumschiff-Rettung, Ton-Treffer); Handys bekommen fertige Ansichten, der Fernseher je Spiel eine eigene |
 | `qr.py` | 4.3: QR-Codes (Byte-Modus, Fehlerkorrektur M, Versionen 1–10) als SVG, nur Standardbibliothek |
-| `kern.py` (4.4) | dazu: Speicherplatz des Kindes, Album, Fotoalbum (Auswahl, Bildschirmschoner), Bilder teilen, Karaoke (Anmeldung der Klassenkiste über kiosk.py, nur GET auf `/api/playlists/karaoke` und den Musik-Stream) |
+| `kern.py` (6.8.5/6.8.6) | dazu: Hilfe-Knopf (`hilfe_rufen`, Telegram an Eltern, höchstens alle 2 min) und „Mama/Papa fragen“ (`seite_gesperrt`, `frage_stellen`, `frage_beantworten` → `domains_erlauben`); Status-Feld `fragen_host` für eingabe.py |
+| `kern.py` (4.4) | dazu: Speicherplatz des Kindes, Album, Fotoalbum (Auswahl, 6.8.7: Diashow nur von Hand), Bilder teilen, Karaoke (Anmeldung der Klassenkiste über kiosk.py, nur GET auf `/api/playlists/karaoke` und den Musik-Stream) |
 | `uebernahme.py` | Einmalige Übernahme aus Version 2.x |
 
 **Schnittstellen.** Alle Routen stehen als Tabellen in `web.py` (`KioskHandler.routen`, `Basis.eltern_routen`; der
@@ -228,9 +234,10 @@ Startseite schreibt (`__FF_TOKEN__`). Eltern-Aufrufe brauchen eine PIN-Sitzung (
 ## 8 · Weboberfläche
 
 - `web/index.html` + `web/js/start.js`: Startseite, Navigation, Kacheln, Restzeit, Meldungen, Spielzimmer.
-- `web/js/spiele/*.js`: je Spiel ein ES-Modul (Snake, Memory, Drei gewinnt, Echo, Duell, Malen, Musik, Bass,
+- `web/js/spiele/*.js`: je Spiel ein ES-Modul (Snake, Memory, Drei gewinnt, Echo, Duell, Malen, Musik, Bass, Mein Tag (6.2),
   Lernen, Sticker, Witze, Gutschein, Wecker, Nachrichten). Gemeinsames in `spiele/kern.js`.
-  6.0: `spiele/stimme.js` (Stimmlinie, Stimmgerät, Pegel) für Singen, Ton-Treffer, Rakete und Stimmgerät.
+  6.0: `spiele/stimme.js` (Stimmlinie, Stimmgerät, Pegel) für Singen, Ton-Treffer, Rakete und Stimmgerät; 6.8.1: `stimmHz()` erkennt
+  Stimmen von 80 bis 1000 Hz (alle Stimm-Spiele), `bass.tonhoehe()` bleibt für Bass und Stimmgerät. `spiele/stimmspiele.js` (6.8): Möwenflug, Drache, Klatsch-Läufer, Ton-Kanone.
   `gemeinsam.js`: `bild(emoji)` liefert das 3D-Bild aus `web/icons/` (Fluent Emoji, MIT), sonst das Emoji als Text;
   `franzi(stimmung)` zeichnet das Maskottchen (froh, jubel, staunen, schlaf) als festes SVG. Die Hintergrund-Motive
   `web/hintergrund/*.svg` erzeugt `werkzeuge/hintergruende.py`. Bewegung nur mit transform/opacity (Pi 3).
@@ -244,7 +251,19 @@ Startseite schreibt (`__FF_TOKEN__`). Eltern-Aufrufe brauchen eine PIN-Sitzung (
   `#reiter/bereich` mit `history.pushState`, damit die Zurück-Taste des Handys zuklappt; ein einzelner Bereichsname und
   `ALTE_SEITEN` führen alte Lesezeichen weiter. `hilfe()` klappt lange Erklärungen hinter „ℹ️“ ein. Neue Einstellungen
   als Karte in den passenden Bereich hängen, nicht als neue Seite.
-- `web/js/youtube.js`, `video.js`, `hoerbuch.js`: eigene Player.
+- 6.2–6.8: `spiele/meintag.js` (Mein Tag: Listen, Zeit-Scheibe, Zahnputz-Timer, Ranzen, Aufgaben, Lesen, Franzi-Sachen),
+  `spiele/stimmspiele.js` (Möwenflug, Drache, Klatsch-Läufer, Ton-Kanone), `spiele/steine.js`, `spiele/labyrinth.js`
+  (Raycasting in 320 × 180), `spiele/huepfen.js` (Jump'n'Run, Level als Textbilder), `spiele/hilfe.js`. Franzi (6.9.43: aus gezeichneten Ebenen in `web/bilder/franzi/`, `gemeinsam.js` `franzi()`, erzeugt mit `werkzeuge/franzi_bilder.py`; v8: Kleidung als 512er-Ebenen `kleid-*`, Antennen a/b in grün/rot mit `franziBlinken()`, Gold-Glanz per SVG-Maske, Gitarren-Animation `gitarre-*`, `franziEcke()` für Musik/Filme/Wetter). Franzis Zimmer: `spiele/franzi.js` (Reiter, Einrichten, Anfassen `DING_AKTIONEN`/`dingAnfassen`, Musikbox mit `spiele/tanzen.js`), Räume `spiele/franzi-raum.js` (`RAUM_BILDER`), Gegenstände `spiele/dinge.js` (SVG, gezeichnete PNG in `web/bilder/dinge/` mit `liste.json` haben Vorrang). Franzis Ausstattung
+  zeichnet `gemeinsam.js` (`setzeFranzi()`, Welt-Ausstattung je `body[data-thema]`); Welten-Bewegung in `gestalten.js`
+  (`#welt-deko`), Welt-Klänge in `spiele/kern.js` (`WELT_TOENE`). Spiele zeichnen höchstens 30-mal je Sekunde und nur, was
+  sich bewegt; Emojis auf Leinwänden immer mit der Schrift „FF Emoji“ und deckender Farbe.
+- 6.8.7: Diashow in `start.js` (`schonerPruefen(true)` nur von Hand, `bildFuerSchirm()` verkleinert per `createImageBitmap`,
+  zwei Leinwände mit einer Überblendung je 10 s); Fotoalbum mit gemerkten Miniaturen (`miniatur()`) und einmal gebautem Raster.
+- `web/js/youtube.js`, `video.js`, `hoerbuch.js`: eigene Player. 6.9.51: `video.js` ist eine Streaming-Seite (Titelbild,
+  Reihen, Meine Liste, Staffeln/Folgen, Fortschritt je Titel, nächste Folge automatisch); 6.9.48: `musik.js` für die Kachel
+  Musik (Alben, Lieblingslieder, Zufall/Wiederholen, ohne Schlaf-Timer; `musikQuelle`/`musikSpieler` nutzt auch die
+  Musikbox bei Franzi), `spiele/tanzen.js` Schlag-Erkenner für Franzis Tanz (6.9.50).
+- `web/js/weckklang.js` (6.6): Geräusche der Weckszenen Ostsee und Wald aus WebAudio (Rauschen, Filter, Oszillatoren), lauter werdend.
 - `web/retro.html`: Platzhalter-Seite, falls Chromium während eines Spiels nicht beendet werden konnte.
 - `web/fonts/emoji.ttf`: Ausschnitt aus Noto Color Emoji (das Gerät hat keine Emoji-Schrift). Nach neuen Emojis im Code
   `werkzeuge/emoji_schrift.py` ausführen.
@@ -265,6 +284,12 @@ Kürzel. Ohne jedes Kürzel lädt labwc seine Vorgaben, und dann öffnet Strg+Al
 **eingabe.py** läuft als root. Es liest CEC (ein `cec-client`), Controller und Tastatur-Sondertasten und schreibt auf
 eine virtuelle Tastatur (uinput). Die Sondertasten einer Tastatur (Zurück, Home, Menü, Medien) legt
 `system/udev/90-fernsehfranzi-tastatur.hwdb` im Kernel auf eigene Codes um, damit Chromium sie nicht selbst ausführt.
+CEC-Befehle des Servers (`standby`, `an`, `test`) holt eingabe.py mit dem Status ab. 6.1: Mit `pow 0` fragt es den
+Zustand des Fernsehers ab; der Test (aus, 15 s, an) und das Wecken bei ausgeschaltetem Fernseher melden das Ergebnis an
+`POST /api/geraet/cec-test` (nur mit Kiosk-Token). Der Server schaltet nachts nur in den Standby (`hub.nachts_aus`),
+wenn kein Wecker in den nächsten 18 Stunden ansteht oder das Einschalten per CEC geprüft ist – sonst bleibt der
+Nachthimmel. 6.8.6: Meldet der Server `fragen_host` (eine Seite wurde gerade gesperrt und „Mama/Papa fragen“ ist an),
+schicken ROT, Controller-Y und die Suche-Taste der Tastatur `POST /api/frage` statt ihrer sonstigen Aufgabe.
 
 **RetroPie** läuft als `fernsehfranzi-retropie.service` auf tty8 mit echtem Terminal (`TTYPath`, `StandardInput=tty-force`).
 EmulationStation ist im Kiosk-Modus, RetroArch ebenfalls (`kiosk_mode_enable`). Der Server spricht mit RetroArch über
@@ -289,7 +314,11 @@ Code liegt auf dem Gerät in `~/fernsehfranzi/`, Daten in `~/fernsehfranzi-daten
 | `zeitkonto.json`, `woche.json` | Zustand des Zeitkontos, Wochenübersicht |
 | `pin.json` | PIN-Hash und Sperre |
 | `familie.json` | Nachrichten, Erinnerungen, Sticker, Bass-Tagebuch |
-| `gutscheine.json`, `hoerbuch.json`, `nutzung.json`, `domains.json` | Gutscheine, Hörbuch-Stände, Statistik, gesehene Domains |
+| `gutscheine.json`, `hoerbuch.json`, `nutzung.json`, `domains.json` | Gutscheine, Hörbuch-Stände (6.9.48/51: dazu `<app>#favoriten`, `<app>#fortschritt`), Statistik, gesehene Domains |
+| `bilder/hintergruende/`, `bilder/plaetze/` | 6.9.42/6.9.52: eigene Hintergründe und Bilder für Bild-Plätze (haben Vorrang vor `web/bilder/`) |
+| `geraet.json` (6.1) | Ergebnis des CEC-Tests: lässt sich der Fernseher aus- und einschalten, wann geprüft |
+| `meintag.json` (6.2) | Mein Tag: heute abgehakte Schritte und wann eine Liste geschafft war (neuer Tag = leer) |
+| `zuletzt.json` (6.0) | „Weiter, wo du warst“ auf der Startseite |
 | `scraper.json`, `spiel-start.json`, `whitelist-richtlinie.json` | Übergabedateien an Dienste und Helfer |
 | `telegram-verlauf.json` | 4.3: Nachrichten je Telegram-Kontakt (die letzten 50, 30 Tage) und wartende Nachrichten; nicht in der Sicherung |
 | `medien/` | 4.4: Fotos, Sprachnachrichten, Musik und Videos von Telegram (7 Tage, höchstens 200 MB) |
@@ -317,6 +346,9 @@ Neue Felder bekommen einen Vorgabewert im Code. Ändert sich der Aufbau, wird `S
 - Karaoke: Das Anmelde-Cookie der Klassenkiste liest kiosk.py über DevTools (`Storage.getCookies`) und gibt es nur an
   den eigenen Server; der Server hält es im Speicher (10 Minuten), nutzt es nur für zwei GET-Anfragen und gibt es nie an
   einen Browser.
+- Mikrofon (Lesen üben, Stimm-Spiele, Singen): nur Pegel und Tonhöhe im Browser, nie aufgenommen, gespeichert oder versendet.
+- 6.8.5/6.8.6: Hilfe-Knopf und „Mama/Papa fragen“ ab Werk aus, nur mit Telegram-Eltern-Kontakt; eine erlaubte Seite landet
+  in `whitelist.zusatz` (für die Eltern sichtbar und löschbar). ROT/Y/Suche fragen nur in den 3 Minuten nach einer Sperre.
 - Strenge Content-Security-Policy auf allen Seiten. Bilder aus `blob:` sind erlaubt (Bildschirmfoto, Zeichnungen).
 
 ## 12 · Entwicklungsumgebung, Prüfungen und Tests
@@ -423,6 +455,13 @@ Jede dieser Lehren hat einmal einen Fehlschlag gekostet.
 | 24 | `.overlay-inhalt` legt Teile nebeneinander und zentriert sie. Höhere Inhalte (Karaoke) ragen sonst über den Kopf; für Spalten-Ansichten `flex-direction: column`. |
 
 ## 16 · Bekannte Grenzen und Ideen
+
+**Grenzen von 6.8 (am Gerät noch zu messen)**
+
+- Neue Spiele (Steine-Brecher, Labyrinth, Franzi hüpft, Stimm-Spiele) und Welten-Bewegung: am Pi 3 bisher nur lokal getestet.
+- Die Diashow hat den Pi 3 auf 60 °C mit Drosselung gebracht (6.8.1); 6.8.7 ist sparsamer, aber noch nicht gemessen.
+- „Mama/Papa fragen“: ob der Hinweis auf Chromiums eigener Sperrseite erscheint, zeigt erst das Gerät (lokal keine Richtlinie).
+- Stimmen-Erkennung (`stimmHz`) mit echten Kinderstimmen und dem USB-Mikro noch nicht abgeglichen (Schwellen 0.04–0.06).
 
 **Grenzen von 5.0.0**
 

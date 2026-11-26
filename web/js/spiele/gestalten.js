@@ -3,17 +3,39 @@
  * 6.0: Startseite „Zuhause + Ordner“ - höchstens 6 Lieblinge stehen ganz oben auf „Zuhause“; die Ansichten von 5.0 gibt es
  *      nicht mehr (die Einstellung bleibt gespeichert, wird aber nicht mehr gebraucht).
  * ↑ ↓ wählen · OK ⭐ an/aus · ← → Farbe (oberste Zeile) · STOP fertig */
-import { el } from "../gemeinsam.js";
+import { el, franzi } from "../gemeinsam.js";
 import { kopf, ton } from "./kern.js";
 
 /* Vorgabe, falls der Server (noch) keine Liste schickt */
 export const THEMEN = [["blau", "🔵 Blau"], ["gruen", "🟢 Grün"], ["lila", "🟣 Lila"], ["rot", "🔴 Rot"], ["schwarz", "⚫ Schwarz"]];
 
 /* 5.0: Design auf der Startseite zeigen (data-thema + Klasse „hell“) */
+/* 6.7: Welten bringen ruhige Bewegung mit - wenige Teile, nur transform/opacity (Pi 3) */
+const WELT_DEKO = {
+  rock: () => [8, 22, 38, 55, 71, 88].map((x, i) => ["welt-flamme", `left:${x}%;animation-delay:-${(i * 0.37).toFixed(2)}s`]),
+  unterwasser: () => [6, 15, 27, 62, 78, 91].map((x, i) => ["welt-blase", `left:${x}%;animation-delay:-${i * 2.3}s;animation-duration:${12 + (i % 3) * 3}s`]),
+  raumstation: () => Array.from({ length: 14 }, (_, i) => ["welt-stern",
+    `left:${(i * 53) % 97}%;top:${(i * 37) % 70}%;animation-delay:-${(i * 0.41).toFixed(2)}s`]),
+};
+function weltDeko(thema) {
+  let box = document.getElementById("welt-deko");
+  if ((box?.dataset.welt || "") === (WELT_DEKO[thema] ? thema : "")) return;
+  box?.remove();
+  document.getElementById("franzi-kopf")?.replaceChildren(franzi("froh"));     /* Welt-Ausstattung an/aus */
+  if (!WELT_DEKO[thema]) return;
+  box = el("div", { id: "welt-deko", "data-welt": thema, "aria-hidden": "true" },
+    ...WELT_DEKO[thema]().map(([klasse, stil]) => el("i", { class: klasse, style: stil })));
+  document.body.prepend(box);
+  if (welteingang) ton("sieg");                                   /* 6.8.3: jede Welt klingt anders (kern.js) */
+}
+let welteingang = false;
+
 export function designZeigen(thema, hell, ansicht) {
   document.body.dataset.thema = thema || "blau";
   document.body.classList.toggle("hell", Boolean(hell));
   if (ansicht) document.body.dataset.ansicht = ansicht;
+  weltDeko(document.body.dataset.thema);
+  welteingang = true;                                             /* beim ersten Laden still, danach mit Klang */
 }
 const ANSICHTEN = [{ id: "konsole", name: "🎮 Konsole" }];
 

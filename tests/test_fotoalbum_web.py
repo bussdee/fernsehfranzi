@@ -30,7 +30,7 @@ JPEG = base64.b64decode(
 @unittest.skipIf(sync_playwright is None, "Playwright fehlt – make venv")
 @unittest.skipUnless(port_frei(8765), "Port 8765 belegt (läuft make v3-lokal?)")
 class FotoalbumImBrowser(unittest.TestCase):
-    def test_foto_ins_album_und_bildschirmschoner(self):
+    def test_foto_ins_album_und_diashow(self):
         ordner = tempfile.mkdtemp(prefix="ff-foto-")
         self.addCleanup(shutil.rmtree, ordner, True)
         hub = neuer_hub(ordner, Uhr(MITTWOCH))
@@ -77,20 +77,17 @@ class FotoalbumImBrowser(unittest.TestCase):
             seite.keyboard.press("Enter")                                # Menü des Album-Bildes
             seite.wait_for_selector(".fa-menue")
             seite.keyboard.press("Enter")                                # ⭐ zeigen
-            seite.wait_for_selector(".fa-stern")
+            seite.wait_for_selector(".fa-kachel.mit-stern .fa-stern")
             self.assertEqual(hub.fotoalbum()["auswahl"], ["album:" + hub.album_liste()[0]["datei"]])
-            seite.keyboard.press("ArrowUp")                              # zur Leiste
-            for _ in range(2):                                           # Album · Bilder · Bildschirmschoner
-                seite.keyboard.press("ArrowRight")
-            seite.keyboard.press("Enter")
-            for _ in range(30):
-                if hub.fotoalbum()["bildschirmschoner"]:
-                    break
-                seite.wait_for_timeout(100)
-            self.assertTrue(hub.fotoalbum()["bildschirmschoner"])
+            seite.wait_for_selector(".fa-kachel.fa-foto canvas, .fa-kachel.fa-foto img", state="attached")   # 6.8.7: Miniatur (Test-JPEG: Notweg)
             seite.screenshot(path=os.path.join(REPO, ".local", "bildschirm", "fotoalbum.png"))
-            seite.keyboard.press("Escape")
-            seite.wait_for_timeout(300)
+            seite.keyboard.press("ArrowUp")                              # zur Leiste
+            for _ in range(2):                                           # Album · Bilder · ▶ Diashow
+                seite.keyboard.press("ArrowRight")
+            seite.keyboard.press("Enter")                                # 6.8.7: Diashow nur noch von Hand
+            seite.wait_for_selector("#schoner .dia-bild", state="attached")   # (das 2×2-Test-JPEG lässt sich nicht entpacken)
+            seite.keyboard.press("Escape")                               # eine Taste beendet sie
+            seite.wait_for_selector("#schoner", state="detached")
             seite.evaluate("() => { window.__ffTest = true; }")
             urls = seite.evaluate("""async () => { const fa = await (await fetch('/api/fotoalbum')).json(); return fa.auswahl; }""")
             self.assertEqual(len(urls), 1)

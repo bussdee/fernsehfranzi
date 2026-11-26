@@ -21,7 +21,7 @@ import urllib.request
 from datetime import datetime, timedelta
 from urllib.parse import urlsplit
 
-from . import daten, design as design_mod, klaenge as klaenge_mod, kinderwelten as kinderwelten_mod, news as news_mod, schule as schule_mod, wetter as wetter_mod, ferien as ferien_mod, qr, raum as raum_mod, system as system_mod, sicherung as sicherung_mod, telegram as telegram_mod, familie as familie_mod, gutschein as gutschein_mod, hoerbuch, nutzung as nutzung_mod, katalog as katalog_mod, wecker as wecker_mod, youtube as youtube_mod, pin as pin_mod, whitelist, zeitkonto
+from . import sprueche as sprueche_mod, archiv as archiv_mod, bilder as bilder_mod, daten, franzi as franzi_mod, design as design_mod, klaenge as klaenge_mod, meintag as meintag_mod, kinderwelten as kinderwelten_mod, news as news_mod, schule as schule_mod, wetter as wetter_mod, ferien as ferien_mod, qr, raum as raum_mod, system as system_mod, sicherung as sicherung_mod, telegram as telegram_mod, familie as familie_mod, gutschein as gutschein_mod, hoerbuch, nutzung as nutzung_mod, katalog as katalog_mod, wecker as wecker_mod, youtube as youtube_mod, pin as pin_mod, whitelist, zeitkonto
 
 log = logging.getLogger("fernsehfranzi.hub")
 
@@ -58,6 +58,16 @@ SPIELZIMMER = [
     {"id": "spiel-schule", "name": "Schule", "zeit": "frei", "sperr_erlaubt": "alle", "lernen": True},
     {"id": "spiel-kinderwelten", "name": "Geschichten & Rätsel", "zeit": "frei", "lernen": True},
     {"id": "spiel-news", "name": "Kinder-News", "zeit": "frei"},
+    {"id": "spiel-stimme", "name": "Stimm-Spiele", "zeit": "gaming"},
+    {"id": "spiel-steine", "name": "Steine-Brecher", "zeit": "gaming"},              # 6.8.2: eigene Spiele
+    {"id": "spiel-labyrinth", "name": "3D-Labyrinth", "zeit": "gaming"},
+    {"id": "spiel-huepfen", "name": "Franzi hüpft", "zeit": "gaming"},               # 6.8.4: Jump'n'Run                 # 6.8: mit der Stimme steuern
+    {"id": "spiel-hilfe", "name": "Ich brauche Hilfe", "zeit": "frei", "sperr_erlaubt": "alle"},   # 6.8.5: Telegram an die Eltern
+    {"id": "spiel-meintag", "name": "Mein Tag", "zeit": "frei", "sperr_erlaubt": "alle"},   # 6.2: Routinen abhaken
+    {"id": "spiel-franzi", "name": "Franzi", "zeit": "frei"},                         # 6.9: Franzi als Haustier + Sterne-Shop
+    # 6.9.41: Archiv-Ordner der Eltern (nur freigegebene Filme/Musik; Kachel erst mit Ordner und Freigabe)
+    {"id": "archiv-video", "name": "Filme", "zeit": "zaehlt", "typ": "video", "symbol": "film"},
+    {"id": "archiv-musik", "name": "Musik", "zeit": "frei", "typ": "hoerbuch", "symbol": "musik"},
 ]
 HANDYSPIELE_PORT = 8767
 KK_LIED = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -77,7 +87,8 @@ EINSTELLUNGEN_FELDER = {"name": str, "untertitel": str, "geburtstage": list, "ze
                         "youtube": dict, "inhalte": dict, "sticker_eigen": list,
                         "startseite": dict, "telegram": dict, "handyspiele": dict, "speicher": dict, "fotoalbum": dict,
                         "spielzimmer": dict, "design": dict, "wetter": dict, "schule": dict, "kinderwelten": dict,
-                        "news": dict, "klaenge": dict}
+                        "news": dict, "klaenge": dict, "meintag": dict, "hilfe": dict, "fragen": dict, "franzi": dict, "archiv": dict, "bildschirm": dict, "kachel_reihenfolge": dict,
+                        "erst_dann": dict}
 ROMS = os.path.expanduser("~/RetroPie/roms")
 GAMELISTS = [os.path.expanduser("~/.emulationstation/gamelists"),
              "/opt/retropie/configs/all/emulationstation/gamelists"]
@@ -137,6 +148,8 @@ class Hub:
         self._hoerbuch_spielt_bis = 0             # 3.3: Hörbuch spielt (Nachtruhe wartet auf den Sleep-Timer)
         self._dunkel_bis = 0                      # 3.4: Einschlafbild ist zu sehen
         self.nachtruhe = False                    # 3.4: Fernseher ist für die Nacht aus - bis zur nächsten Taste still
+        self.nachthimmel = False                  # 6.1: statt Standby (Wecker nicht sicher) - dunkler Nachthimmel
+        self._cec_test = None
         self._sperr_erledigt = set()              # "Name@Beginn" - Umschalten zu Beginn einer Sperrzeit nur einmal
         self.familie = familie_mod.Familie(self)
         self.gutscheine = gutschein_mod.Gutscheine(self._pfad("gutscheine.json"))
@@ -146,6 +159,9 @@ class Hub:
         self.telegram = telegram_mod.Telegram(self)      # 4.0: Nachrichten der Familie per Telegram
         self.telegram.neu_starten()
         self._wecker_erledigt = set()
+        self._meintag_erledigt = set()             # 6.2: Erinnerungen von Mein Tag (je Tag einmal)
+        self.meintag_zustand = daten.lies_json(self._pfad("meintag.json"), {}) or {}
+        self.franzi_zustand = daten.lies_json(self._pfad("franzi.json"), {}) or {}     # 6.9
         self.wetter = wetter_mod.Wetter(self)                    # 5.0: Wetter und Regenzeiten
         self.schule = schule_mod.Schule(self)                    # 5.0: Klassenkiste (nur lesen)
         self.kinderwelten = kinderwelten_mod.Kinderwelten(self)  # 5.0: Familienfabrik (nur lesen)
@@ -270,7 +286,210 @@ class Hub:
         """4.6: eingebaute Spiele und Kacheln mit den Einstellungen der Eltern (an/aus, Zeitart, Limit, Sperrzeiten,
         Bewegungspause)."""
         eigen = self.einstellungen.get("spielzimmer") or {}
-        return [dict(e, **eigen.get(e["id"], {})) for e in SPIELZIMMER]
+        archiv = archiv_mod.einstellungen(self.einstellungen.get("archiv"))
+        return [dict(e, **eigen.get(e["id"], {}), **({"start": archiv[archiv_mod.APP_ART[e["id"]]]["ordner"]}
+                                                      if e["id"] in archiv_mod.APP_ART else {})) for e in SPIELZIMMER]
+
+    # ------------------------------------------------------------ 6.9.47: Bildschirmschoner und Standby
+    SCHONER_WAHL = (0, 2, 5, 10, 15, 30)            # Minuten ohne Eingabe; 0 = aus
+    STANDBY_WAHL = (0, 15, 30, 60, 90, 120)          # 0 = aus (ab Werk)
+    STANDBY_WARNUNG_S = 60
+
+    def bildschirm(self):
+        b = self.einstellungen.get("bildschirm") or {}
+        return {"schoner_min": b.get("schoner_min", 5) if b.get("schoner_min", 5) in self.SCHONER_WAHL else 5,
+                "standby_min": b.get("standby_min", 0) if b.get("standby_min", 0) in self.STANDBY_WAHL else 0}
+
+    # 6.9.66: „Erst-dann“ - Spiele (Gaming-Zeit) erst, wenn heute gelernt oder eine Mein-Tag-Liste geschafft ist. Ab Werk aus.
+    ERST_DANN_LERNEN = (0, 5, 10, 15, 20, 30, 45, 60)
+
+    def erst_dann(self):
+        e = self.einstellungen.get("erst_dann") or {}
+        return {"aktiv": e.get("aktiv") is True,
+                "lernen_min": e.get("lernen_min", 15) if e.get("lernen_min", 15) in self.ERST_DANN_LERNEN else 15,
+                "liste": e.get("liste", True) is not False}
+
+    def _erst_dann_offen(self, jetzt):
+        """None, wenn Spiele frei sind - sonst ein kindgerechter Satz, was noch fehlt."""
+        e = self.erst_dann()
+        if not e["aktiv"]:
+            return None
+        z = self.familie.zustand
+        gelernt = 0 if z.get("lern_datum") != jetzt.date().isoformat() else (z.get("lern_s", 0) + z.get("lern_offen_s", 0)) // 60
+        if e["lernen_min"] and gelernt >= e["lernen_min"]:
+            return None
+        if e["liste"] and self.meintag()["aktiv"]:
+            mz = meintag_mod.zustand_fuer(self.meintag_zustand, jetzt.date())
+            if mz.get("geschafft"):
+                return None
+        teile = []
+        if e["lernen_min"]:
+            teile.append("noch %d Minuten lernen" % max(1, e["lernen_min"] - gelernt))
+        if e["liste"] and self.meintag()["aktiv"]:
+            teile.append("eine Liste in „Mein Tag“ schaffen")
+        if not teile:
+            return None
+        return "Erst-dann: " + " oder ".join(teile) + " – dann geht's los!"
+
+    def _standby_takt(self, laeuft, ruhig):
+        """Fernseher aus, wenn lange niemand eine Taste drückt und keine App läuft (Video, Hörbuch, Spiel, Retro).
+        Eine Minute vorher ein Hinweis; ist der Wecker nicht sicher, bleibt der Nachthimmel (nachts_aus)."""
+        minuten = self.bildschirm()["standby_min"]
+        beschaeftigt = self.aktuell or laeuft or self.hoerbuch_laeuft() or self.wecker_laeuft or self.nachtruhe
+        if not minuten or beschaeftigt or ruhig < minuten * 60 - self.STANDBY_WARNUNG_S:
+            self._standby_stand = None
+            return
+        stand = getattr(self, "_standby_stand", None)
+        if stand is None:
+            self._standby_stand = "gewarnt"
+            self.auftrag("hinweis", text="Niemand drückt eine Taste – in einer Minute schalte ich den Fernseher aus.")
+        elif stand == "gewarnt" and ruhig >= minuten * 60:
+            self._standby_stand = "aus"
+            self.nachts_aus("Standby nach %d Minuten ohne Eingabe" % minuten)
+
+    # ------------------------------------------------------------ 6.9.42: eigene Hintergründe der Startseite
+    def _hintergrund_ordner(self):
+        return self._pfad(os.path.join("bilder", "hintergruende"))
+
+    def hintergruende(self):
+        return bilder_mod.liste(self._hintergrund_ordner())
+
+    def hintergrund_datei(self, name):
+        """Pfad einer hochgeladenen Hintergrund-Datei (nur gültige Namen) oder ValueError."""
+        if not isinstance(name, str) or not bilder_mod.NAME.match(name):
+            raise ValueError("Unbekanntes Bild.")
+        pfad = os.path.join(self._hintergrund_ordner(), name)
+        if not os.path.isfile(pfad):
+            raise ValueError("Das Bild gibt es nicht mehr.")
+        return pfad
+
+    def hintergrund_speichern(self, inhalt):
+        """Ein Bild der Eltern (Bytes) prüfen und ablegen. Rückgabe: Dateiname."""
+        import hashlib
+        endung = bilder_mod.pruefe_hintergrund(inhalt)
+        ordner = self._hintergrund_ordner()
+        if len(self.hintergruende()) >= bilder_mod.HINTERGRUND_ANZAHL:
+            raise ValueError("Es sind schon %d Bilder da – bitte erst eins löschen." % bilder_mod.HINTERGRUND_ANZAHL)
+        os.makedirs(ordner, exist_ok=True)
+        name = "hg-%s.%s" % (hashlib.sha1(inhalt).hexdigest()[:12], endung)
+        ziel = os.path.join(ordner, name)
+        with open(ziel + ".neu", "wb") as f:
+            f.write(inhalt)
+        os.replace(ziel + ".neu", ziel)
+        log.info("Eigener Hintergrund gespeichert: %s (%d KB).", name, len(inhalt) // 1024)
+        return name
+
+    def hintergrund_loeschen(self, name):
+        pfad = self.hintergrund_datei(name)
+        d = dict(self.einstellungen.get("design") or {})
+        hg = {k: v for k, v in (d.get("hintergruende") or {}).items() if v != name}
+        if hg != (d.get("hintergruende") or {}):
+            d["hintergruende"] = hg
+            self.einstellungen_aendern({"design": d})
+        os.remove(pfad)
+        log.info("Eigener Hintergrund gelöscht: %s.", name)
+
+    def hintergrund_ordner_liste(self):
+        """Bilder im FileBrowser-Ordner der Eltern (oberste Ebene)."""
+        link = design_mod.einstellungen(self.einstellungen.get("design"))["hintergrund_ordner"]
+        if not link:
+            return []
+        return [t["pfad"] for t in hoerbuch.liste(link, "", endungen=hoerbuch.BILD)["titel"]][:200]
+
+    def hintergrund_aus_ordner(self, pfad):
+        """Ein Bild aus dem FileBrowser-Ordner als eigene Kopie übernehmen (läuft dann auch ohne Server)."""
+        link = design_mod.einstellungen(self.einstellungen.get("design"))["hintergrund_ordner"]
+        if not link:
+            raise ValueError("Es ist kein Bilder-Ordner eingetragen.")
+        adresse = hoerbuch.bild_adresse(link, pfad)
+        try:
+            with urllib.request.urlopen(urllib.request.Request(adresse, headers={"User-Agent": "FernsehFranzi"}), timeout=30) as a:
+                inhalt = a.read(bilder_mod.HINTERGRUND_MAX_BYTES + 1)
+        except OSError as fehler:
+            raise ValueError("Das Bild ist gerade nicht erreichbar (%s)." % fehler) from None
+        return self.hintergrund_speichern(inhalt)
+
+    # ------------------------------------------------------------ 6.9.52: Bild-Plätze (eigene Bilder statt der Vorgaben)
+    def _bildplatz_ordner(self):
+        return self._pfad(os.path.join("bilder", "plaetze"))
+
+    def bildplatz_datei(self, platz):
+        """Pfad eines eigenen Bildes für einen Platz (z. B. "raeume/raum-1.jpg") oder None."""
+        if platz not in bilder_mod.BILDPLAETZE:
+            return None
+        pfad = os.path.join(self._bildplatz_ordner(), platz.replace("/", "__"))
+        return pfad if os.path.isfile(pfad) else None
+
+    def bildplaetze(self):
+        return [{"platz": p, "name": n, "gruppe": g, "min": list(m), "alpha": a, "eigen": bool(self.bildplatz_datei(p))}
+                for p, (n, g, m, _, a) in bilder_mod.BILDPLAETZE.items()]
+
+    def bildplatz_speichern(self, platz, inhalt):
+        bilder_mod.pruefe_bildplatz(platz, inhalt)
+        ordner = self._bildplatz_ordner()
+        os.makedirs(ordner, exist_ok=True)
+        ziel = os.path.join(ordner, platz.replace("/", "__"))
+        with open(ziel + ".neu", "wb") as f:
+            f.write(inhalt)
+        os.replace(ziel + ".neu", ziel)
+        log.info("Eigenes Bild für %s gespeichert (%d KB).", platz, len(inhalt) // 1024)
+
+    def bildplatz_zuruecksetzen(self, platz):
+        pfad = self.bildplatz_datei(platz)
+        if pfad:
+            os.remove(pfad)
+            log.info("Bild-Platz %s zurück zur Vorgabe.", platz)
+
+    # ------------------------------------------------------------ 6.9.41: Archiv-Ordner (Filme, Musik)
+    def archiv(self):
+        return archiv_mod.einstellungen(self.einstellungen.get("archiv"))
+
+    def archiv_bereit(self, art):
+        a = self.archiv()[art]
+        return bool(a["ordner"] and a["freigaben"])
+
+    def _archiv_eintrag_app(self, app, pfad):
+        """Die App, wie sie für einen Eintrag (Film) gilt - mit Belohnung (kein Limit / auch in Sperrzeiten)."""
+        art = archiv_mod.APP_ART.get(app["id"])
+        flaggen = self.archiv()[art]["freigaben"].get(archiv_mod.oberster(pfad)) if art else None
+        return archiv_mod.als_belohnung(app, flaggen) if flaggen else app
+
+    def _archiv_jetzt_erlaubt(self, app, pfad, jetzt):
+        """Ist ein Eintrag freigegeben und darf er jetzt laufen (Zeit, Sperrzeit, je mit Belohnung)?"""
+        art = archiv_mod.APP_ART[app["id"]]
+        if archiv_mod.oberster(pfad) not in self.archiv()[art]["freigaben"]:
+            return False
+        ok, _, _ = self.konto.darf_starten(self._archiv_eintrag_app(app, pfad), jetzt, uhr_sicher=bool(self.uhr_sicher()))
+        return ok
+
+    def _start_app(self, app, jetzt, sicher):
+        """6.9.41: Archiv-Kachel geht auch, wenn nur ein Belohnungs-Film gerade erlaubt ist."""
+        ok, grund, art = self.konto.darf_starten(app, jetzt, uhr_sicher=sicher)
+        if ok and zeitkonto.ist_gaming(app):                 # 6.9.66: Erst-dann
+            fehlt = self._erst_dann_offen(jetzt)
+            if fehlt:
+                return False, fehlt, "zeit"
+        if ok or (app or {}).get("id") not in archiv_mod.APP_ART:
+            return ok, grund, art
+        a = self.archiv()[archiv_mod.APP_ART[app["id"]]]
+        for pfad, flaggen in a["freigaben"].items():
+            if any(flaggen.values()) and self.konto.darf_starten(archiv_mod.als_belohnung(app, flaggen), jetzt, uhr_sicher=sicher)[0]:
+                return True, "", ""
+        return ok, grund, art
+
+    def archiv_inhalt(self, art):
+        """Für die Eltern: oberste Ebene des Archiv-Ordners (Ordner und Dateien) mit Freigabe-Stand."""
+        if art not in archiv_mod.ARTEN:
+            raise ValueError("Unbekanntes Archiv.")
+        a = self.archiv()[art]
+        if not a["ordner"]:
+            return {"eintraege": [], "ordner": ""}
+        l = hoerbuch.liste(a["ordner"], "", endungen=archiv_mod.ARTEN[art]["endungen"])
+        eintraege = [{"pfad": x["pfad"], "name": x["name"], "ordner": True} for x in l["ordner"]] + \
+                    [{"pfad": x["pfad"], "name": x["name"], "ordner": False} for x in l["titel"]]
+        for x in eintraege:
+            x["freigabe"] = a["freigaben"].get(x["pfad"])
+        return {"eintraege": eintraege[:archiv_mod.FREIGABEN_MAX], "ordner": a["ordner"]}
 
     # ------------------------------------------------------------ Hörbücher (3.3)
     def _hoerbuch_app(self, app_id):
@@ -284,19 +503,40 @@ class Hub:
     def hoerbuch_laeuft(self):
         """Spielt gerade ein Hörbuch? (Der Player meldet sich alle 15 s, solange er spielt.)"""
         app = self.app(self.aktuell) if self.aktuell else None
-        return bool(app) and app.get("typ") == "hoerbuch" and self.monoton() < self._hoerbuch_spielt_bis
+        return bool(app) and app.get("typ") == "hoerbuch" and self.aktuell not in archiv_mod.APP_ART \
+            and self.monoton() < self._hoerbuch_spielt_bis          # 6.9.48: Musik ist kein Einschlaf-Hörbuch
 
     def hoerbuch_liste(self, app_id, pfad=""):
         app = self._hoerbuch_app(app_id)
+        if app_id in archiv_mod.APP_ART and pfad and not self._archiv_jetzt_erlaubt(app, pfad, self.uhr()):
+            raise ValueError("Das ist gerade nicht freigegeben.")
         ergebnis = hoerbuch.liste(app["start"], pfad,
                                   endungen=hoerbuch.VIDEO if app["typ"] == "video" else hoerbuch.AUDIO)
+        if app_id in archiv_mod.APP_ART and not hoerbuch.sauberer_pfad(pfad):
+            # 6.9.41: oben nur, was die Eltern freigegeben haben und was gerade laufen darf
+            jetzt = self.uhr()
+            ergebnis["ordner"] = [x for x in ergebnis["ordner"] if self._archiv_jetzt_erlaubt(app, x["pfad"], jetzt)]
+            ergebnis["titel"] = [x for x in ergebnis["titel"] if self._archiv_jetzt_erlaubt(app, x["pfad"], jetzt)]
         ergebnis["stand"] = (daten.lies_json(self._pfad("hoerbuch.json")) or {}).get(app_id)
+        st = ergebnis["stand"]
+        if app_id in archiv_mod.APP_ART and st and not self._archiv_jetzt_erlaubt(app, st.get("titel") or st.get("ordner") or "", self.uhr()):
+            ergebnis["stand"] = None                         # 6.9.41: „Weiterschauen“ nur bei Freigegebenem
+        # 6.9.51: Fortschritt je Titel (nur was hier sichtbar sein darf) und Belohnungs-Zeichen
+        fs = (daten.lies_json(self._pfad("hoerbuch.json")) or {}).get(app_id + "#fortschritt") or {}
+        if app_id in archiv_mod.APP_ART:
+            jetzt = self.uhr()
+            fs = {k: v for k, v in fs.items() if self._archiv_jetzt_erlaubt(app, k, jetzt)}
+            fr = self.archiv()[archiv_mod.APP_ART[app_id]]["freigaben"]
+            ergebnis["belohnung"] = {k: v for k, v in fr.items() if any(v.values())}
+        ergebnis["fortschritt"] = fs
         ergebnis["schlaf_max_min"] = int(self.familie.einstellungen()["hoerbuch"].get("schlaf_max_min", 60))
         return ergebnis
 
     def hoerbuch_cover(self, app_id, ordner):
         """4.0: Adresse des Cover-Bilds eines Ordners (eine Stunde zwischengespeichert) oder None."""
         app = self._hoerbuch_app(app_id)
+        if app_id in archiv_mod.APP_ART and archiv_mod.oberster(ordner) not in self.archiv()[archiv_mod.APP_ART[app_id]]["freigaben"]:
+            return None
         schluessel = (app_id, hoerbuch.sauberer_pfad(ordner))
         treffer = self._cover_cache.get(schluessel)
         if treffer is None or self.monoton() - treffer[1] > 3600:
@@ -309,6 +549,8 @@ class Hub:
 
     def hoerbuch_datei(self, app_id, pfad):
         app = self._hoerbuch_app(app_id)
+        if app_id in archiv_mod.APP_ART and not self._archiv_jetzt_erlaubt(app, pfad, self.uhr()):
+            raise ValueError("Das ist gerade nicht freigegeben.")
         return hoerbuch.datei_adresse(app["start"], pfad, hoerbuch.VIDEO if app["typ"] == "video" else hoerbuch.AUDIO)
 
     def still(self):
@@ -316,28 +558,115 @@ class Hub:
         (kein Gong, kein Countdown), Erinnerungen warten bis morgen (Entscheidung 9.3)."""
         return self.nachtruhe or self.hoerbuch_laeuft() or self.monoton() < self._dunkel_bis
 
-    def hoerbuch_stand(self, app_id, ordner, titel, sekunde, spielt=False, dunkel=False):
-        """Wo das Kind aufgehört hat (je App): beim nächsten Öffnen „Weiterhören“."""
+    FORTSCHRITT_MAX = 120
+
+    def hoerbuch_stand(self, app_id, ordner, titel, sekunde, spielt=False, dunkel=False, dauer=0, fertig=False):
+        """Wo das Kind aufgehört hat (je App): beim nächsten Öffnen „Weiterhören“.
+        6.9.51: dazu der Fortschritt je Titel (Filme/Folgen: Balken, „gesehen“ ✅, Reihe „Weiterschauen“)."""
         self._hoerbuch_app(app_id)
+        if app_id in archiv_mod.APP_ART:                     # 6.9.41: welcher Film läuft (für Belohnungen im Takt)
+            self._archiv_laeuft = (app_id, titel or ordner, self.monoton()) if spielt else None
         self._hoerbuch_spielt_bis = self.monoton() + 60 if spielt else 0
         self._dunkel_bis = self.monoton() + 60 if dunkel else 0
         if not titel:
             return None
-        stand = {"ordner": hoerbuch.sauberer_pfad(ordner), "titel": hoerbuch.sauberer_pfad(titel),
-                 "sekunde": max(0, int(sekunde)), "zeit": self.uhr().isoformat(timespec="seconds")}
+        titel = hoerbuch.sauberer_pfad(titel)
+        jetzt_s = self.uhr().isoformat(timespec="seconds")
+        stand = {"ordner": hoerbuch.sauberer_pfad(ordner), "titel": titel, "sekunde": max(0, int(sekunde)), "zeit": jetzt_s}
         with self.lock:
             alle = daten.lies_json(self._pfad("hoerbuch.json")) or {}
-            alle[app_id] = stand
+            if fertig:
+                if (alle.get(app_id) or {}).get("titel") == titel:
+                    alle.pop(app_id, None)                   # fertig geschaut: kein „Weiterschauen“ mehr dafür
+                stand = None
+            else:
+                alle[app_id] = stand
+            fs = alle.setdefault(app_id + "#fortschritt", {})
+            fs[titel] = {"sekunde": max(0, int(sekunde)), "dauer": max(0, int(dauer or 0)), "zeit": jetzt_s,
+                         "gesehen": bool(fertig) or bool((fs.get(titel) or {}).get("gesehen"))}
+            if len(fs) > self.FORTSCHRITT_MAX:
+                for alt in sorted(fs, key=lambda k: fs[k]["zeit"])[:len(fs) - self.FORTSCHRITT_MAX]:
+                    del fs[alt]
             daten.schreibe_json(self._pfad("hoerbuch.json"), alle)
         return stand
 
+    FAVORITEN_MAX = 300
+
+    def favoriten(self, app_id):
+        """6.9.48: Lieblingslieder/-filme je App (Pfade), z. B. für die Musik-Seite."""
+        self._hoerbuch_app(app_id)
+        return list((daten.lies_json(self._pfad("hoerbuch.json")) or {}).get(app_id + "#favoriten") or [])
+
+    def favorit_setzen(self, app_id, pfad, an):
+        app = self._hoerbuch_app(app_id)
+        pfad = hoerbuch.sauberer_pfad(pfad)
+        if not pfad:
+            raise ValueError("Was soll gemerkt werden?")
+        if app_id in archiv_mod.APP_ART and archiv_mod.oberster(pfad) not in self.archiv()[archiv_mod.APP_ART[app_id]]["freigaben"]:
+            raise ValueError("Das ist gerade nicht freigegeben.")
+        with self.lock:
+            alle = daten.lies_json(self._pfad("hoerbuch.json")) or {}
+            liste = [x for x in (alle.get(app_id + "#favoriten") or []) if x != pfad]
+            if an:
+                liste = [pfad] + liste
+            alle[app_id + "#favoriten"] = liste[:self.FAVORITEN_MAX]
+            daten.schreibe_json(self._pfad("hoerbuch.json"), alle)
+        log.debug("Favorit %s %s: %s", app.get("id"), "an" if an else "aus", pfad)
+        return alle[app_id + "#favoriten"]
+
     def hoerbuch_schlaf_ende(self):
-        """Sleep-Timer abgelaufen: Wiedergabe ist aus, Bild ist schwarz - jetzt den Fernseher ausschalten."""
-        # Kein zurueck(): die Startseite wäre hell, falls der Fernseher CEC ignoriert. Das Bild bleibt schwarz.
-        log.info("Hörbuch: Sleep-Timer abgelaufen - Fernseher aus.")
+        """Sleep-Timer abgelaufen (oder das Hörbuch ist im Dunkeln zu Ende): Fernseher aus - wenn der Wecker ihn sicher
+        wieder einschalten kann, sonst bleibt der Nachthimmel."""
+        # Kein zurueck(): die Startseite wäre hell, falls der Fernseher CEC ignoriert. Das Bild bleibt dunkel.
+        log.info("Hörbuch: Sleep-Timer abgelaufen.")
         self._hoerbuch_spielt_bis = 0
         self.nachtruhe = True
+        return self.nachts_aus("Hörbuch zu Ende")
+
+    # ------------------------------------------------------------ 6.1: Standby nur, wenn der Wecker sicher ist
+    WECKER_VORLAUF = timedelta(hours=18)
+
+    def geraet_info(self):
+        return daten.lies_json(self._pfad("geraet.json")) or {}
+
+    def wecker_bald(self, jetzt=None):
+        """Nächster Wecker (Beginn mit Sonnenaufgang), wenn er in den nächsten 18 Stunden liegt - sonst None."""
+        jetzt = jetzt or self.uhr()
+        naechster = wecker_mod.naechster(self.wecker(), jetzt)
+        return naechster if naechster and naechster - jetzt <= self.WECKER_VORLAUF else None
+
+    def nachts_aus(self, grund):
+        """Fernseher für die Nacht ausschalten (Standby). Steht ein Wecker an und ist nicht geprüft, dass der Fernseher
+        sich per HDMI-CEC wieder einschalten lässt, bleibt er an und zeigt den dunklen Nachthimmel."""
+        bald = self.wecker_bald()
+        if bald and self.geraet_info().get("cec_an") is not True:
+            log.info("%s: Wecker um %s und Einschalten per CEC nicht geprüft - Fernseher bleibt an (Nachthimmel).",
+                     grund, bald.strftime("%H:%M"))
+            self.nachthimmel = True
+            return False
+        log.info("%s: Fernseher aus (Standby).", grund)
         self.cec_befehl("standby")
+        return True
+
+    def cec_test_starten(self):
+        """Eltern-Seite: Fernseher aus, nach 15 s wieder an - eingabe.py fragt jeweils den Zustand ab und meldet ihn."""
+        with self.lock:
+            self._cec_test = {"seit": self.uhr().isoformat(timespec="seconds")}
+        self.cec_befehl("test")
+
+    def cec_test_ergebnis(self, aus, an):
+        ergebnis = {"cec_aus": bool(aus), "cec_an": bool(aus and an), "geprueft": self.uhr().isoformat(timespec="seconds")}
+        with self.lock:
+            info = dict(self.geraet_info(), **ergebnis)
+            daten.schreibe_json(self._pfad("geraet.json"), info)
+            self._cec_test = None
+        log.info("CEC-Test: aus=%s, an=%s", aus, an)
+        return ergebnis
+
+    def cec_test_stand(self):
+        info = self.geraet_info()
+        return {"laeuft": bool(self._cec_test), "cec_an": info.get("cec_an"), "cec_aus": info.get("cec_aus"),
+                "geprueft": info.get("geprueft"), "wecker_bald": (lambda b: b.strftime("%H:%M") if b else None)(self.wecker_bald())}
 
     # ------------------------------------------------------------ Wecker (3.5)
     def wecker(self):
@@ -376,15 +705,15 @@ class Hub:
             self._klingeln(w, faellig[0], jetzt)
         for eintrag, minuten in wecker_mod.sonnenaufgang_faellig(w, jetzt, self._wecker_erledigt):
             log.info("Wecker %s: Sonnenaufgang (%d min).", eintrag["zeit"], minuten)
-            self.nachtruhe, self._dunkel_bis, self._hoerbuch_spielt_bis = False, 0, 0
+            self.nachtruhe, self.nachthimmel, self._dunkel_bis, self._hoerbuch_spielt_bis = False, False, 0, 0
             self.cec_befehl("an")
-            self.auftrag("sonne", minuten=minuten)
+            self.auftrag("sonne", minuten=minuten, szene=eintrag.get("szene", "huegel"))
         if len(self._wecker_erledigt) > 50:
             self._wecker_erledigt = set(list(self._wecker_erledigt)[-20:])
 
     def _klingeln(self, w, eintrag, jetzt):
         log.info("Wecker %s klingelt.", eintrag["zeit"])
-        self.nachtruhe, self._dunkel_bis, self._hoerbuch_spielt_bis = False, 0, 0     # morgens: wach
+        self.nachtruhe, self.nachthimmel, self._dunkel_bis, self._hoerbuch_spielt_bis = False, False, 0, 0     # morgens: wach
         laeuft, _ = self.system.retropie_zustand()
         if laeuft:
             self._retro_beenden()
@@ -414,6 +743,424 @@ class Hub:
             if eintrag:
                 self._schlummer = (self.uhr() + timedelta(minutes=wecker_mod.SCHLUMMERN_MIN), eintrag)
         log.info("Wecker: %s.", aktion)
+
+    # ------------------------------------------------------------ 6.8.5: „Ich brauche Hilfe“
+    HILFE_PAUSE_S = 120
+
+    def hilfe_bereit(self):
+        """Nur wenn die Eltern es eingeschaltet haben und Telegram mit mindestens einem Eltern-Kontakt läuft."""
+        if not (self.einstellungen.get("hilfe") or {}).get("aktiv"):
+            return False
+        t = telegram_mod.einstellungen(self.einstellungen.get("telegram") or {})
+        return bool(t.get("aktiv") and any(c.get("eltern") for c in t.get("chats", [])))
+
+    def hilfe_rufen(self):
+        """Das Kind drückt „Ich brauche Hilfe“: sofort Telegram an alle Eltern-Kontakte. Höchstens alle 2 Minuten."""
+        if not self.hilfe_bereit():
+            raise ValueError("Der Hilfe-Knopf ist gerade aus. Bitte geh zu einem Erwachsenen.")
+        jetzt = self.monoton()
+        if jetzt - getattr(self, "_hilfe_zuletzt", -10 ** 9) < self.HILFE_PAUSE_S:
+            return {"gesendet": [], "schon": True}
+        self._hilfe_zuletzt = jetzt
+        name = self.einstellungen.get("name") or "Dein Kind"
+        namen = self.telegram.melde_eltern("hilfe", "🆘 %s braucht Hilfe und hat am Fernseher den Hilfe-Knopf gedrückt (%s Uhr)."
+                                           % (name, self.uhr().strftime("%H:%M")))
+        log.info("Hilfe-Knopf gedrückt, Telegram an: %s", ", ".join(namen) or "niemanden")
+        return {"gesendet": namen, "schon": False}
+
+    # ------------------------------------------------------------ 6.8.6: „Mama/Papa fragen“ bei gesperrten Seiten
+    FRAGE_GILT_S = 180          # so lange nach dem Sperren gilt ROT als „fragen“
+    FRAGE_PAUSE_S = 600         # dieselbe Seite höchstens alle 10 Minuten
+    FRAGEN_MAX = 20
+
+    def fragen_bereit(self):
+        if not (self.einstellungen.get("fragen") or {}).get("aktiv"):
+            return False
+        t = telegram_mod.einstellungen(self.einstellungen.get("telegram") or {})
+        return bool(t.get("aktiv") and any(c.get("eltern") for c in t.get("chats", [])))
+
+    def seite_gesperrt(self, host):
+        """kiosk.py: Die Whitelist hat gerade eine Seite gesperrt (Hauptseite, nicht Bilder/Werbung)."""
+        host = str(host or "").lower()[:253]
+        if not re.fullmatch(r"[a-z0-9.-]+", host):
+            raise ValueError("Ungültiger Host.")
+        self._gesperrt = {"host": host, "seit": self.monoton()}
+        return {"frage": self.fragen_bereit()}
+
+    def fragen_host(self):
+        g = getattr(self, "_gesperrt", None)
+        if not g or self.monoton() - g["seit"] > self.FRAGE_GILT_S or not self.fragen_bereit():
+            return None
+        return g["host"]
+
+    def fragen_liste(self):
+        return list(getattr(self, "_fragen", []))
+
+    def frage_stellen(self):
+        """ROT (Fernbedienung), Y (Controller) oder Suche (Tastatur) auf der Sperrseite: Telegram an die Eltern."""
+        host = self.fragen_host()
+        if not host:
+            raise ValueError("Gerade ist keine Seite gesperrt.")
+        fragen = self._fragen = getattr(self, "_fragen", [])
+        jetzt = self.monoton()
+        if any(f["host"] == host and jetzt - f["mono"] < self.FRAGE_PAUSE_S for f in fragen):
+            self.auftrag("hinweis", text="Mama und Papa sind schon gefragt – warte kurz auf die Antwort.")
+            return {"schon": True}
+        nr = max([f["nr"] for f in fragen] + [0]) + 1
+        fragen.append({"nr": nr, "host": host, "zeit": self.uhr().strftime("%H:%M"), "stand": "offen", "mono": jetzt})
+        del fragen[:-self.FRAGEN_MAX]
+        name = self.einstellungen.get("name") or "Dein Kind"
+        self.telegram.melde_eltern("fragen", "❓ %s möchte die Seite %s öffnen. Antwort: /erlauben %d oder /ablehnen %d"
+                                   % (name, host, nr, nr))
+        self.auftrag("hinweis", text="Mama und Papa sind gefragt. Du bekommst gleich eine Antwort.")
+        log.info("Frage an die Eltern: %s (Nr. %d)", host, nr)
+        return {"schon": False, "nr": nr}
+
+    def frage_beantworten(self, nr, ja):
+        f = next((f for f in getattr(self, "_fragen", []) if f["nr"] == nr and f["stand"] == "offen"), None)
+        if f is None:
+            raise ValueError("Zu dieser Nummer ist keine Frage offen.")
+        f["stand"] = "ja" if ja else "nein"
+        if ja:
+            self.domains_erlauben([f["host"]])
+            self.familie.nachricht("Mama oder Papa sagen ja: %s geht jetzt. Öffne die Seite einfach nochmal." % f["host"],
+                                   quelle="Antwort")
+        else:
+            self.familie.nachricht("Mama oder Papa sagen: %s lieber nicht." % f["host"], quelle="Antwort")
+        log.info("Frage %d (%s): %s", nr, f["host"], f["stand"])
+        return {k: v for k, v in f.items() if k != "mono"}
+
+    # ------------------------------------------------------------ 6.9: Franzi als Haustier + Sterne-Shop
+    def franzi(self):
+        return franzi_mod.einstellungen(self.einstellungen.get("franzi"))
+
+    def _franzi_sterne(self, jetzt):
+        return int(meintag_mod.zustand_fuer(self.meintag_zustand, jetzt.date())["sterne"])
+
+    FRANZI_WARM_C = 70                       # 6.9.6: ab hier fächelt sich Franzi Luft zu (nur ein Satz, keine Wirkung)
+
+    def _pi_temperatur(self):
+        try:
+            with open("/sys/class/thermal/thermal_zone0/temp", encoding="ascii") as f:
+                return int(f.read().strip()) / 1000
+        except (OSError, ValueError):
+            return None
+
+    def _franzi_level(self, jetzt):
+        """6.9.37: Level-Belohnungen (bis Level 4 Gegenstände, dann Räume) - gesagt beim nächsten Besuch."""
+        if not self.franzi()["aktiv"]:
+            return
+        mz = meintag_mod.zustand_fuer(self.meintag_zustand, jetzt.date())
+        stufe = meintag_mod.level(mz["verdient"])
+        self.franzi_zustand, neu = franzi_mod.level_belohnen(self.franzi_zustand, jetzt, stufe, mz["sammeltage"])
+        if neu:
+            log.info("Franzi: Level %d - neu: %s.", stufe, ", ".join(neu))
+
+    def _franzi_fertig(self, jetzt, satz=None):
+        self._franzi_level(jetzt)
+        reaktion = self.franzi_zustand.pop("reaktion", None) if isinstance(self.franzi_zustand, dict) else None   # 6.9.45
+        daten.schreibe_json(self._pfad("franzi.json"), self.franzi_zustand)
+        try:
+            wetter = franzi_mod.wetter_art((self.wetter.fuer_tv() or {}).get("daten"))
+        except Exception:                                   # noqa: BLE001 - Wetter ist nur Schmuck
+            wetter = None
+        temp = self._pi_temperatur()
+        mz = meintag_mod.zustand_fuer(self.meintag_zustand, jetzt.date())
+        aus = franzi_mod.fuer_tv(dict(self.franzi(), _kind=str(self.einstellungen.get("name") or "")), self.franzi_zustand, jetzt, self._franzi_sterne(jetzt), satz,
+                                 wetter=wetter, warm=bool(temp and temp >= self.FRANZI_WARM_C),
+                                 sammeltage=mz["sammeltage"], reaktion=reaktion, musik=self.archiv_bereit("musik"))
+        try:                                                # 6.9.59: Stern in den letzten 45 Minuten = Franzi ist verliebt
+            aus["lob"] = jetzt - datetime.fromisoformat(mz.get("letzter_stern") or "") < timedelta(minutes=45)
+        except (TypeError, ValueError):
+            aus["lob"] = False
+        aus["spruch"] = self._franzi_spruch(jetzt, aus, wetter)
+        return aus
+
+    def _franzi_spruch(self, jetzt, stand, wetter):
+        """6.9.61: ein passender Satz für die Startseite (Lage aus Mein Tag, Wetter, Kalender)."""
+        try:
+            m, ferien = self.meintag(), self._ferien_heute(jetzt)
+            lage = {"wetter": wetter, "lob": stand.get("lob"), "wochenende": jetzt.weekday() >= 5}
+            if m["aktiv"]:
+                h = meintag_mod.heute(m, jetzt, ferien, self.meintag_zustand)
+                lage["routine"] = meintag_mod.laufende_liste(m, jetzt, ferien, self.meintag_zustand)
+                lage["geschafft"] = next((r["name"] for r in reversed(h["routinen"]) if r["geschafft"]), None)
+                lage["nicht_geschafft"] = next((r["name"] for r in reversed(h["routinen"]) if r["vorbei"] and not r["geschafft"]), None)
+                lage["aufgaben"] = [a["text"] for a in h["aufgaben"] if a.get("stand") not in ("ja", "wartet")]
+            morgen = (jetzt + timedelta(days=1)).date()
+            try:
+                frei_morgen = zeitkonto.in_ferien(morgen, self._regeln())
+            except (KeyError, TypeError, ValueError):
+                frei_morgen = False
+            lage["schule_morgen"] = jetzt.hour >= 15 and morgen.weekday() < 5 and not frei_morgen
+            namen = {k[0]: k[2] for k in franzi_mod.KATALOG}
+            kleid = next((namen[x] for x in stand.get("angezogen") or [] if x in namen and x.startswith("kleid-")), None)
+            lage["kleid"] = kleid
+            return sprueche_mod.waehle(self.franzi().get("sprueche"), jetzt, lage)
+        except Exception:                                   # noqa: BLE001 - ein Satz darf nie die Seite stören
+            log.exception("Franzi-Spruch")
+            return None
+
+    def _franzi_an(self):
+        if not self.franzi()["aktiv"]:
+            raise ValueError("Franzi schläft gerade – Mama oder Papa können sie im Elternbereich wecken.")
+
+    def franzi_stand(self, besuch=False):
+        """Zustand für den Fernseher; besuch=True beim Öffnen (Abenteuer, Gedächtnis-Sätze)."""
+        jetzt = self.uhr()
+        with self.lock:
+            if besuch:
+                self._franzi_level(jetzt)
+                self.franzi_zustand, satz = franzi_mod.besuch(self.franzi(), self.franzi_zustand, jetzt)
+            else:
+                self.franzi_zustand, satz = franzi_mod.altern(franzi_mod._vollstaendig(self.franzi_zustand, jetzt), jetzt), None
+            return self._franzi_fertig(jetzt, satz)
+
+    def franzi_tun(self, aktion, **werte):
+        """pflegen / gespielt / anziehen / raum / stellen."""
+        self._franzi_an()
+        jetzt = self.uhr()
+        with self.lock:
+            z = self.franzi_zustand
+            if aktion == "gespielt":
+                z = franzi_mod.gespielt(z, jetzt, werte.get("spiel"), werte.get("punkte") or 0)
+            elif aktion == "anziehen":
+                z = franzi_mod.anziehen(z, jetzt, werte.get("item"), werte.get("an", True) is not False)
+            elif aktion == "raum":
+                z = franzi_mod.raum_wechseln(z, jetzt, str(werte.get("raum") or ""))
+            elif aktion == "setzen":                          # 6.9.54: frei platzieren
+                z = franzi_mod.setzen(z, jetzt, str(werte.get("item") or ""), werte.get("x"), werte.get("y"))
+            elif aktion == "wegraeumen":
+                z = franzi_mod.wegraeumen(z, jetzt, str(werte.get("item") or ""))
+            else:
+                z = franzi_mod.pflegen(self.franzi(), z, jetzt, aktion)
+            self.franzi_zustand = z
+            return self._franzi_fertig(jetzt)
+
+    def _franzi_tv(self, jetzt, app_id, sekunden, aktiv):
+        """6.9.59: Fernsehzeit des Kindes kostet Franzi Energie/Hunger - alle 5 Minuten gesammelt fortgeschrieben."""
+        if not app_id or not aktiv or not self.franzi()["aktiv"] or not self.franzi_zustand:
+            return
+        self._franzi_tv_s = getattr(self, "_franzi_tv_s", 0) + sekunden
+        if self._franzi_tv_s < 300:
+            return
+        minuten, self._franzi_tv_s = self._franzi_tv_s / 60, 0
+        with self.lock:
+            self.franzi_zustand = franzi_mod.fernsehzeit(self.franzi_zustand, jetzt, minuten)
+            daten.schreibe_json(self._pfad("franzi.json"), self.franzi_zustand)
+
+    def _sterne_ausgeben(self, jetzt, anzahl):
+        mz = meintag_mod.zustand_fuer(self.meintag_zustand, jetzt.date())
+        mz["sterne"] = int(mz["sterne"]) - anzahl
+        self.meintag_zustand = mz
+        self._meintag_speichern()
+
+    def franzi_kaufen(self, item):
+        self._franzi_an()
+        jetzt = self.uhr()
+        with self.lock:
+            self.franzi_zustand, p = franzi_mod.kaufen(self.franzi(), self.franzi_zustand, self._franzi_sterne(jetzt), jetzt, item)
+            self._sterne_ausgeben(jetzt, p)
+            name = next(k[2] for k in franzi_mod.KATALOG if k[0] == item)
+            stand = self._franzi_fertig(jetzt, "Juhu, %s! Danke!" % name)
+        self.telegram.melde_eltern("meintag", "🛍️ Im Sterne-Shop gekauft: %s (%d ⭐)." % (name, p))
+        log.info("Sterne-Shop: %s für %d Sterne.", item, p)
+        return stand
+
+    def franzi_schenken(self, item):
+        """6.9.11: die Eltern schenken Franzi etwas (ohne Sterne)."""
+        jetzt = self.uhr()
+        with self.lock:
+            self.franzi_zustand, name = franzi_mod.schenken(self.franzi_zustand, jetzt, str(item or ""))
+            daten.schreibe_json(self._pfad("franzi.json"), self.franzi_zustand)
+        log.info("Franzi: Geschenk %s.", item)
+        return {"name": name, "besitz": list(self.franzi_zustand["besitz"])}
+
+    def franzi_angebot(self, nr):
+        self._franzi_an()
+        jetzt = self.uhr()
+        with self.lock:
+            einst = self.franzi()
+            a = next((x for x in einst["angebote"] if x.get("nr") == nr), None)
+            if a and a["art"] in ("minuten", "wochenende") and zeitkonto.aktive_sperrzeiten(jetzt, self.konto.regeln) \
+                    and not self.konto.sonder_aktiv(jetzt):
+                raise ValueError("Das kannst du einlösen, wenn gerade keine Pause ist.")
+            self.franzi_zustand, a, p = franzi_mod.angebot_einloesen(einst, self.franzi_zustand, self._franzi_sterne(jetzt), jetzt, nr)
+            self._sterne_ausgeben(jetzt, p)
+            if a["art"] in ("minuten", "wochenende"):
+                self.konto.bonus_frei(jetzt, a["minuten"])
+                text = "⭐ %s: %d Minuten mehr Spielzeit!" % (a["name"], a["minuten"])
+            elif a["art"] == "sperrzeit":
+                self.konto.sonder_frei(jetzt, a["minuten"])
+                text = "⭐ %s: %d Minuten geht alles!" % (a["name"], a["minuten"])
+            else:
+                text = "⭐ Eingelöst: %s – Mama oder Papa wissen Bescheid." % a["name"]
+            self.speichere_konto()
+            stand = self._franzi_fertig(jetzt, "Super, viel Spaß!")
+        self.telegram.melde_eltern("meintag", "🛍️ Angebot eingelöst: %s (%d ⭐)." % (a["name"], p))
+        self.melde(text)
+        return stand
+
+    # ------------------------------------------------------------ Mein Tag (6.2)
+    def meintag(self):
+        return meintag_mod.einstellungen(self.einstellungen.get("meintag"))
+
+    def meintag_bereit(self):
+        m = self.meintag()
+        return bool(m["aktiv"] and (m["routinen"] or m["aufgaben"] or m["ranzen"]["aktiv"] or m["lesen"]["aktiv"]))
+
+    def _schulfaecher(self):
+        stand = (self.schule.fuer_tv() or {}).get("stand") if self.schule.bereit() else None
+        if not stand:
+            return []
+        alle = [x.get("fach") for x in (stand.get("stunden") or []) + ((stand.get("morgen") or {}).get("stunden") or [])]
+        return sorted({f for f in alle if f})
+
+    def _schulmorgen(self):
+        """6.3: nächster Schultag aus der Klassenkiste (nur lesen) - oder None."""
+        stand = (self.schule.fuer_tv() or {}).get("stand") if self.schule.bereit() else None
+        return (stand or {}).get("morgen")
+
+    def _ferien_heute(self, jetzt):
+        try:
+            return zeitkonto.in_ferien(jetzt.date(), self._regeln())
+        except (KeyError, TypeError, ValueError):
+            return False
+
+    def meintag_heute(self, jetzt=None):
+        jetzt = jetzt or self.uhr()
+        with self.lock:
+            h = meintag_mod.heute(self.meintag(), jetzt, self._ferien_heute(jetzt), self.meintag_zustand, self._schulmorgen())
+        if h.get("aktiv") and self.franzi()["aktiv"]:
+            # 6.9.37: Ist Franzi als Haustier an, gibt es nur EINEN Kleiderschrank (bei Franzi). Mein Tag zeigt dann, was die
+            # Level bringen (bis Level 4 Gegenstände, danach Räume) - zum Ansehen, angezogen wird bei Franzi.
+            namen = {k[0]: (k[2], k[3]) for k in franzi_mod.KATALOG}
+            h["sachen"] = [{"level": lv, "art": "belohnung", "id": item, "name": namen[item][0], "symbol": namen[item][1],
+                            "tage": franzi_mod.MIN_TAGE.get(item, 0),
+                            "frei": h["level"] >= lv and h["sammeltage"] >= franzi_mod.MIN_TAGE.get(item, 0), "an": False, "belohnung": True}
+                           for lv, item in franzi_mod.LEVEL_BELOHNUNG]
+        return h
+
+    # 6.9.64: Franzi versteckt sich in Spielen (Labyrinth) - wer sie findet, bekommt höchstens einmal am Tag einen Stern
+    def franzi_versteck_moeglich(self):
+        jetzt = self.uhr()
+        with self.lock:
+            mz = meintag_mod.zustand_fuer(self.meintag_zustand, jetzt.date())
+            return {"aktiv": bool(self.franzi()["aktiv"]), "stern": mz.get("versteck_tag") != jetzt.date().isoformat()}
+
+    def franzi_versteck_gefunden(self):
+        jetzt = self.uhr()
+        with self.lock:
+            if not self.franzi()["aktiv"]:
+                return {"stern": False}
+            mz = self.meintag_zustand = meintag_mod.zustand_fuer(self.meintag_zustand, jetzt.date())
+            if mz.get("versteck_tag") == jetzt.date().isoformat():
+                return {"stern": False}
+            mz["versteck_tag"] = jetzt.date().isoformat()
+            meintag_mod.sterne_geben(mz, jetzt, 1)
+            self._meintag_speichern()
+            if isinstance(self.franzi_zustand, dict) and self.franzi_zustand:
+                franzi_mod.notiere(self.franzi_zustand, jetzt, "spiel", "Im Labyrinth hast du mich gefunden – ein Bonusstern!")
+                daten.schreibe_json(self._pfad("franzi.json"), self.franzi_zustand)
+        log.info("Franzi im Versteck gefunden: Bonusstern.")
+        return {"stern": True}
+
+    def _meintag_speichern(self):
+        daten.schreibe_json(self._pfad("meintag.json"), self.meintag_zustand)
+
+    def ranzen_abhaken(self, nr, an=True):
+        jetzt = self.uhr()
+        with self.lock:
+            self.meintag_zustand, fertig = meintag_mod.ranzen_abhaken(self.meintag(), jetzt, self.meintag_zustand,
+                                                                     self._schulmorgen(), nr, bool(an))
+            self._meintag_speichern()
+        if fertig:
+            log.info("Mein Tag: Ranzen gepackt.")
+        return self.meintag_heute(jetzt)
+
+    def aufgabe_melden(self, nr):
+        """Das Kind sagt „erledigt“ - die Eltern bekommen eine Frage (Telegram /ja nr · /nein nr oder Eltern-Seite)."""
+        jetzt = self.uhr()
+        with self.lock:
+            self.meintag_zustand, a = meintag_mod.aufgabe_melden(self.meintag(), jetzt, self.meintag_zustand, nr)
+            self._meintag_speichern()
+        log.info("Mein Tag: Aufgabe „%s“ gemeldet.", a["text"])
+        self.telegram.melde_eltern("meintag", "%s Aufgabe erledigt: %s – stimmt das? Antwort: /ja %d oder /nein %d"
+                                   % (a.get("symbol") or "📋", a["text"], nr, nr))
+        return self.meintag_heute(jetzt)
+
+    def franzi_anziehen(self, art, kennung):
+        """6.4: Franzi-Sachen (nur freigespielte)."""
+        jetzt = self.uhr()
+        with self.lock:
+            self.meintag_zustand = meintag_mod.franzi_setzen(meintag_mod.zustand_fuer(self.meintag_zustand, jetzt.date()),
+                                                             str(art), str(kennung or ""))
+            self._meintag_speichern()
+        return self.meintag_heute(jetzt)
+
+    def lesen_melden(self, sekunden):
+        """6.5: Vorlese-Zeit (nur gemessen am Pegel des Mikros, nichts aufgenommen)."""
+        jetzt = self.uhr()
+        with self.lock:
+            self.meintag_zustand, stempel = meintag_mod.lesen_melden(self.meintag(), jetzt, self.meintag_zustand, sekunden)
+            self._meintag_speichern()
+        if stempel:
+            log.info("Mein Tag: Lese-Stempel.")
+            self.telegram.melde_eltern("meintag", "📖 Heute %d Minuten vorgelesen – Stempel im Lesepass!" % self.meintag()["lesen"]["ziel_min"])
+        return dict(self.meintag_heute(jetzt), neuer_stempel=stempel)
+
+    def sterne_tauschen(self):
+        """6.4: ein Stern gegen Spielzeit - nur wenn die Eltern es eingeschaltet haben (ab Werk aus)."""
+        jetzt = self.uhr()
+        with self.lock:
+            self.meintag_zustand, minuten = meintag_mod.tauschen(self.meintag(), jetzt, self.meintag_zustand)
+            self._meintag_speichern()
+        self.bonus_minuten(minuten, "⭐ Getauscht: %d Minuten mehr Zeit!" % minuten)
+        log.info("Mein Tag: 1 Stern gegen %d Minuten getauscht.", minuten)
+        return self.meintag_heute(jetzt)
+
+    def aufgabe_bestaetigen(self, nr, ja):
+        jetzt = self.uhr()
+        with self.lock:
+            self.meintag_zustand, a = meintag_mod.aufgabe_bestaetigen(self.meintag(), jetzt, self.meintag_zustand, nr, bool(ja))
+            self._meintag_speichern()
+        sterne = int(a.get("sterne", 1))
+        text = ("Super! %s – du bekommst %d %s." % (a["text"], sterne, "Stern" if sterne == 1 else "Sterne")) if ja else \
+            ("%s – fast geschafft! Schau nochmal nach, dann klappt's." % a["text"])
+        self.familie.nachricht(text, quelle="Mein Tag")
+        return self.meintag_heute(jetzt)
+
+    def meintag_abhaken(self, nr, schritt, an=True):
+        """Das Kind hakt einen Schritt ab (oder wieder weg). Ist die Liste damit geschafft: Meldung an die Eltern."""
+        jetzt = self.uhr()
+        with self.lock:
+            self.meintag_zustand, geschafft = meintag_mod.abhaken(self.meintag(), jetzt, self._ferien_heute(jetzt),
+                                                                  self.meintag_zustand, nr, schritt, bool(an))
+            self._meintag_speichern()
+        if geschafft:
+            log.info("Mein Tag: „%s“ geschafft.", geschafft["name"])
+            puenktlich = (self.meintag_zustand.get("puenktlich") or {}).get(str(nr))
+            self.telegram.melde_eltern("meintag", "✅ %s geschafft (%s Uhr)%s." % (geschafft["name"], jetzt.strftime("%H:%M"),
+                                                                                 " – pünktlich, Bonus-Stern" if puenktlich else ""))
+        return self.meintag_heute(jetzt)
+
+    def _meintag_takt(self, jetzt):
+        m = self.meintag()
+        if not m["aktiv"]:
+            return
+        ferien = self._ferien_heute(jetzt)
+        for r, offen in meintag_mod.erinnerungen_faellig(m, jetzt, ferien, self._meintag_erledigt, self.meintag_zustand):
+            log.info("Mein Tag: Erinnerung „%s“ (%s).", r["name"], "Beginn" if offen is None else "noch %d offen" % offen)
+            # ohne Emoji: Plex-Seiten und RetroArch haben auf dem Gerät keine Emoji-Schrift
+            text = "%s – los geht's!" % r["name"] if offen is None else \
+                "%s – noch %s offen!" % (r["name"], "1 Sache" if offen == 1 else "%d Sachen" % offen)
+            self.familie.nachricht(text, quelle="Mein Tag", klang=r.get("klang"))
+        for r, fertig, anzahl in meintag_mod.nicht_geschafft(m, jetzt, ferien, self._meintag_erledigt, self.meintag_zustand):
+            log.info("Mein Tag: „%s“ nicht geschafft (%d von %d).", r["name"], fertig, anzahl)
+            self.telegram.melde_eltern("meintag", "⏰ %s nicht geschafft (%d von %d erledigt, fertig um %s Uhr)." %
+                                       (r["name"], fertig, anzahl, r["fertig"]))
+        if len(self._meintag_erledigt) > 50:
+            self._meintag_erledigt = set(list(self._meintag_erledigt)[-20:])
 
     # ------------------------------------------------------------ Musik-Akademie: Song-Suche (3.5)
     def musik_suche(self, text):
@@ -532,7 +1279,7 @@ class Hub:
         log.info("Nachtruhe: %s", wahl)
         if wahl == "aus":
             self.nachtruhe = True
-            self.cec_befehl("standby")
+            self.nachts_aus("Nachtruhe")
         elif wahl == "gute-nacht":
             self.gute_nacht_starten()
 
@@ -684,12 +1431,32 @@ class Hub:
                 "pin_gesetzt": bool(self.pin_daten.get("hash")),
                 "cec": dict(self.cec), "pause": self.familie.in_pause(),
                 "pause_rest": self.familie.pause_rest(jetzt),
-                "still": self.still(), "nachtruhe": self.nachtruhe,
+                "still": self.still(), "nachtruhe": self.nachtruhe, "nachthimmel": self.nachthimmel and self.nachtruhe,
+                "sperrzeit": self._sperrzeit_jetzt(jetzt),
                 "wecker": {k: v for k, v in self.wecker_laeuft.items() if k != "vorher"} if self.wecker_laeuft else None,
                 "freunde_spaeter": self.familie.gezaehlt_gesperrt(),
+                "routine": self._laufende_routine(jetzt),       # 6.9.58: Mein Tag hervorheben / von selbst öffnen
+                "fragen_host": self.fragen_host(),          # 6.8.6: gesperrte Seite - ROT/Y/Suche fragt die Eltern
                 "meldungen": [{k: m.get(k) for k in ("nr", "text", "quelle", "zeit", "symbol", "medium")}
                               for m in self.familie.offene_meldungen()],
             }
+
+    def _laufende_routine(self, jetzt):
+        try:
+            return meintag_mod.laufende_liste(self.meintag(), jetzt, self._ferien_heute(jetzt), self.meintag_zustand)
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _sperrzeit_jetzt(self, jetzt):
+        """6.1: gerade geltende Sperrzeit für die Startseite (keine Diashow, nachts der Nachthimmel)."""
+        try:
+            aktiv = zeitkonto.aktive_sperrzeiten(jetzt, self._regeln())
+        except (KeyError, TypeError, ValueError):
+            return None
+        if not aktiv:
+            return None
+        s = next((s for s, _ in aktiv if s.get("nacht")), aktiv[0][0])
+        return {"name": s.get("name", ""), "nacht": bool(s.get("nacht"))}
 
     def kacheln(self):
         jetzt = self.uhr()
@@ -699,14 +1466,20 @@ class Hub:
             handyspiele = bool((self.einstellungen.get("handyspiele") or {}).get("aktiv"))
             fotoalbum = bool((self.einstellungen.get("fotoalbum") or {}).get("erlaubt"))
             karaoke = bool(self.klassenkiste_basis())
+            franzi_an = self.franzi()["aktiv"]              # 6.9.13: Minispiele wohnen dann bei Franzi
             bedingt = {"spiel-handys": handyspiele, "spiel-fotoalbum": fotoalbum, "spiel-karaoke": karaoke,   # 5.0: Seiten von außen
                        "spiel-wetter": self.wetter.einstellungen()["aktiv"], "spiel-schule": self.schule.bereit(),
-                       "spiel-kinderwelten": self.kinderwelten.einstellungen()["aktiv"], "spiel-news": self.news.aktiv()}
+                       "spiel-kinderwelten": self.kinderwelten.einstellungen()["aktiv"], "spiel-news": self.news.aktiv(),
+                       "spiel-meintag": self.meintag_bereit(), "spiel-hilfe": self.hilfe_bereit(),
+                       "spiel-franzi": self.franzi()["aktiv"],
+                       "archiv-video": self.archiv_bereit("video"), "archiv-musik": self.archiv_bereit("musik")}   # 6.9.41
             for kachel in katalog_mod.kacheln(self.katalog) + [
-                    dict(e, typ="spiel", eingerichtet=True) for e in self.spielzimmer()
-                    if e.get("aktiv", True) and bedingt.get(e["id"], True)]:
+                    dict(e, typ=e.get("typ", "spiel"), eingerichtet=True) for e in self.spielzimmer()
+                    if e.get("aktiv", True) and bedingt.get(e["id"], True)
+                    and not (franzi_an and e["id"] in franzi_mod.UMGEZOGEN)
+                    and not (franzi_an and e["id"] == "spiel-witz" and (self.franzi().get("sprueche") or {}).get("witze"))]:
                 app = self.app(kachel["id"])
-                ok, grund, art = self.konto.darf_starten(app, jetzt, uhr_sicher=sicher)
+                ok, grund, art = self._start_app(app, jetzt, sicher)
                 if self.gesperrt:
                     ok, grund, art = False, self.gesperrt.get("text") or "Der Fernseher ist gerade gesperrt.", "eltern"
                 ergebnis.append(dict(kachel, frei=ok, grund=grund, sperre=art, zaehlt=zeitkonto.zaehlt(app)))
@@ -724,7 +1497,7 @@ class Hub:
             return False, "Der Fernseher wird gerade aktualisiert. Bitte warten."
         if self.gesperrt:
             return False, self.gesperrt.get("text") or "Der Fernseher ist gerade gesperrt."
-        ok, grund, _ = self.konto.darf_starten(app, self.uhr(), uhr_sicher=bool(self.uhr_sicher()))
+        ok, grund, _ = self._start_app(app, self.uhr(), bool(self.uhr_sicher()))
         if not ok:
             return False, grund
         typ, start = app.get("typ"), app.get("start", "")
@@ -746,7 +1519,7 @@ class Hub:
 
     # ------------------------------------------------------------ 6.0: „Weiter, wo du warst“ auf der Startseite
     ZULETZT_MAX = 8
-    OHNE_ZULETZT = ("spiel-gestalten", "spiel-gutschein", "spiel-wecker", "spiel-nachrichten")
+    OHNE_ZULETZT = ("spiel-gestalten", "spiel-gutschein", "spiel-wecker", "spiel-nachrichten", "spiel-meintag")
 
     def _zuletzt_merken(self, app_id):
         if app_id in self.OHNE_ZULETZT:
@@ -1018,7 +1791,19 @@ class Hub:
                 self._kk.update(cookie=str(cookie or "")[:8000] or None, fehler=str(fehler or "")[:200], zeit=self.monoton())
             self._kk_neu.notify_all()
 
-    def _kk_cookie(self, neu=False, warten_s=6.0):
+    KK_VERSUCHE = 2                          # 6.9.35: ist der Fernseher-Browser gerade beschäftigt, einmal nachfassen
+
+    def _kk_cookie(self, neu=False, warten_s=8.0):
+        for versuch in range(self.KK_VERSUCHE):
+            try:
+                return self._kk_cookie_einmal(neu or versuch > 0, warten_s)
+            except ValueError as e:
+                if "antwortet gerade nicht" not in str(e) or versuch == self.KK_VERSUCHE - 1:
+                    raise
+                log.info("Klassenkiste: Fernseher hat nicht geantwortet - zweiter Versuch.")
+        raise ValueError("Der Fernseher antwortet gerade nicht. Bitte nochmal versuchen.")
+
+    def _kk_cookie_einmal(self, neu, warten_s):
         basis = self.klassenkiste_basis()
         if not basis:
             raise ValueError("Die Klassenkiste ist nicht eingerichtet.")
@@ -1042,7 +1827,10 @@ class Hub:
     # ------------------------------------------------------------ 5.0: Designs der Startseite
     def startseite_anzeige(self):
         st = self.einstellungen.get("startseite") or {"lieblinge": [], "thema": "blau"}
-        return dict(st, design=design_mod.fuer_startseite(self.einstellungen.get("design"), st, self.uhr()))
+        return dict(st, design=design_mod.fuer_startseite(self.einstellungen.get("design"), st, self.uhr()),
+                    klang=klaenge_mod.fuer_tv(self.einstellungen.get("klaenge")),     # 6.9.40
+                    bildschirm=self.bildschirm(),                                     # 6.9.47
+                    reihenfolge=self.einstellungen.get("kachel_reihenfolge") or {})   # 6.9.52
 
     def startseite_setzen(self, d):
         """Vom Kind (Meine Startseite): Lieblinge und Design - nur ein Design, das die Eltern erlaubt haben."""
@@ -1228,7 +2016,7 @@ class Hub:
         with self.lock:
             self.letzte_eingabe = self.monoton()
             if tasten:
-                self.nachtruhe = False           # jemand ist wach und drückt Tasten
+                self.nachtruhe = self.nachthimmel = False     # jemand ist wach und drückt Tasten
         if tasten:
             self.familie.tasten(tasten)
 
@@ -1247,6 +2035,9 @@ class Hub:
             app_id = "games" if laeuft else self.aktuell
             app = self.app(app_id) if app_id != "internet" else \
                 {"id": "internet", "name": "Internet", "typ": "web", "zeit": "zaehlt"}
+            laeuft_archiv = getattr(self, "_archiv_laeuft", None)
+            if app and laeuft_archiv and laeuft_archiv[0] == app_id and self.monoton() - laeuft_archiv[2] < 60:
+                app = self._archiv_eintrag_app(app, laeuft_archiv[1])     # 6.9.41: Belohnungs-Film
             ruhig = self.monoton() - self.letzte_eingabe
             ereignisse = self.konto.tick(jetzt, app, sekunden, aktiv=ruhig < LEERLAUF_S)
             internet_ruhig = app_id == "internet" and ruhig >= INTERNET_LEERLAUF_S
@@ -1254,10 +2045,13 @@ class Hub:
         self.telegram.tick()                       # 4.3: wartende Nachrichten nach der Sperrzeit zeigen
         self.raum_tick()                           # 4.3: Spielraum (Zeit, Sperrzeiten, Spielablauf)
         self.nutzung.zaehle(jetzt, app_id, sekunden, ruhig < LEERLAUF_S or self.hoerbuch_laeuft())
+        self._franzi_tv(jetzt, app_id, sekunden, ruhig < LEERLAUF_S)
         if not self.konto.sonder_aktiv(jetzt):
             self._sperrzeiten(jetzt, app, laeuft)
         self._sonder_ende(jetzt, laeuft)
+        self._standby_takt(laeuft, ruhig)                # 6.9.47
         self._wecker_takt(jetzt)
+        self._meintag_takt(jetzt)
         self._scraper_nachts(jetzt, laeuft)
         self.wetter.tick()                         # 5.0: im Hintergrund, höchstens alle 30 min
         self.schule.tick(jetzt)                    # 5.0: Klassenkiste alle 15 min, Morgen-Check am Abend
@@ -1553,6 +2347,16 @@ class Hub:
                 "spielzimmer": copy.deepcopy(self.spielzimmer()),           # 4.6: eingebaute Spiele und Kacheln
                 "bundeslaender": ferien_mod.LAENDER, "ferien_bekannt_bis": ferien_mod.bekannt_bis(),
                 "klaenge": klaenge_mod.liste(),                          # 5.2: Klang-Archiv
+                "archiv": self.archiv(),                                                       # 6.9.41
+                "hintergruende": self.hintergruende(),                                         # 6.9.42
+                "bildschirm": self.bildschirm(),                                               # 6.9.47
+                "erst_dann": self.erst_dann(),                                                 # 6.9.66
+                "bildplaetze": self.bildplaetze(),                                             # 6.9.52
+                "kachel_reihenfolge": self.einstellungen.get("kachel_reihenfolge") or {},
+                "klang_arten": [{"id": a, "name": n, "symbol": y} for a, n, y in klaenge_mod.ARTEN],          # 6.9.40
+                "klang_ereignisse": [{"id": e, "gruppe": g, "name": n, "art": a} for e, g, n, a in klaenge_mod.EREIGNISSE],
+                "klang_pakete": {k: {"name": p["name"], "ereignisse": p["ereignisse"], "bedienung_laut": p["bedienung_laut"]}
+                                 for k, p in klaenge_mod.PAKETE.items()},
                 # 5.0: Designs, Wetter, Schule, Kinderwelten, Kinder-News (vollständig, mit Vorgaben)
                 "design": dict(design_mod.einstellungen(einst.get("design")),
                                alle=[{"id": k, "name": n, "hell": h, "abends": sw if h else k} for k, n, h, sw in design_mod.DESIGNS],
@@ -1563,6 +2367,15 @@ class Hub:
                                stand=self.schule.fuer_tv()),
                 "kinderwelten": kinderwelten_mod.einstellungen(einst.get("kinderwelten")),
                 "news": self.news.fuer_eltern(),
+                "meintag": meintag_mod.einstellungen(einst.get("meintag")),            # 6.2
+                "meintag_heute": self.meintag_heute(jetzt),
+                "meintag_faecher": self._schulfaecher(),
+                "franzi": franzi_mod.einstellungen(einst.get("franzi")),               # 6.9
+                "franzi_besitz": list((self.franzi_zustand or {}).get("besitz") or []),  # 6.9.11: was Franzi schon hat
+                "franzi_katalog": [{"id": k[0], "art": k[1], "name": k[2], "symbol": k[3], "preis": k[4], "start": k[5],
+                                    "level": franzi_mod.NUR_LEVEL.get(k[0]), "tage": franzi_mod.MIN_TAGE.get(k[0])}
+                                   for k in franzi_mod.KATALOG],
+                "fragen": [{k: v for k, v in f.items() if k != "mono"} for f in self.fragen_liste()],      # 6.8.6                              # 6.3: Hilfe für den Ranzen-Check
                 "heute": {"genutzt_min": z["genutzt_s"] // 60, "retropie_min": z["retropie_s"] // 60,
                           "apps_min": {k: v // 60 for k, v in z["app_s"].items()},
                           "bonus_min": z["bonus_min"], "ohne_limit": z["ohne_limit"],
@@ -1609,18 +2422,39 @@ class Hub:
             familie_mod.pruefe(neu.get("familie") or {})
             if "wecker" in neu:
                 neu["wecker"] = wecker_mod.pruefe(neu["wecker"])
+            fr = neu.get("fragen") or {}
+            if set(fr) - {"aktiv"} or not isinstance(fr.get("aktiv", False), bool):
+                raise ValueError("Mama/Papa fragen: nur an oder aus.")
+            hi = neu.get("hilfe") or {}
+            if set(hi) - {"aktiv"} or not isinstance(hi.get("aktiv", False), bool):
+                raise ValueError("Hilfe-Knopf: nur an oder aus.")
             if "youtube" in neu:
                 youtube_mod.pruefe(neu["youtube"])
             _pruefe_inhalte(neu.get("inhalte") or {})
             _pruefe_startseite(neu.get("startseite") or {})
-            kl = neu.get("klaenge") or {}
-            if set(kl) - {"ordner"} or not isinstance(kl.get("ordner", ""), str) or \
-                    (kl.get("ordner") and hoerbuch.pruefe_freigabe(kl["ordner"])):
-                raise ValueError("Klang-Ordner " + (hoerbuch.pruefe_freigabe(kl.get("ordner", "")) or "ungültig."))
+            klaenge_mod.pruefe_einstellungen(neu.get("klaenge") or {}, hoerbuch.pruefe_freigabe)    # 6.9.40: Ordner je Art, Ereignisse
+            archiv_mod.pruefe(neu.get("archiv") or {}, hoerbuch.pruefe_freigabe)                    # 6.9.41: Archiv-Ordner
+            kr = neu.get("kachel_reihenfolge") or {}                                                # 6.9.52
+            if any(not isinstance(k, str) or len(k) > 20 or not isinstance(v, list) or len(v) > 100
+                   or any(not isinstance(x, str) or len(x) > 64 for x in v) for k, v in kr.items()) or len(kr) > 12:
+                raise ValueError("Reihenfolge der Kacheln: ungültige Angaben.")
+            ed = neu.get("erst_dann") or {}                                                         # 6.9.66
+            if set(ed) - {"aktiv", "lernen_min", "liste"} or not isinstance(ed.get("aktiv", False), bool) \
+                    or not isinstance(ed.get("liste", True), bool) or ed.get("lernen_min", 15) not in self.ERST_DANN_LERNEN \
+                    or isinstance(ed.get("lernen_min", 15), bool):
+                raise ValueError("Erst-dann: an/aus, Lernminuten aus der Liste, Mein-Tag-Liste ja/nein.")
+            bs = neu.get("bildschirm") or {}                                                        # 6.9.47
+            if set(bs) - {"schoner_min", "standby_min"} or bs.get("schoner_min", 5) not in self.SCHONER_WAHL \
+                    or bs.get("standby_min", 0) not in self.STANDBY_WAHL or any(isinstance(v, bool) for v in bs.values()):
+                raise ValueError("Bildschirmschoner/Standby: bitte eine der angebotenen Zeiten wählen.")
             for feld, pruefung in (("design", design_mod.pruefe), ("wetter", wetter_mod.pruefe), ("schule", schule_mod.pruefe),
-                                   ("kinderwelten", kinderwelten_mod.pruefe), ("news", news_mod.pruefe)):
+                                   ("kinderwelten", kinderwelten_mod.pruefe), ("news", news_mod.pruefe),
+                                   ("meintag", meintag_mod.pruefe), ("franzi", franzi_mod.pruefe)):
                 if feld in aenderungen:
                     neu[feld] = pruefung(neu[feld])
+            if "design" in aenderungen:                                    # 6.9.42: gewählte Bilder müssen da sein
+                for name in neu["design"]["hintergruende"].values():
+                    self.hintergrund_datei(name)
             if "telegram" in aenderungen:
                 t = dict(neu["telegram"])
                 if t.get("token") == telegram_mod.VERSTECKT:      # Eltern-Seite zeigt den Token nie - alten behalten
@@ -1785,32 +2619,37 @@ class Hub:
         self.klang_spielen(klang, warten=True)
 
     # ------------------------------------------------------------ 6.0: eigene Klänge aus einem Ordner der Eltern
-    KLANG_MAX_BYTES = 4 * 1024 * 1024
+    KLANG_MAX_BYTES = 50 * 1024 * 1024        # 6.8.11: lange eigene Klänge erlaubt (vorher 4 MB)
 
-    def klaenge_ordner(self):
-        return str((self.einstellungen.get("klaenge") or {}).get("ordner") or "")
+    def klaenge_ordner(self, art=None):
+        """Freigabe-Link des allgemeinen Klang-Ordners oder (6.9.40) des Ordners einer Art."""
+        kl = klaenge_mod.einstellungen(self.einstellungen.get("klaenge"))
+        return kl["ordner_arten"].get(art, "") if art else kl["ordner"]
 
-    def klaenge_eigen(self):
-        """[{id, name}] der Audiodateien im Klang-Ordner (oberste Ebene)."""
-        link = self.klaenge_ordner()
+    def klaenge_eigen(self, art=None):
+        """[{id, name}] der Audiodateien im Klang-Ordner (oberste Ebene); 6.9.40: art = Ordner einer Art."""
+        if art and art not in klaenge_mod.ART_IDS:
+            raise ValueError("Unbekannte Klang-Art.")
+        link = self.klaenge_ordner(art)
         if not link:
             return []
         try:
             titel = hoerbuch.liste(link, "")["titel"]
         except hoerbuch.HoerbuchFehler as fehler:
             raise ValueError("Der Klang-Ordner ist gerade nicht erreichbar (%s)." % fehler) from None
-        return [{"id": klaenge_mod.EIGEN + t["pfad"], "name": t["name"].rsplit(".", 1)[0]} for t in titel
+        vorne = ("eigen@%s:" % art) if art else klaenge_mod.EIGEN
+        return [{"id": vorne + t["pfad"], "name": t["name"].rsplit(".", 1)[0]} for t in titel
                 if t["name"].lower().endswith(klaenge_mod.EIGEN_ENDUNGEN)][:200]
 
     def klang_eigen_adresse(self, klang):
         pfad = klaenge_mod.eigen_pfad(klang)
-        link = self.klaenge_ordner()
+        link = self.klaenge_ordner(klaenge_mod.eigen_art(klang))
         if not pfad or not link:
             raise ValueError("Unbekannter Klang.")
         return hoerbuch.datei_adresse(link, pfad, endungen=klaenge_mod.EIGEN_ENDUNGEN)
 
     def _eigene_klangdatei(self, klang):
-        """Lokale Kopie eines eigenen Klangs (einmal heruntergeladen, höchstens 4 MB)."""
+        """Lokale Kopie eines eigenen Klangs (einmal heruntergeladen, höchstens 50 MB)."""
         import hashlib
         adresse = self.klang_eigen_adresse(klang)
         endung = os.path.splitext(klaenge_mod.eigen_pfad(klang))[1].lower()
@@ -1818,17 +2657,20 @@ class Hub:
         os.makedirs(ordner, exist_ok=True)
         pfad = os.path.join(ordner, hashlib.sha1(adresse.encode()).hexdigest()[:20] + endung)
         if not os.path.exists(pfad):
-            with urllib.request.urlopen(urllib.request.Request(adresse, headers={"User-Agent": "FernsehFranzi"}), timeout=15) as a:
+            with urllib.request.urlopen(urllib.request.Request(adresse, headers={"User-Agent": "FernsehFranzi"}), timeout=60) as a:
                 inhalt = a.read(self.KLANG_MAX_BYTES + 1)
             if len(inhalt) > self.KLANG_MAX_BYTES:
-                raise ValueError("Der Klang ist zu groß (höchstens 4 MB).")
+                raise ValueError("Der Klang ist zu groß (höchstens 50 MB).")
             with open(pfad + ".neu", "wb") as f:
                 f.write(inhalt)
             os.replace(pfad + ".neu", pfad)
         return pfad
 
     def klang_spielen(self, klang, warten=False):
-        """Klang aus dem Archiv oder eigener Klang; geht ein eigener nicht, kommt der Gong."""
+        """Klang aus dem Archiv oder eigener Klang; geht ein eigener nicht, kommt der Gong.
+        6.9.40: ohne eigenen Klang gilt der Klang, den die Eltern für „Meldungen“ gewählt haben."""
+        if not klang:
+            klang = klaenge_mod.einstellungen(self.einstellungen.get("klaenge"))["ereignisse"]["meldung"] or None
         if not klaenge_mod.eigen_pfad(klang):
             self.system.gong(klang)
             return
@@ -1998,6 +2840,12 @@ def _pruefe_inhalte(inhalte):
     if not isinstance(witze, list) or not isinstance(quiz, list) or len(witze) > 200 or len(quiz) > 200:
         raise ValueError("Höchstens 200 Witze und 200 Quizfragen.")
     for nr, w in enumerate(witze, 1):
+        if isinstance(w, dict) and "zeilen" in w:                  # 6.8.8: mehrzeilig, Zeile für Zeile am Fernseher
+            if set(w) - {"zeilen"} or not isinstance(w["zeilen"], list) or not 1 <= len(w["zeilen"]) <= 10:
+                raise ValueError("Witz %d: 1 bis 10 Zeilen." % nr)
+            for z in w["zeilen"]:
+                _text(z, "Witz %d" % nr, 200)
+            continue
         if not isinstance(w, dict) or set(w) - {"frage", "pointe"}:
             raise ValueError("Witz %d: unbekannte Felder." % nr)
         _text(w.get("frage"), "Witz %d" % nr)

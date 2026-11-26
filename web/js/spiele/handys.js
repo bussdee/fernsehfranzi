@@ -7,8 +7,8 @@
  * Ton-Treffer: Der Fernseher spielt die Tonfolge und hört über das USB-Mikro zu (Tonerkennung aus der Bass-Ecke). */
 import { el, bild } from "../gemeinsam.js";
 import { kopf, ton, konfetti } from "./kern.js";
-import { ctx, tonhoehe } from "./bass.js";
-import { stimmSpur, centZu, pegel } from "./stimme.js";
+import { ctx } from "./bass.js";
+import { stimmSpur, centZu, pegel, stimmHz } from "./stimme.js";
 
 const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
 const SPIEL_SYMBOL = { buzzer: "🔔", quiz: "🏁", malen: "🎨", raumschiff: "🚀", ton: "🎤", rakete: "📣", klatsch: "👏" };
@@ -446,7 +446,7 @@ export default {
         let haltSeit = 0, ok = false;
         while (offen && Date.now() - start < proNote) {
           m.analyse.getFloatTimeDomainData(m.puffer);
-          const f = tonhoehe(m.puffer, ctx().sampleRate);
+          const f = stimmHz(m.puffer, ctx().sampleRate);
           if (f) {
             const cent = centZu(f, hz(ziel));
             tonSpur?.zeige(cent);

@@ -21,7 +21,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
-from . import hoerbuch as hoerbuch_mod, katalog as katalog_mod, kinderwelten as kinderwelten_mod, klaenge as klaenge_mod, sicherung as sicherung_mod, wetter as wetter_mod
+from . import bilder as bilder_mod, hoerbuch as hoerbuch_mod, katalog as katalog_mod, kinderwelten as kinderwelten_mod, klaenge as klaenge_mod, sicherung as sicherung_mod, wetter as wetter_mod
 
 log = logging.getLogger("fernsehfranzi.web")
 
@@ -201,7 +201,24 @@ class Basis(BaseHTTPRequestHandler):
                 lambda d: h.entsperren() if d.get("frei") else h.sperren(d.get("text", ""))),
             # 5.2: Klang-Archiv - Datei zum Probehören (ohne Anmeldung: sie ist für alle gleich) und Probe am Fernseher
             ("GET", "/api/klang"): lambda q: self._klang(q.get("id", [""])[0]),
-            ("GET", "/api/eltern/klaenge-eigen"): lambda q: (self.eltern_pflicht(), self.json({"klaenge": h.klaenge_eigen()})),
+            # 6.9.42: eigene Hintergründe (Bild ohne Anmeldung - der Fernseher zeigt es; hochladen nur mit PIN)
+            ("GET", "/api/hintergrund"): lambda q: self._hintergrund(q.get("datei", [""])[0]),
+            ("POST", "/api/eltern/hintergrund"): lambda q: self._hintergrund_hochladen(),
+            ("POST", "/api/eltern/hintergrund-loeschen"): lambda q: self._eltern(lambda d: h.hintergrund_loeschen(d.get("datei"))),
+            ("GET", "/api/eltern/hintergrund-ordner"): lambda q: (self.eltern_pflicht(), self.json({"bilder": h.hintergrund_ordner_liste()})),
+            ("POST", "/api/eltern/hintergrund-aus-ordner"): lambda q: self._eltern_ergebnis(
+                lambda d: {"datei": h.hintergrund_aus_ordner(str(d.get("pfad", "")))}),
+            # 6.9.52: Bild-Plätze
+            ("POST", "/api/eltern/bildplatz"): lambda q: self._bildplatz_hochladen(),
+            ("POST", "/api/eltern/bildplatz-zuruecksetzen"): lambda q: self._eltern(lambda d: h.bildplatz_zuruecksetzen(str(d.get("platz", "")))),
+            ("GET", "/api/eltern/archiv"): lambda q: (self.eltern_pflicht(), self.json(h.archiv_inhalt(q.get("art", [""])[0]))),
+            ("GET", "/api/eltern/klaenge-eigen"): lambda q: (self.eltern_pflicht(),
+                                                              self.json({"klaenge": h.klaenge_eigen(q.get("art", [""])[0] or None)})),
+            ("POST", "/api/eltern/franzi-geschenk"): lambda q: self._eltern_ergebnis(lambda d: h.franzi_schenken(d.get("item"))),   # 6.9.11
+            ("POST", "/api/eltern/frage"): lambda q: self._eltern_ergebnis(                      # 6.8.6
+                lambda d: h.frage_beantworten(d.get("nr") if isinstance(d.get("nr"), int) else -1, d.get("ja") is True)),
+            ("POST", "/api/eltern/meintag-aufgabe"): lambda q: self._eltern_ergebnis(          # 6.3: ja/nein
+                lambda d: h.aufgabe_bestaetigen(d.get("nr") if isinstance(d.get("nr"), int) else -1, d.get("ja") is True)),
             ("POST", "/api/eltern/klang-test"): lambda q: self._eltern(lambda d: h.klang_testen(d.get("klang"))),
             ("POST", "/api/eltern/auszeit"): lambda q: self._eltern_ergebnis(lambda d: h.auszeit(d.get("minuten"))),   # 5.1
             ("POST", "/api/eltern/geraet"): lambda q: self._eltern(lambda d: h.system.geraet(
@@ -213,6 +230,8 @@ class Basis(BaseHTTPRequestHandler):
             ("POST", "/api/eltern/nachricht"): lambda q: self._eltern(lambda d: h.eltern_nachricht(d.get("text"), d.get("von"))),
             ("POST", "/api/eltern/gute-nacht"): lambda q: self._eltern(lambda d: h.gute_nacht_starten()),
             ("POST", "/api/eltern/fernseher-aus"): lambda q: self._eltern(lambda d: h.cec_befehl("standby")),
+            ("POST", "/api/eltern/cec-test"): lambda q: self._eltern(lambda d: h.cec_test_starten()),
+            ("GET", "/api/eltern/cec-test"): lambda q: (self.eltern_pflicht(), self.json(h.cec_test_stand())),
             ("POST", "/api/eltern/ton"): lambda q: self._eltern(
                 lambda d: h.ton_setzen(_wahl(str(d.get("ziel")), ("hdmi", "klinke", "kopfhoerer")))[0]),
             ("POST", "/api/eltern/lautstaerke"): lambda q: self._eltern(
@@ -285,6 +304,44 @@ class Basis(BaseHTTPRequestHandler):
         neu = self.hub.gutscheine.erstellen(str(d.get("art", "")), d.get("minuten"), d.get("anzahl", 1), self.hub.uhr())
         self.json({"ok": True, "neu": neu})
 
+    def _hintergrund(self, name):
+        pfad = self.hub.hintergrund_datei(name)
+        with open(pfad, "rb") as f:
+            inhalt = f.read()
+        self.sende(200, inhalt, bilder_mod.TYPEN[name.rsplit(".", 1)[1]], {"Cache-Control": "max-age=86400"})
+
+    def _bildplatz_hochladen(self):
+        import base64
+        self.eltern_pflicht()
+        d = self.lies_json(grenze=bilder_mod.BILDPLATZ_MAX_BYTES * 4 // 3 + 4096)
+        try:
+            inhalt = base64.b64decode(str(d.get("daten", "")).split(",", 1)[-1], validate=True)
+        except ValueError:
+            raise ValueError("Das Bild kam nicht vollständig an.") from None
+        self.hub.bildplatz_speichern(str(d.get("platz", "")), inhalt)
+        self.json({"ok": True})
+
+    def eigenes_bild(self, pfad):
+        """6.9.52: /bilder/<platz> - eigenes Bild der Eltern hat Vorrang vor der Vorgabe (Typ aus dem Inhalt)."""
+        eigen = self.hub.bildplatz_datei(pfad[len("/bilder/"):])
+        if not eigen:
+            return False
+        with open(eigen, "rb") as f:
+            inhalt = f.read()
+        self.sende(200, inhalt, bilder_mod.TYPEN.get(bilder_mod.art_und_groesse(inhalt)[0], "image/png"))
+        return True
+
+    def _hintergrund_hochladen(self):
+        """6.9.42: Bild als Base64 im JSON (Handy-Browser, ohne Formular-Bibliothek)."""
+        import base64
+        self.eltern_pflicht()
+        d = self.lies_json(grenze=bilder_mod.HINTERGRUND_MAX_BYTES * 4 // 3 + 4096)
+        try:
+            inhalt = base64.b64decode(str(d.get("daten", "")).split(",", 1)[-1], validate=True)
+        except ValueError:
+            raise ValueError("Das Bild kam nicht vollständig an.") from None
+        self.json({"ok": True, "datei": self.hub.hintergrund_speichern(inhalt)})
+
     def _eltern(self, aktion):
         self.eltern_pflicht()
         ergebnis = aktion(self.lies_json())
@@ -302,6 +359,44 @@ class Basis(BaseHTTPRequestHandler):
         """Wie _eltern, gibt aber das Ergebnis (dict) mit zurück."""
         self.eltern_pflicht()
         self.json(dict(aktion(self.lies_json()) or {}, ok=True))
+
+    # 6.9.35: in der Basis - auch die Eltern-Seite (LanHandler) reicht eigene Klänge zum Probehören durch
+    def _durchreichen(self, adresse, pfad, zusatz=None):
+        kopf = dict(zusatz or {})
+        if self.headers.get("Range"):
+            kopf["Range"] = self.headers["Range"]
+        try:
+            antwort = urllib.request.urlopen(urllib.request.Request(adresse, headers=kopf), timeout=20)
+        except urllib.error.HTTPError as fehler:
+            if fehler.code == 416:
+                self.send_response(416)
+                self.send_header("Content-Range", fehler.headers.get("Content-Range", "bytes */0"))
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            raise Antwort(502, {"ok": False, "fehler": "Hörbuch-Datei nicht erreichbar (%s)." % fehler.code})
+        except OSError as fehler:
+            raise Antwort(502, {"ok": False, "fehler": "Hörbuch-Datei nicht erreichbar (%s)." % fehler})
+        with antwort:
+            self.send_response(antwort.status)
+            typ = antwort.headers.get("Content-Type", "")
+            if not typ.startswith(("audio/", "image/")):
+                typ = mimetypes.guess_type(pfad)[0] or "audio/mpeg"
+            self.send_header("Content-Type", typ)
+            for name in ("Content-Length", "Content-Range"):
+                if antwort.headers.get(name):
+                    self.send_header(name, antwort.headers[name])
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            if self.command == "HEAD":
+                return
+            while True:
+                block = antwort.read(64 * 1024)
+                if not block:
+                    break
+                self.wfile.write(block)
 
     def _klang(self, kennung):
         """5.2/6.0: Klang zum Probehören - aus dem Archiv (erzeugt) oder ein eigener aus dem Klang-Ordner (durchgereicht)."""
@@ -352,6 +447,7 @@ class KioskHandler(Basis):
             ("POST", "/api/zurueck"): lambda q: (h.zurueck(bool(self.lies_json().get("eltern"))),
                                                 self.json({"ok": True})),
             ("POST", "/api/eingabe"): lambda q: self._eingabe(),
+            ("POST", "/api/geraet/cec-test"): lambda q: self._cec_test(),
             ("POST", "/api/audio"): lambda q: self._ton(),
             ("POST", "/api/lautstaerke"): lambda q: self._lautstaerke(),
             ("GET", "/api/zeichnungen"): lambda q: self.json({"zeichnungen": self._zeichnungen()}),
@@ -384,6 +480,10 @@ class KioskHandler(Basis):
             ("GET", "/api/hoerbuch/datei"): lambda q: self._hoerbuch_datei(q),
             ("GET", "/api/hoerbuch/cover"): lambda q: self._hoerbuch_cover(q),
             ("POST", "/api/hoerbuch/stand"): lambda q: self._hoerbuch_stand(),
+            # 6.9.48: Lieblingslieder (Musik-Seite) - lesen und setzen vom Fernseher
+            ("GET", "/api/hoerbuch/favoriten"): lambda q: self.json({"favoriten": h.favoriten(q.get("app", [""])[0])}),
+            ("POST", "/api/hoerbuch/favorit"): lambda q: (lambda d: self.json({"ok": True, "favoriten": h.favorit_setzen(
+                str(d.get("app", "")), str(d.get("pfad", "")), d.get("an") is not False)}))(self.lies_json()),
             ("GET", "/api/youtube"): lambda q: self.json(h.youtube_fuer_tv()),
             ("GET", "/api/startseite"): lambda q: self.json(dict(h.startseite_anzeige(), zuletzt=h.zuletzt())),
             # 5.0: Wetter, Schule (Klassenkiste), Kinderwelten (Familienfabrik), Kinder-News - alles nur lesen
@@ -426,6 +526,22 @@ class KioskHandler(Basis):
             ("GET", "/api/meldungen"): lambda q: self.json({"meldungen": list(reversed(h.familie.sichtbare_meldungen(20))),
                                                             "freunde_spaeter": h.familie.gezaehlt_gesperrt()}),
             ("POST", "/api/musik/suche"): lambda q: self._ergebnis(*h.musik_suche(self.lies_json().get("text"))),
+            ("GET", "/api/meintag"): lambda q: self.json(h.meintag_heute()),                    # 6.2
+            ("GET", "/api/franzi"): lambda q: self.json(h.franzi_stand(besuch=q.get("besuch", [""])[0] == "1")),   # 6.9
+            ("POST", "/api/franzi/tun"): lambda q: (lambda d: self.json(dict(h.franzi_tun(str(d.get("aktion") or ""), **{k: v for k, v in d.items() if k in ("spiel", "punkte", "item", "an", "raum", "platz", "x", "y")}), ok=True)))(self.lies_json()),
+            ("POST", "/api/franzi/versteck"): lambda q: self.json(dict(h.franzi_versteck_gefunden(), ok=True)),      # 6.9.64
+            ("GET", "/api/franzi/versteck"): lambda q: self.json(h.franzi_versteck_moeglich()),
+            ("POST", "/api/franzi/kaufen"): lambda q: (lambda d: self.json(dict(h.franzi_kaufen(str(d.get("item") or "")), ok=True)))(self.lies_json()),
+            ("POST", "/api/franzi/angebot"): lambda q: (lambda d: self.json(dict(h.franzi_angebot(d.get("nr")), ok=True)))(self.lies_json()),
+            ("POST", "/api/frage"): lambda q: self.json(dict(h.frage_stellen(), ok=True)),            # 6.8.6
+            ("POST", "/api/kiosk/gesperrt"): lambda q: self.json(dict(h.seite_gesperrt(self.lies_json().get("host")), ok=True)),
+            ("POST", "/api/hilfe"): lambda q: self.json(dict(h.hilfe_rufen(), ok=True)),             # 6.8.5
+            ("POST", "/api/meintag/abhaken"): lambda q: self._meintag_abhaken(),
+            ("POST", "/api/meintag/ranzen"): lambda q: self._meintag_zahl(lambda d, n: h.ranzen_abhaken(n, d.get("an", True) is not False)),
+            ("POST", "/api/meintag/franzi"): lambda q: (lambda d: self.json(dict(h.franzi_anziehen(d.get("art"), d.get("id")), ok=True)))(self.lies_json()),
+            ("POST", "/api/meintag/lesen"): lambda q: (lambda d: self.json(dict(h.lesen_melden(d.get("sekunden")), ok=True)))(self.lies_json()),
+            ("POST", "/api/meintag/tauschen"): lambda q: self.json(dict(h.sterne_tauschen(), ok=True)),
+            ("POST", "/api/meintag/aufgabe"): lambda q: self._meintag_zahl(lambda d, n: h.aufgabe_melden(n)),
             ("GET", "/api/wecker"): lambda q: self.json({"wecker": {k: v for k, v in h.wecker().items() if k != "toene"},
                                                          "toene": h.wecker_toene(), "laeuft": h.status()["wecker"]}),
             ("POST", "/api/wecker"): lambda q: (h.wecker_liste_setzen(self.lies_json().get("liste")), self.json({"ok": True})),
@@ -433,7 +549,7 @@ class KioskHandler(Basis):
                                                                      q.get("pfad", [""])[0]),
             ("POST", "/api/wecker/aktion"): lambda q: (h.wecker_aktion(str(self.lies_json().get("aktion", ""))),
                                                        self.json({"ok": True})),
-            ("POST", "/api/hoerbuch/schlaf-ende"): lambda q: (h.hoerbuch_schlaf_ende(), self.json({"ok": True})),
+            ("POST", "/api/hoerbuch/schlaf-ende"): lambda q: self.json({"ok": True, "standby": bool(h.hoerbuch_schlaf_ende())}),
         }
         r.update(self.eltern_routen())
         return r
@@ -474,6 +590,8 @@ class KioskHandler(Basis):
                 with open(voll, "rb") as f:
                     return self.sende(200, f.read(), "image/png")
             raise Antwort(404, {"ok": False})
+        if pfad.startswith("/bilder/") and self.eigenes_bild(pfad):
+            return None
         return self.datei(pfad.lstrip("/"))
 
     # ------------------------------------------------------------ Hörbücher
@@ -493,7 +611,7 @@ class KioskHandler(Basis):
         d = self.lies_json()
         self.json({"ok": True, "stand": self.hub.hoerbuch_stand(
             str(d.get("app", "")), str(d.get("ordner", "")), str(d.get("titel", "")), int(d.get("sekunde") or 0),
-            d.get("spielt") is True, d.get("dunkel") is True)})
+            d.get("spielt") is True, d.get("dunkel") is True, int(d.get("dauer") or 0), d.get("fertig") is True)})
 
     def _hoerbuch_datei(self, q):
         """Audiodatei durchreichen - mit Range (Spulen, Weiterhören an der gemerkten Stelle)."""
@@ -510,43 +628,6 @@ class KioskHandler(Basis):
         adresse, kopf = self.hub.karaoke_musik(q.get("id", [""])[0])
         self._durchreichen(adresse, "lied.mp3", kopf)
 
-    def _durchreichen(self, adresse, pfad, zusatz=None):
-        kopf = dict(zusatz or {})
-        if self.headers.get("Range"):
-            kopf["Range"] = self.headers["Range"]
-        try:
-            antwort = urllib.request.urlopen(urllib.request.Request(adresse, headers=kopf), timeout=20)
-        except urllib.error.HTTPError as fehler:
-            if fehler.code == 416:
-                self.send_response(416)
-                self.send_header("Content-Range", fehler.headers.get("Content-Range", "bytes */0"))
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-                return
-            raise Antwort(502, {"ok": False, "fehler": "Hörbuch-Datei nicht erreichbar (%s)." % fehler.code})
-        except OSError as fehler:
-            raise Antwort(502, {"ok": False, "fehler": "Hörbuch-Datei nicht erreichbar (%s)." % fehler})
-        with antwort:
-            self.send_response(antwort.status)
-            typ = antwort.headers.get("Content-Type", "")
-            if not typ.startswith(("audio/", "image/")):
-                typ = mimetypes.guess_type(pfad)[0] or "audio/mpeg"
-            self.send_header("Content-Type", typ)
-            for name in ("Content-Length", "Content-Range"):
-                if antwort.headers.get(name):
-                    self.send_header(name, antwort.headers[name])
-            self.send_header("Accept-Ranges", "bytes")
-            self.send_header("Cache-Control", "no-store")
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.end_headers()
-            if self.command == "HEAD":
-                return
-            while True:
-                block = antwort.read(64 * 1024)
-                if not block:
-                    break
-                self.wfile.write(block)
-
     def _start(self):
         ok, meldung = self.hub.starte(str(self.lies_json().get("id", "")))
         self.json({"ok": ok, "meldung": meldung}, 200 if ok else 409)
@@ -557,6 +638,13 @@ class KioskHandler(Basis):
             raise ValueError("tasten muss eine Liste sein.")
         self.hub.eingabe([str(t)[:16] for t in tasten[:60]])
         self.json({"ok": True})
+
+    def _cec_test(self):
+        """6.1: Ergebnis des CEC-Tests von eingabe.py (nur mit dem Kiosk-Token)."""
+        if self.headers.get("X-FF-Token") != self.hub.token:
+            raise Antwort(403, {"ok": False})
+        d = self.lies_json()
+        self.json(dict(self.hub.cec_test_ergebnis(d.get("aus") is True, d.get("an") is True), ok=True))
 
     def _domains(self):
         if self.headers.get("X-FF-Token") != self.hub.token:
@@ -578,6 +666,22 @@ class KioskHandler(Basis):
     def _retro(self):
         daten = self.lies_json()
         self._ergebnis(*self.hub.retro_starten(str(daten.get("system", "")), str(daten.get("rom", ""))))
+
+    def _meintag_zahl(self, tun):
+        """6.3: Ranzen abhaken / Aufgabe melden - nur eine Nummer."""
+        daten = self.lies_json()
+        nr = daten.get("nr")
+        if not isinstance(nr, int) or isinstance(nr, bool):
+            raise ValueError("nr muss eine Zahl sein.")
+        self.json(dict(tun(daten, nr), ok=True))
+
+    def _meintag_abhaken(self):
+        """6.2: Schritt abhaken - nur Zahlen, nichts an den Listen änderbar."""
+        daten = self.lies_json()
+        nr, schritt = daten.get("nr"), daten.get("schritt")
+        if not isinstance(nr, int) or not isinstance(schritt, int) or isinstance(nr, bool) or isinstance(schritt, bool):
+            raise ValueError("nr und schritt müssen Zahlen sein.")
+        self.json(dict(self.hub.meintag_abhaken(nr, schritt, daten.get("an", True) is not False), ok=True))
 
     def _bass(self):
         daten = self.lies_json()
@@ -643,6 +747,10 @@ class LanHandler(Basis):
         if pfad in ("/anleitung.pdf", "/kinder-anleitung.pdf", "/handbuch.pdf", "/kurzanleitung.pdf"):   # Anleitungen (enthalten nichts Privates)
             return self.datei(pfad.lstrip("/"))
         if pfad.startswith(("/css/", "/js/eltern", "/js/gemeinsam", "/fonts/")):
+            return self.datei(pfad.lstrip("/"))
+        if pfad.startswith("/bilder/"):                     # 6.9.52: Vorschau der Bild-Plätze im Elternbereich
+            if self.eigenes_bild(pfad):
+                return None
             return self.datei(pfad.lstrip("/"))
         if pfad.startswith("/medien/") and self.hub.sitzung_gueltig(self.headers.get("X-FF-Eltern")):
             return self.medium(pfad)

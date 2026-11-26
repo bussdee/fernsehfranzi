@@ -5,7 +5,7 @@
  * - kopf(): Überschrift + Hilfezeile für jedes Spiel
  * - canvasScharf(): Canvas in echter Bildschirmauflösung (kein CSS-Skalieren)
  */
-import { el, mitBild, franzi } from "../gemeinsam.js";
+import { el, mitBild, franzi, franziBlinken } from "../gemeinsam.js";
 
 let audio = null;
 const TOENE = {
@@ -13,27 +13,105 @@ const TOENE = {
   anschlag: [[140, 0.06]], punkt: [[880, 0.06]], sieg: [[523, 0.1], [659, 0.1], [784, 0.1], [1046, 0.2]],
   verloren: [[392, 0.15], [330, 0.15], [262, 0.3]],
   /* Farben-Echo: A-Dur-Dreiklang mit Oktave - gut nach Gehör zu unterscheiden */
+  /* 6.2: Zahnputz-Lied (Mein Tag) - vier kurze, fröhliche Takte in C-Dur, im Wechsel gespielt */
+  lied1: [[523, 0.22], [659, 0.22], [784, 0.22], [659, 0.3]], lied2: [[587, 0.22], [698, 0.22], [880, 0.22], [698, 0.3]],
+  lied3: [[659, 0.22], [784, 0.22], [1046, 0.3], [784, 0.22]], lied4: [[784, 0.22], [659, 0.22], [587, 0.22], [523, 0.35]],
   rot: [[220, 0.45]], gruen: [[277.2, 0.45]], gelb: [[329.6, 0.45]], blau: [[440, 0.45]],
+  /* 6.9.21: Nachtruhe - leise und weich */
+  leise: [[392, 0.18]], glocke: [[784, 0.5], [1176, 0.4]],
+};
+/* 6.8.3: Klänge je Welt - [Frequenz, Dauer, Zielfrequenz?]; ersetzen nur die Bedien-Töne, nicht die Spiel-Töne */
+const WELT_TOENE = {
+  rock: { typ: "sawtooth", laut: 0.45, bewegen: [[196, 0.05]], ok: [[196, 0.07], [294, 0.12]], fehler: [[110, 0.2]],
+          sieg: [[196, 0.1], [247, 0.1], [294, 0.1], [392, 0.3]] },
+  unterwasser: { typ: "sine", laut: 1.1, bewegen: [[700, 0.06, 350]], ok: [[500, 0.08, 900], [700, 0.1, 1200]], fehler: [[300, 0.2, 150]],
+                 sieg: [[400, 0.1, 800], [500, 0.1, 1000], [600, 0.25, 1400]] },
+  raumstation: { typ: "square", laut: 0.35, bewegen: [[1320, 0.03]], ok: [[880, 0.05], [1760, 0.08]], fehler: [[220, 0.18, 110]],
+                 sieg: [[523, 0.07], [784, 0.07], [1046, 0.07], [1568, 0.25]] },
 };
 const LAUT = 0.28;          /* vorher 0.12 - am Fernseher/über die Klinke war es zu leise */
 
-export function ton(art, { dauer = null, laut = LAUT } = {}) {
+/* 6.9.24: gemeinsamer Ausgang für alle Töne - Kompressor (nichts übersteuert, auch wenn viele Töne zusammenkommen)
+   und ein leichtes Echo für etwas Raum. Wird einmal gebaut. */
+let ausgang = null;
+function bus() {
+  if (ausgang) return ausgang;
+  const komp = audio.createDynamicsCompressor();
+  komp.threshold.value = -18; komp.knee.value = 12; komp.ratio.value = 4; komp.attack.value = 0.004; komp.release.value = 0.2;
+  const sanft = audio.createBiquadFilter();                    /* nimmt die harte Spitze aus Dreieck/Rechteck */
+  sanft.type = "lowpass"; sanft.frequency.value = 5200;
+  const echo = audio.createDelay(0.5), rueck = audio.createGain(), nass = audio.createGain();
+  echo.delayTime.value = 0.13; rueck.gain.value = 0.22; nass.gain.value = 0.16;
+  sanft.connect(komp);
+  sanft.connect(echo); echo.connect(rueck).connect(echo); echo.connect(nass).connect(komp);
+  komp.connect(audio.destination);
+  ausgang = sanft;
+  return ausgang;
+}
+
+/* 6.9.40: Klang je Ereignis (Eltern-Seite → Aussehen → Klänge). Leer = eingebauter Ton, "stumm" = still, sonst eine
+   Datei vom Server (Archiv-Klang oder eigener Klang aus einem Klang-Ordner). Bedienung kann leiser gestellt werden. */
+let klangWahl = { ereignisse: {}, bedienung_laut: 100 };
+const BEDIENUNG = { bewegen: "tasten", anschlag: "tasten", ok: "ok", fehler: "fehler" };
+const klangDateien = new Map();
+export function setzeKlaenge(k) {
+  klangWahl = { ereignisse: (k && k.ereignisse) || {}, bedienung_laut: k && Number.isInteger(k.bedienung_laut) ? k.bedienung_laut : 100 };
+}
+function spieleDatei(id, laut) {
+  let a = klangDateien.get(id);
+  if (!a) { a = new Audio("/api/klang?id=" + encodeURIComponent(id)); a.preload = "auto"; klangDateien.set(id, a); }
+  a.volume = Math.max(0, Math.min(1, laut));
+  try { a.currentTime = 0; } catch (_) { /* noch nicht geladen */ }
+  a.play().catch(() => { /* ohne Ton weiter */ });
+}
+/** Ereignis-Klang (stern, geschafft, franzi, kauf): Wahl der Eltern, sonst der eingebaute Ton `ersatz`. */
+/* 6.9.57: Franzis Antennen zeigen richtig (grün) / falsch (rot) */
+const BLINK = { stern: "gruen", geschafft: "gruen", franzi: "gruen", kauf: "gruen", fehler: "rot", sieg: "gruen", punkt: "gruen", verloren: "rot" };
+
+export function ereignis(id, ersatz) {
+  franziBlinken(BLINK[id]);
+  const k = klangWahl.ereignisse[id];
+  if (k === "stumm") return;
+  if (k) { spieleDatei(k, 1); return; }
+  ton(ersatz);
+}
+
+export function ton(art, { dauer = null, laut = LAUT, faktor = 1 } = {}) {   /* 6.9.16: faktor = Tonhöhe (Combo) */
+  if (art === "fehler" || art === "sieg" || art === "verloren") franziBlinken(BLINK[art]);
+  const bed = BEDIENUNG[art];
+  if (bed) {
+    const k = klangWahl.ereignisse[bed], anteil = klangWahl.bedienung_laut / 100;
+    if (k === "stumm" || anteil <= 0) return;
+    if (k) { spieleDatei(k, anteil); return; }
+    laut *= anteil;
+  }
   try {
     audio = audio || new AudioContext();
     let t = audio.currentTime;
-    for (const [frequenz, laenge] of TOENE[art] || []) {
+    const welt = WELT_TOENE[document.body?.dataset.thema];
+    const eigen = welt && welt[art];
+    if (eigen) laut *= welt.laut;
+    const ziel_ = bus();
+    for (const [frequenz, laenge, ziel] of eigen || TOENE[art] || []) {
       const dauerHier = dauer ?? laenge;
-      const osz = audio.createOscillator();
       const pegel = audio.createGain();
-      osz.frequency.value = frequenz;
-      osz.type = "triangle";
+      /* Grundton + (ohne Welt-Klang) ein leiser Oberton eine Oktave höher - klingt runder, fast wie eine kleine Glocke */
+      const teile = eigen ? [[1, 1, welt.typ]] : [[1, 1, "triangle"], [2, 0.18, "sine"]];
+      for (const [mal, anteil, typ] of teile) {
+        const osz = audio.createOscillator(), teilPegel = audio.createGain();
+        osz.type = typ;
+        osz.frequency.setValueAtTime(frequenz * faktor * mal, t);
+        if (ziel) osz.frequency.exponentialRampToValueAtTime(ziel * faktor * mal, t + dauerHier);
+        teilPegel.gain.value = anteil;
+        osz.connect(teilPegel).connect(pegel);
+        osz.start(t);
+        osz.stop(t + dauerHier + 0.08);
+      }
       pegel.gain.setValueAtTime(0.0001, t);
-      pegel.gain.exponentialRampToValueAtTime(laut, t + 0.01);
-      pegel.gain.setValueAtTime(laut, t + dauerHier * 0.6);
-      pegel.gain.exponentialRampToValueAtTime(0.0001, t + dauerHier);
-      osz.connect(pegel).connect(audio.destination);
-      osz.start(t);
-      osz.stop(t + dauerHier + 0.02);
+      pegel.gain.exponentialRampToValueAtTime(laut, t + 0.012);
+      pegel.gain.setValueAtTime(laut, t + dauerHier * 0.45);
+      pegel.gain.exponentialRampToValueAtTime(0.0001, t + dauerHier + 0.06);       /* weich ausklingen */
+      pegel.connect(ziel_);
       t += dauerHier * 0.9;
     }
   } catch (_) { /* ohne Ton weiter */ }
@@ -123,7 +201,7 @@ export function konfetti(box) {
   };
   requestAnimationFrame(schritt);
   /* 6.0: Franzi jubelt mit */
-  const f = franzi("jubel", "franzi-jubel");
+  const f = franzi("jubel", "franzi-konfetti");   /* 6.9.8: eigene Klasse - „franzi-jubel“ trägt jede jubelnde Franzi */
   box.append(f);
   setTimeout(() => f.remove(), 2600);
 }

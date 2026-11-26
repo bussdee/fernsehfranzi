@@ -17,10 +17,14 @@ Immer:
   GELB, dann ↑ ↓ (4 s lang)              -> Lautstärke lauter/leiser (seit 3.2.1; die TV-Tasten regeln nur den Fernseher)
   Controller: Back halten + ↑ ↓          -> Lautstärke
   Pfeiltasten                            -> immer Navigation (nie Lautstärke/Spulen, so gewünscht)
+  6.8.6: Ist gerade eine Seite gesperrt (Status „fragen_host“): ROT, Controller Y oder Tastatur Suche (F21)
+         -> „Mama/Papa fragen“ (POST /api/frage) statt ihrer sonstigen Aufgabe
 
 Seit 3.1:
   * Fernseher aus per CEC ("standby"), wenn der Server es verlangt (Schlafenszeit, Gute-Nacht, Eltern);
     an ("an": "on 0" + "as" = unser Eingang) für den Wecker (3.5)
+  * 6.1: "test" = Fernseher aus, nach 15 s wieder an; mit "pow 0" wird jeweils der Zustand abgefragt und dem Server
+    gemeldet (POST /api/geraet/cec-test). Beim Wecker wird es nebenbei gelernt, wenn der Fernseher vorher aus war.
   * Zweiter Controller (Spiele zu zweit): Steuerkreuz -> W A S D, A -> F, B -> G, Start -> P
 
 Seit 4.1 (Tastaturen, z. B. iPazzPort per Bluetooth - gelesen ohne exklusiven Zugriff, Tasten gehen normal weiter):
@@ -51,6 +55,8 @@ log = logging.getLogger("eingabe")
 # TV (Adresse 0) -> wir (4): Tastendruck 04:44:xx, Loslassen 04:45 (cec-client -d 8)
 DRUCK = re.compile(r">>\s*04:44:([0-9a-fA-F]{2})")
 LOS = re.compile(r">>\s*04:45")
+STROM = re.compile(r"power status:\s*(.+?)\s*$", re.IGNORECASE)      # Antwort auf "pow 0"
+CEC_WARTEN_S = 15
 CEC_TASTEN = {
     0x00: "ENTER", 0x01: "UP", 0x02: "DOWN", 0x03: "LEFT", 0x04: "RIGHT",
     0x20: "0", 0x21: "1", 0x22: "2", 0x23: "3", 0x24: "4", 0x25: "5", 0x26: "6", 0x27: "7", 0x28: "8", 0x29: "9",
@@ -87,6 +93,8 @@ class Logik:
             if self.exit_seit is None:
                 self.exit_seit, self.exit_lang_erledigt = self.uhr(), False
             return
+        if code == CEC_ROT and self.status.get("fragen_host") and not self.retro():
+            return self.aus(("server", "/api/frage", {}))                    # 6.8.6: gesperrte Seite -> Eltern fragen
         if code in (CEC_ROT, CEC_GRUEN, CEC_GELB, CEC_BLAU) and self.im_echo():
             return self.aus(("taste", {CEC_ROT: "F9", CEC_GRUEN: "F10", CEC_GELB: "F11", CEC_BLAU: "F12"}[code]))
         if code == CEC_GELB:
@@ -168,6 +176,8 @@ class Logik:
             return       # Kombination läuft (Elternbereich nach LANG_S, siehe pad_takt)
         if not gedrueckt:
             return
+        if knopf == "Y" and self.status.get("fragen_host"):
+            return self.aus(("server", "/api/frage", {}))                    # 6.8.6
         ziel = {"A": "ENTER", "B": "ESC", "X": "SPACE", "Y": "M", "START": "P",
                 "LB": "REWIND", "RB": "FASTFORWARD"}.get(knopf)   # BACK allein: nichts (Kombination)
         if ziel:
@@ -175,7 +185,7 @@ class Logik:
 
     # ---------------- Tastatur (4.1)
     def tastatur(self, name):
-        """name: VOLUMEUP VOLUMEDOWN MUTE F20 (Home) F22 (Menü). Nur Tastendruck, keine Wiederholung (außer Lautstärke)."""
+        """name: VOLUMEUP VOLUMEDOWN MUTE F20 (Home) F22 (Menü) F21 (Suche, nur auf einer Sperrseite). Nur Tastendruck, keine Wiederholung (außer Lautstärke)."""
         if name in ("VOLUMEUP", "VOLUMEDOWN", "MUTE"):
             richtung = {"VOLUMEUP": "lauter", "VOLUMEDOWN": "leiser", "MUTE": "stumm"}[name]
             return self.aus(("server", "/api/lautstaerke", {"richtung": richtung}))
@@ -185,6 +195,8 @@ class Logik:
             return self.zur_startseite()
         if name == "F22":
             return self.aus(("server", "/api/zurueck", {"eltern": True}))
+        if name == "F21" and self.status.get("fragen_host") and not self.retro():
+            return self.aus(("server", "/api/frage", {}))                    # 6.8.6: Suche-Taste auf der Sperrseite
 
     def pad_richtung(self, richtung, spieler=1, gehalten=frozenset()):
         if richtung in ("UP", "DOWN") and "BACK" in gehalten:       # Back + ↑ ↓ = Lautstärke (auch im Spiel)
@@ -209,6 +221,9 @@ class Ausgabe:
         self.gedrueckt = []           # Tastennamen seit der letzten Meldung (Lern-Check, aktive Minuten)
         self.lock = threading.Lock()
         self.cec_client = None        # laufender cec-client (stdin für Befehle)
+        self.strom = None             # 6.1: letzte Antwort auf "pow 0" (on / standby / ...)
+        self.strom_neu = threading.Event()
+        self.cec_pruefung = False
 
     def code(self, name):
         return getattr(self.e, "KEY_" + name)
@@ -237,9 +252,9 @@ class Ausgabe:
                     subprocess.run(["pkill", "-x", name], check=False)
             elif art == "cec" and aktion[1] == "an" and self.cec_client and self.cec_client.stdin:
                 log.info("CEC: Fernseher an (Wecker).")
-                self.cec_client.stdin.write("on 0\n")           # einschalten ...
-                self.cec_client.stdin.write("as\n")             # ... und auf unseren HDMI-Eingang schalten
-                self.cec_client.stdin.flush()
+                threading.Thread(target=self._an_und_lernen, daemon=True).start()
+            elif art == "cec" and aktion[1] == "test" and self.cec_client and self.cec_client.stdin:
+                threading.Thread(target=self._cec_test, daemon=True).start()
             elif art == "cec" and aktion[1] == "standby" and self.cec_client and self.cec_client.stdin:
                 log.info("CEC: Fernseher aus (standby).")
                 self.cec_client.stdin.write("standby 0\n")
@@ -247,6 +262,61 @@ class Ausgabe:
         except Exception:   # noqa: BLE001 - eine Taste darf die Eingabe nie beenden
             log.exception("Aktion %s fehlgeschlagen", aktion)
         self.eingabe_melden()
+
+    # ------------------------------------------------ 6.1: Zustand des Fernsehers per CEC
+    def _cec(self, *befehle):
+        for b in befehle:
+            self.cec_client.stdin.write(b + "\n")
+        self.cec_client.stdin.flush()
+
+    def strom_gemeldet(self, wert):
+        self.strom = wert.lower()
+        self.strom_neu.set()
+
+    def _strom_fragen(self):
+        """'on', 'standby', 'in transition ...' oder None (keine Antwort)."""
+        self.strom = None
+        self.strom_neu.clear()
+        self._cec("pow 0")
+        self.strom_neu.wait(6)
+        return self.strom
+
+    def _an(self):
+        self._cec("on 0", "as")                       # einschalten und auf unseren HDMI-Eingang schalten
+
+    def _an_und_lernen(self):
+        """Wecker: einschalten. War der Fernseher vorher aus, wird nebenbei gelernt, ob CEC-Einschalten klappt."""
+        if self.cec_pruefung:
+            return self._an()
+        self.cec_pruefung = True
+        try:
+            vorher = self._strom_fragen()
+            self._an()
+            if vorher and "standby" in vorher:
+                time.sleep(CEC_WARTEN_S)
+                nachher = self._strom_fragen()
+                self.server("/api/geraet/cec-test", {"aus": True, "an": nachher == "on"})
+        finally:
+            self.cec_pruefung = False
+
+    def _cec_test(self):
+        """Eltern-Seite: aus, warten, Zustand; an, warten, Zustand -> Server."""
+        if self.cec_pruefung:
+            return
+        self.cec_pruefung = True
+        try:
+            log.info("CEC-Test: Fernseher aus ...")
+            self._cec("standby 0")
+            time.sleep(CEC_WARTEN_S)
+            aus = self._strom_fragen()
+            log.info("CEC-Test: Zustand nach standby: %s - jetzt an ...", aus)
+            self._an()
+            time.sleep(CEC_WARTEN_S)
+            an = self._strom_fragen()
+            log.info("CEC-Test: Zustand nach on: %s", an)
+            self.server("/api/geraet/cec-test", {"aus": bool(aus and "standby" in aus), "an": an == "on"})
+        finally:
+            self.cec_pruefung = False
 
     def _druck(self, codes):
         for c in codes:
@@ -298,6 +368,10 @@ def cec_schleife(logik, ausgabe):
         ausgabe.cec_client = prozess
         log.info("Fernbedienung: cec-client gestartet (PID %s).", prozess.pid)
         for zeile in prozess.stdout:
+            strom = STROM.search(zeile)
+            if strom:
+                ausgabe.strom_gemeldet(strom.group(1))
+                continue
             treffer = DRUCK.search(zeile)
             if treffer:
                 logik.cec_druck(int(treffer.group(1), 16))
@@ -404,7 +478,7 @@ def controller_schleife(logik, ausgabe):
                 ausgabe(("server", "/api/zurueck", {"eltern": True}))
 
 
-TASTATUR_TASTEN = ("VOLUMEUP", "VOLUMEDOWN", "MUTE", "F20", "F22")
+TASTATUR_TASTEN = ("VOLUMEUP", "VOLUMEDOWN", "MUTE", "F20", "F22", "F21")
 LAUT_WIEDERHOLUNG_S = 0.25
 
 

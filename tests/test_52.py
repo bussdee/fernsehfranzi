@@ -125,8 +125,15 @@ class EigeneKlaenge(unittest.TestCase):
             self.assertEqual(auf.call_count, 1, "einmal geladen, danach aus dem Zwischenspeicher")
         self.assertEqual(self.hub.system.aufrufe[-1][0], "gong_datei")
         with mock.patch("urllib.request.urlopen", return_value=Antwort(b"0" * (5 * 1024 * 1024))):
+            self.hub.klang_testen("eigen:Lied.flac")             # 6.8.11: lange Klänge (5 MB) gehen jetzt
+        self.assertEqual(self.hub.system.aufrufe[-1][0], "gong_datei")
+
+        class Riesig(Antwort):                                    # mehr als 50 MB, ohne sie wirklich anzulegen
+            def read(self, n=-1):
+                return b"0" * n
+        with mock.patch("urllib.request.urlopen", return_value=Riesig()):
             with self.assertRaisesRegex(ValueError, "zu groß"):
-                self.hub.klang_testen("eigen:Lied.flac")
+                self.hub.klang_testen("eigen:Hupe2.mp3")
         self.assertEqual(self.hub.system.aufrufe[-1], ("gong",), "geht der eigene nicht, kommt der Gong")
 
 

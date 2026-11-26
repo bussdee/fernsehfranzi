@@ -204,7 +204,7 @@ class Telegram44(unittest.TestCase):
             self.hub.einstellungen_aendern({"fotoalbum": {"erlaubt": True, "ordner": "http://kein-freigabelink"}})
 
     def test_sperrzeit_eltern_leise_freunde_nur_gezaehlt(self):
-        """4.4 (Sebastian): Eltern-Nachrichten kommen in Sperrzeiten an und sind beantwortbar, aber ohne Ton; Nachrichten
+        """4.4 (Wunsch der Eltern): Eltern-Nachrichten kommen in Sperrzeiten an und sind beantwortbar, aber ohne Ton; Nachrichten
         von Freunden zählen nur und sind erst nach der Sperrzeit lesbar und beantwortbar."""
         einst = self.hub.eltern_daten()["einstellungen"]["telegram"]
         einst["chats"][1].update(nur_freizeit=True)

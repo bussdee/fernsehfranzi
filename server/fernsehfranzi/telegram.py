@@ -49,7 +49,10 @@ KONTAKT_NEU = {"symbol": "💬", "eltern": False, "darf_schreiben": False, "eige
                "medien": False}
 MELDUNG_ARTEN = {"zeit": "Spielzeit aufgebraucht, Sperrzeit beginnt", "freunde": "Nachrichten mit Freunden",
                  "gutschein": "Gutschein eingelöst", "wecker": "Wecker ausgeschaltet", "gelesen": "Nachricht gelesen",
-                 "bericht": "Tagesbericht am Abend", "schule": "Klassenkiste: Neues und Morgen-Check"}
+                 "bericht": "Tagesbericht am Abend", "schule": "Klassenkiste: Neues und Morgen-Check",
+                 "meintag": "Mein Tag: Liste geschafft, Aufgabe erledigt (mit /ja · /nein)",
+                 "hilfe": "Hilfe-Knopf am Fernseher (wichtig – besser anlassen)",
+                 "fragen": "Mama/Papa fragen: gesperrte Seite (mit /erlauben · /ablehnen)"}
 MEDIEN_TAGE = 7
 MEDIEN_MAX_MB = 200
 DATEI_MAX = 20 * 1024 * 1024                 # mehr gibt die Bot-Schnittstelle ohnehin nicht heraus
@@ -257,7 +260,7 @@ class Telegram:
 
     HILFE = ("Befehle für Eltern:\n/status – Restzeit und was gerade läuft\n/zeit 15 · /zeit 30 · /zeit frei\n"
              "/sperren [Text] · /freigeben\n/auszeit 15 – Auszeit mit Countdown (Minuten)\n/gutenacht – Gute Nacht starten\n/aus – Fernseher aus\n"
-             "/foto – Bild vom Fernseher\n/bericht – Tagesbericht jetzt")
+             "/foto – Bild vom Fernseher\n/bericht – Tagesbericht jetzt\n/ja 3 · /nein 3 – Aufgabe aus „Mein Tag“ bestätigen\n/erlauben 2 · /ablehnen 2 – gesperrte Seite freigeben")
 
     def antwort(self, c, text):
         self._aufruf_sicher("sendMessage", {"chat_id": c["id"], "text": text})
@@ -301,6 +304,21 @@ class Telegram:
                 if bild is None:
                     return self.antwort(c, "📷 " + fehler)
                 return self.sende_bild(c["id"], bild, "bild.jpg", "📷 So sieht der Fernseher gerade aus.")
+            if name in ("/ja", "/nein"):                 # 6.3: Aufgaben aus „Mein Tag“
+                try:
+                    nr = int(rest)
+                except ValueError:
+                    return self.antwort(c, "So geht's: /ja 3 oder /nein 3 (die Nummer steht in der Meldung)")
+                h.aufgabe_bestaetigen(nr, name == "/ja")
+                return self.antwort(c, "⭐ Bestätigt – die Sterne sind gutgeschrieben." if name == "/ja"
+                                    else "👍 Danke – am Fernseher steht „fast geschafft, schau nochmal nach“.")
+            if name in ("/erlauben", "/ablehnen"):       # 6.8.6: gesperrte Seite
+                try:
+                    nr = int(rest)
+                except ValueError:
+                    return self.antwort(c, "So geht's: /erlauben 2 oder /ablehnen 2 (die Nummer steht in der Frage)")
+                f = h.frage_beantworten(nr, name == "/erlauben")
+                return self.antwort(c, ("✅ %s ist jetzt erlaubt." if name == "/erlauben" else "🚫 %s bleibt gesperrt.") % f["host"])
             if name == "/bericht":
                 return self.antwort(c, self.bericht_text())
             return self.antwort(c, "Diesen Befehl kenne ich nicht.\n\n" + self.HILFE)

@@ -1,5 +1,5 @@
 #!/bin/bash
-# FernsehFranzi 4.1 - Bluetooth für die Eltern-Seite. Läuft als root über die enge sudo-Regel.
+# FernsehFranzi 4.1 (6.9.35: Koppeln mit Agent) - Bluetooth für die Eltern-Seite. Läuft als root über die enge sudo-Regel.
 # Erlaubt sind genau diese Aufrufe (MAC-Adresse wird geprüft):
 #   bt-helfer liste                gekoppelte Geräte:  MAC<TAB>Name<TAB>verbunden(ja/nein)<TAB>Akku(% oder leer)
 #   bt-helfer suchen               12 s suchen, dann alle bekannten Geräte: MAC<TAB>Name
@@ -35,10 +35,27 @@ case "$aktion" in
     bluetoothctl devices | sed -n 's/^Device \([0-9A-F:]\{17\}\) \(.*\)$/\1\t\2/p'
     ;;
   koppeln)
+    # 6.9.35: in EINER bluetoothctl-Sitzung mit Agent (sonst bestätigt niemand die Kopplung und die Box lehnt ab),
+    # Pi dabei koppelbar und suchend; ein halber alter Eintrag (vertraut, aber nicht gekoppelt) wird vorher entfernt.
+    # Am Ende wird geprüft, ob wirklich gekoppelt ist - vorher kam auch bei Misserfolg „ok“ zurück.
     mac_pruefen
-    bluetoothctl --timeout 25 pair "$mac"
-    bluetoothctl trust "$mac"
-    bluetoothctl --timeout 15 connect "$mac"
+    bluetoothctl power on > /dev/null 2>&1 || true
+    if ! bluetoothctl info "$mac" 2>/dev/null | grep -q "Paired: yes"; then
+      bluetoothctl remove "$mac" > /dev/null 2>&1 || true
+    fi
+    {
+      echo "agent NoInputNoOutput"; echo "default-agent"; echo "pairable on"; echo "scan on"
+      sleep 8
+      echo "pair $mac"; sleep 14
+      echo "trust $mac"; echo "connect $mac"; sleep 8
+      echo "scan off"; echo "pairable off"; echo "quit"
+    } | bluetoothctl > /dev/null 2>&1 || true
+    if ! bluetoothctl info "$mac" 2>/dev/null | grep -q "Paired: yes"; then
+      echo "Koppeln hat nicht geklappt. Ist die Box im Kopplungsmodus (blinkt)? Box kurz aus- und einschalten und nochmal versuchen." >&2
+      exit 1
+    fi
+    bluetoothctl info "$mac" 2>/dev/null | grep -q "Connected: yes" || bluetoothctl --timeout 15 connect "$mac" > /dev/null 2>&1 || true
+    echo "gekoppelt"
     ;;
   verbinden) mac_pruefen; bluetoothctl --timeout 15 connect "$mac" ;;
   trennen)   mac_pruefen; bluetoothctl disconnect "$mac" ;;

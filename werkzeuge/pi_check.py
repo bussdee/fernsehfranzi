@@ -136,6 +136,15 @@ def pruefe_vor(z):
     return p
 
 
+# 6.8.8: Ports, die der Server nur zeitweise öffnet - 8767 lauscht nur, solange am Fernseher ein Spielraum der
+# Handy-Spiele offen ist (beim Deploy am 24.11. fälschlich rot, weil vorher gerade ein Raum offen war).
+ZEITWEISE_PORTS = (":8767",)
+
+
+def zeitweise(port):
+    return port.endswith(ZEITWEISE_PORTS)
+
+
 def pruefe_nach(vor, nach, erwartete_version=None, neustart_erlaubt=False, neue_ports=(), abgeloest=()):
     """Vergleicht zwei Zustände. erwartete_version None = nicht prüfen."""
     p = []
@@ -164,9 +173,15 @@ def pruefe_nach(vor, nach, erwartete_version=None, neustart_erlaubt=False, neue_
         p.append(("ok", "Keine neu fehlgeschlagenen Units"))
     ports_vor, ports_nach = set(vor["ports"]), set(nach["ports"])
     for port in sorted(ports_nach - ports_vor):
-        p.append(("ok" if port in neue_ports else "rot", "Neuer lauschender Port: %s" % port))
+        if zeitweise(port):
+            p.append(("ok", "Port %s lauscht (Spielraum der Handy-Spiele offen)" % port))
+        else:
+            p.append(("ok" if port in neue_ports else "rot", "Neuer lauschender Port: %s" % port))
     for port in sorted(ports_vor - ports_nach):
-        p.append(("rot", "Port lauscht nicht mehr: %s" % port))
+        if zeitweise(port):
+            p.append(("ok", "Port %s zu (öffnet sich nur, solange ein Spielraum der Handy-Spiele offen ist)" % port))
+        else:
+            p.append(("rot", "Port lauscht nicht mehr: %s" % port))
     if ports_vor == ports_nach:
         p.append(("ok", "Lauschende Ports unverändert (%d)" % len(ports_nach)))
     status = nach["server_status"]

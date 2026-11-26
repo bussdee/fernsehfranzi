@@ -1,6 +1,6 @@
 /* Snake (neu in 3.0): Tempostufen, weiche Gleitbewegung, große Felder, Eingabepuffer gegen die
    CEC-Verzögerung, durchlässige Wände (wer rausläuft, kommt gegenüber wieder rein). */
-import { el } from "../gemeinsam.js";
+import { el, stufe as animStufe } from "../gemeinsam.js";
 import { kopf, takt, ton, canvasScharf, menue, konfetti } from "./kern.js";
 
 const STUFEN = [
@@ -65,27 +65,54 @@ export default {
         } else s.schlange.pop();
       }
 
+      /* 6.9.26: Wiese einmal vorzeichnen; Schlange rund mit Augen, Apfel statt Punkt; „hoch“: Schatten, hüpfender Apfel */
+      const hoch = animStufe() === "hoch";
+      const wiese = document.createElement("canvas");
+      wiese.width = feld * SPALTEN; wiese.height = feld * ZEILEN;
+      { const w = wiese.getContext("2d");
+        for (let x = 0; x < SPALTEN; x++) for (let y = 0; y < ZEILEN; y++) {
+          w.fillStyle = (x + y) % 2 ? "#2f7d45" : "#358a4c"; w.fillRect(x * feld, y * feld, feld, feld);
+          if ((x * 7 + y * 13) % 11 === 0) { w.fillStyle = (x + y) % 3 ? "#ffe27a" : "#ffffff";
+            w.beginPath(); w.arc(x * feld + feld * 0.3, y * feld + feld * 0.7, feld * 0.06, 0, Math.PI * 2); w.fill(); }
+          if ((x * 5 + y * 3) % 7 === 0) { w.strokeStyle = "rgba(20,60,30,.35)"; w.lineWidth = 2; w.beginPath();
+            w.moveTo(x * feld + feld * 0.6, y * feld + feld * 0.8); w.lineTo(x * feld + feld * 0.65, y * feld + feld * 0.55); w.stroke(); }
+        } }
+      let bild = 0;
       function zeichne(anteil) {
-        g.fillStyle = "#0e1522";
-        g.fillRect(0, 0, feld * SPALTEN, feld * ZEILEN);
-        g.fillStyle = "#151f30";
-        for (let x = 0; x < SPALTEN; x++) for (let y = 0; y < ZEILEN; y++) if ((x + y) % 2) g.fillRect(x * feld, y * feld, feld, feld);
-        g.fillStyle = "#ff6b6b";
-        g.beginPath();
-        g.arc((s.futter[0] + 0.5) * feld, (s.futter[1] + 0.5) * feld, feld * 0.36, 0, Math.PI * 2);
-        g.fill();
-        s.schlange.forEach((p, i) => {
+        bild++;
+        g.drawImage(wiese, 0, 0);
+        const fx = (s.futter[0] + 0.5) * feld, fy = (s.futter[1] + 0.5) * feld + (hoch ? Math.sin(bild * 0.15) * feld * 0.06 : 0);
+        g.textAlign = "center"; g.textBaseline = "middle"; g.font = `${Math.round(feld * 0.78)}px "FF Emoji", sans-serif`; g.fillStyle = "#000";
+        g.fillText("🍎", fx, fy);
+        const punkte = s.schlange.map((p, i) => {
           const alt = s.vorher[i] || p;
           let dx = p[0] - alt[0], dy = p[1] - alt[1];
           if (Math.abs(dx) > 1) dx = -Math.sign(dx);   /* über den Rand: nicht quer übers Feld gleiten */
           if (Math.abs(dy) > 1) dy = -Math.sign(dy);
-          const x = (alt[0] + dx * anteil) * feld, y = (alt[1] + dy * anteil) * feld;
-          g.fillStyle = i === 0 ? "#7dffb8" : `hsl(150 60% ${Math.max(32, 55 - i)}%)`;
-          const r = feld * 0.12;
-          g.beginPath();
-          g.roundRect(x + 2, y + 2, feld - 4, feld - 4, r);
-          g.fill();
+          return [(alt[0] + dx * anteil + 0.5) * feld, (alt[1] + dy * anteil + 0.5) * feld];
         });
+        /* Verbindung zwischen den Gliedern (nicht über den Rand hinweg, wo die Schlange gegenüber wieder reinkommt) */
+        g.strokeStyle = "#3fcf86"; g.lineCap = "round"; g.lineJoin = "round"; g.lineWidth = feld * 0.62;
+        g.beginPath();
+        punkte.forEach(([x, y], i) => {
+          const [vx, vy] = punkte[i - 1] || [x, y];
+          if (!i || Math.abs(vx - x) > feld * 1.5 || Math.abs(vy - y) > feld * 1.5) g.moveTo(x, y); else g.lineTo(x, y);
+        });
+        g.stroke();
+        /* Körper als runde Kette - vom Schwanz zum Kopf, nach hinten dünner */
+        for (let i = punkte.length - 1; i >= 0; i--) {
+          const [x, y] = punkte[i], r = feld * (0.42 - Math.min(0.14, i * 0.01));
+          if (hoch) { g.fillStyle = "rgba(0,0,0,.18)"; g.beginPath(); g.arc(x + 3, y + 4, r, 0, Math.PI * 2); g.fill(); }
+          g.fillStyle = i === 0 ? "#7dffb8" : i % 2 ? "#3fcf86" : "#4fdd94";
+          g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+        }
+        /* Kopf: Augen in Laufrichtung */
+        const [kx, ky] = punkte[0], [rx, ry] = s.richtung;
+        for (const seite_ of [-1, 1]) {
+          const ax = kx + rx * feld * 0.14 - ry * seite_ * feld * 0.17, ay = ky + ry * feld * 0.14 + rx * seite_ * feld * 0.17;
+          g.fillStyle = "#fff"; g.beginPath(); g.arc(ax, ay, feld * 0.11, 0, Math.PI * 2); g.fill();
+          g.fillStyle = "#1e2a4a"; g.beginPath(); g.arc(ax + rx * feld * 0.04, ay + ry * feld * 0.04, feld * 0.055, 0, Math.PI * 2); g.fill();
+        }
         if (spiel.pausiert && !s.aus) {
           g.fillStyle = "rgba(0,0,0,.5)";
           g.fillRect(0, 0, feld * SPALTEN, feld * ZEILEN);

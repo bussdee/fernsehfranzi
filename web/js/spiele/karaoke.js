@@ -10,7 +10,8 @@
  * Leerzeilen trennen Strophen, „[Refrain]“ ist eine Überschrift. Ohne Marken läuft der Text wie bisher gleichmäßig. */
 import { el } from "../gemeinsam.js";
 import { kopf, ton, konfetti } from "./kern.js";
-import { ctx, tonhoehe } from "./bass.js";
+import { ctx } from "./bass.js";
+import { stimmHz } from "./stimme.js";
 
 const SPRUNG_S = 10;
 const PHP_TRIM = /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g;   /* wie PHP trim() in der Klassenkiste, nicht String.trim() */
@@ -47,11 +48,18 @@ export default {
 
     async function lade() {
       inhalt.replaceChildren(el("div", { class: "witz", text: "Ich hole die Lieder aus der Klassenkiste …" }));
+      /* 6.9.35: Karaoke gibt es nur mit einem Klassenkiste-Premium-Konto - bei Fehler oder leerer Liste darauf hinweisen */
+      const PREMIUM = "Hinweis: Karaoke braucht ein Klassenkiste-Premium-Konto. Ohne Premium gibt es hier keine Lieder.";
       try {
         z.lieder = (await api.hole("/api/karaoke")).lieder;
+        if (!z.lieder.length) {
+          inhalt.replaceChildren(el("div", { class: "witz", text: "Keine Lieder gefunden." }), el("p", { class: "hilfe", text: PREMIUM }));
+          hilfe.textContent = "STOP zurück";
+          return;
+        }
         zeigeListe();
       } catch (f) {
-        inhalt.replaceChildren(el("div", { class: "witz", text: f.message }));
+        inhalt.replaceChildren(el("div", { class: "witz", text: f.message }), el("p", { class: "hilfe", text: PREMIUM }));
         hilfe.textContent = "STOP zurück";
       }
     }
@@ -130,7 +138,7 @@ export default {
         if (laeuft && z.mikro) {
           z.mikro.analyse.getFloatTimeDomainData(z.mikro.puffer);
           z.gehoert += dt;
-          if (tonhoehe(z.mikro.puffer, ctx().sampleRate)) z.gesungen += dt;
+          if (stimmHz(z.mikro.puffer, ctx().sampleRate)) z.gesungen += dt;
           sterne.textContent = "🎤 " + "⭐".repeat(sternZahl());
         }
         if (!a && eigeneZeit >= dauer) return ende();

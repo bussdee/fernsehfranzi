@@ -240,6 +240,8 @@ class Kiosk:
                     host = self.anfragen.get(params.get("requestId"))
                     if host:
                         self.domains[host]["blockiert"] += 1
+                if host and params.get("type") == "Document":      # 6.8.6: die Seite selbst ist gesperrt
+                    threading.Thread(target=self.gesperrt_melden, args=(host,), daemon=True).start()
             return
         if methode == "Target.targetInfoChanged":
             info = params.get("targetInfo", {})
@@ -248,6 +250,20 @@ class Kiosk:
                 threading.Thread(target=self.melde_adresse, daemon=True).start()
                 if getattr(self, "stufe", 0):
                     threading.Timer(2.0, lambda: self.dimmen(self.stufe)).start()
+
+    def gesperrt_melden(self, host):
+        """6.8.6: Sperre melden; dürfen die Eltern gefragt werden, steht auf der Sperrseite, wie es geht."""
+        try:
+            frage = self.server("/api/kiosk/gesperrt", {"host": host}).get("frage")
+        except (urllib.error.URLError, OSError, ValueError) as fehler:
+            log.warning("Sperre nicht gemeldet: %s", fehler)
+            return
+        if frage:
+            time.sleep(1.0)                    # die Sperrseite von Chromium erst fertig laden lassen
+            try:
+                self.hinweis("Diese Seite ist gesperrt. Drück ROT (Controller: Y), dann fragen wir Mama oder Papa.")
+            except Exception as fehler:        # noqa: BLE001 - ein fehlender Hinweis darf nichts stören
+                log.warning("Hinweis auf der Sperrseite: %s", fehler)
 
     def melde_adresse(self):
         try:
@@ -379,7 +395,8 @@ class Kiosk:
         elif art == "gute_nacht":         # 3.4: Gute-Nacht-Player auf der Startseite (automatisch = mit Alarmen)
             self.zur_startseite(anker="#gute-nacht-auto" if a.get("automatisch") else "#gute-nacht")
         elif art == "sonne":              # 4.0: Sonnenaufgang vor dem Wecken
-            self.zur_startseite(anker="#sonne-%d" % int(a.get("minuten") or 10))
+            szene = a.get("szene") if a.get("szene") in ("huegel", "ostsee", "wald") else "huegel"     # 6.6: Weckszene
+            self.zur_startseite(anker="#sonne-%d-%s" % (int(a.get("minuten") or 10), szene))
         elif art == "wecker":             # 3.5: Weckbildschirm
             self.zur_startseite(anker="#wecker")
         elif art == "nacht":              # 3.4: Countdown zu Beginn der Nachtruhe

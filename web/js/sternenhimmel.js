@@ -1,31 +1,100 @@
-/* FernsehFranzi 3.4 - Einschlafbild: sehr dunkler Sternenhimmel mit Mond, ab und zu eine Sternschnuppe
+/* FernsehFranzi 3.4 (6.8.12 sparsamer) - Einschlafbild: sehr dunkler Sternenhimmel mit Mond, ab und zu eine Sternschnuppe
  * und ein Vogel, der langsam vorbeifliegt.
+ * 6.1: schöner - tiefblauer Verlauf statt Schwarz, zarte Milchstraße, Hügel mit Tannen und einem Häuschen mit warmem
+ * Fenster, langsam ziehende Wolken, Sterne in leicht verschiedenen Farben. Der feste Hintergrund wird einmal
+ * vorgezeichnet, je Bild kommen nur Sterne, Mond, Wolken und Schnuppe dazu.
  *
  * Absichtlich dunkel (nichts heller als ~45 %), nur 10 Bilder pro Sekunde (der Pi 3 soll dabei kühl und leise bleiben).
  * starte(canvas) -> Funktion zum Beenden.
  */
-const BILDER_PRO_S = 10;
+const STUFE = () => document.documentElement.dataset.animation || "sparsam";
+const BILDER_PRO_S_STUFE = { hoch: 10, sparsam: 2, aus: 0 };
+const BILDER_PRO_S = 2;          /* 6.8.12: 2 statt 10 - der Pi 3 drosselte beim Hörbuch; Funkeln braucht nicht mehr */
+const AUFLOESUNG = 0.5;          /* 6.8.12: halbe Auflösung (ein Viertel der Pixel), der Browser skaliert hoch */
 const HELL = 0.45;              /* hellste Stelle (Mond), Sterne deutlich darunter */
 
 export function starte(canvas) {
   const g = canvas.getContext("2d");
-  let breite = 0, hoehe = 0, sterne = [], schnuppe = null, vogel = null;
+  let breite = 0, hoehe = 0, sterne = [], schnuppe = null, vogel = null, hintergrund = null, wolken = [];
   let naechsteSchnuppe = performance.now() + 15000 + Math.random() * 20000;
   let naechsterVogel = performance.now() + 40000 + Math.random() * 40000;
   let laeuft = true, timer = 0;
 
+  const dpr = () => (STUFE() === "hoch" ? 1 : AUFLOESUNG);
   function groesse() {
-    const dpr = Math.min(1, window.devicePixelRatio || 1);      /* lieber unscharf als heiß */
+    const d = dpr();      /* lieber unscharf als heiß */
     breite = canvas.clientWidth || innerWidth;
     hoehe = canvas.clientHeight || innerHeight;
-    canvas.width = Math.round(breite * dpr);
-    canvas.height = Math.round(hoehe * dpr);
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    sterne = Array.from({ length: 150 }, () => ({
-      x: Math.random() * breite, y: Math.random() * hoehe * 0.85,
+    canvas.width = Math.round(breite * d);
+    canvas.height = Math.round(hoehe * d);
+    g.setTransform(d, 0, 0, d, 0, 0);
+    const FARBEN = ["205,215,255", "205,215,255", "205,215,255", "255,232,205", "190,210,255"];
+    sterne = Array.from({ length: 170 }, () => ({
+      x: Math.random() * breite, y: Math.pow(Math.random(), 1.4) * hoehe * 0.72,
       r: Math.random() < 0.9 ? 0.6 + Math.random() * 0.8 : 1.4 + Math.random() * 0.6,
       grund: 0.06 + Math.random() * 0.22, tempo: 0.3 + Math.random() * 1.2, phase: Math.random() * 6.3,
+      farbe: FARBEN[Math.floor(Math.random() * FARBEN.length)],
     }));
+    wolken = Array.from({ length: 3 }, (_, i) => ({ x: Math.random() * breite, y: hoehe * (0.12 + i * 0.13),
+      s: 0.7 + Math.random() * 0.6, tempo: 3 + Math.random() * 3 }));
+    hintergrund = vorzeichnen();
+  }
+
+  /* fester Hintergrund: Verlauf, Milchstraße, Hügel, Tannen, Häuschen - einmal je Größe */
+  function vorzeichnen() {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(breite * dpr())); c.height = Math.max(1, Math.round(hoehe * dpr()));
+    const h = c.getContext("2d");
+    h.setTransform(dpr(), 0, 0, dpr(), 0, 0);
+    const himmel = h.createLinearGradient(0, 0, 0, hoehe);
+    himmel.addColorStop(0, "#000000"); himmel.addColorStop(0.55, "#000105"); himmel.addColorStop(0.85, "#01030a");
+    h.fillStyle = himmel; h.fillRect(0, 0, breite, hoehe);
+    /* Milchstraße: schräges, sehr schwaches Band aus Schleiern und winzigen Punkten */
+    for (let i = 0; i < 16; i++) {
+      const t = i / 15, x = breite * (0.05 + t * 0.9), y = hoehe * (0.62 - t * 0.5);
+      const r = Math.min(breite, hoehe) * (0.12 + Math.random() * 0.08);
+      const s = h.createRadialGradient(x, y, 0, x, y, r);
+      s.addColorStop(0, "rgba(150,160,220,0.014)"); s.addColorStop(1, "rgba(150,160,220,0)");
+      h.fillStyle = s; h.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    for (let i = 0; i < 500; i++) {
+      const t = Math.random(), x = breite * (0.05 + t * 0.9) + (Math.random() - 0.5) * breite * 0.12;
+      const y = hoehe * (0.62 - t * 0.5) + (Math.random() - 0.5) * hoehe * 0.12;
+      h.fillStyle = `rgba(200,210,255,${(0.04 + Math.random() * 0.08).toFixed(3)})`;
+      h.fillRect(x, y, 1, 1);
+    }
+    /* Hügel: zwei Schichten, die hintere einen Hauch heller */
+    const huegel = (basis, hoehe2, farbe, phase) => {
+      h.fillStyle = farbe; h.beginPath(); h.moveTo(0, hoehe);
+      for (let x = 0; x <= breite; x += 20) h.lineTo(x, basis - hoehe2 * (0.5 + 0.5 * Math.sin(x / breite * Math.PI * 2.2 + phase)));
+      h.lineTo(breite, hoehe); h.closePath(); h.fill();
+    };
+    huegel(hoehe * 0.86, hoehe * 0.07, "#010307", 0.6);
+    huegel(hoehe * 0.93, hoehe * 0.05, "#000103", 2.4);
+    /* Tannen am Rand */
+    h.fillStyle = "#010307";
+    const tanne = (x, y, s) => { h.beginPath(); h.moveTo(x, y - 70 * s); h.lineTo(x - 18 * s, y); h.lineTo(x + 18 * s, y); h.closePath(); h.fill(); };
+    for (let i = 0; i < 7; i++) tanne(breite * 0.02 + i * breite * 0.035, hoehe * (0.93 + Math.random() * 0.02), 0.8 + Math.random() * 0.6);
+    for (let i = 0; i < 5; i++) tanne(breite * 0.8 + i * breite * 0.04, hoehe * (0.92 + Math.random() * 0.02), 0.8 + Math.random() * 0.5);
+    /* Häuschen mit einem warmen, gedimmten Fenster */
+    const hx = breite * 0.62, hy = hoehe * 0.905, hb = Math.min(breite, hoehe) * 0.06;
+    h.fillStyle = "#02040a";
+    h.fillRect(hx, hy - hb * 0.7, hb, hb * 0.7);
+    h.beginPath(); h.moveTo(hx - hb * 0.12, hy - hb * 0.7); h.lineTo(hx + hb / 2, hy - hb * 1.15); h.lineTo(hx + hb * 1.12, hy - hb * 0.7); h.closePath(); h.fill();
+    const fenster = h.createRadialGradient(hx + hb * 0.5, hy - hb * 0.38, 0, hx + hb * 0.5, hy - hb * 0.38, hb * 0.6);
+    fenster.addColorStop(0, "rgba(255,180,100,0.10)"); fenster.addColorStop(1, "rgba(255,180,100,0)");
+    h.fillStyle = fenster; h.fillRect(hx - hb, hy - hb * 1.2, hb * 3, hb * 1.5);
+    h.fillStyle = "rgba(255,190,110,0.28)";
+    h.fillRect(hx + hb * 0.38, hy - hb * 0.5, hb * 0.24, hb * 0.2);
+    return c;
+  }
+
+  function wolke(w, t) {
+    const x = ((w.x + t * w.tempo) % (breite + 400)) - 200, r = 60 * w.s;
+    g.fillStyle = "rgba(120,135,190,0.022)";
+    for (const [dx, dy, f] of [[0, 0, 1], [-0.9, 0.25, 0.7], [0.9, 0.25, 0.75], [-0.4, -0.3, 0.7], [0.45, -0.25, 0.65]]) {
+      g.beginPath(); g.ellipse(x + dx * r, w.y + dy * r * 0.6, r * f, r * f * 0.55, 0, 0, Math.PI * 2); g.fill();
+    }
   }
 
   /* Mondsichel einmal vorzeichnen: Scheibe, davon ein Kreis ausgestanzt (durchsichtig - der Schein bleibt rund) */
@@ -59,21 +128,32 @@ export function starte(canvas) {
   function zeichne(jetzt) {
     if (!laeuft) return;
     const t = jetzt / 1000;
-    g.fillStyle = "#000";
-    g.fillRect(0, 0, breite, hoehe);
+    if (hintergrund) g.drawImage(hintergrund, 0, 0, breite, hoehe);
+    else { g.fillStyle = "#000"; g.fillRect(0, 0, breite, hoehe); }
     for (const s of sterne) {
       const a = s.grund * (0.6 + 0.4 * Math.sin(t * s.tempo + s.phase));
-      g.fillStyle = `rgba(205,215,255,${a.toFixed(3)})`;
+      g.fillStyle = `rgba(${s.farbe},${a.toFixed(3)})`;
       g.beginPath(); g.arc(s.x, s.y, s.r, 0, Math.PI * 2); g.fill();
     }
     const m = mond(t);
+    /* 6.9.22: Stufe „hoch“ - ein paar sehr schwache Glühwürmchen über den Hügeln (bleibt dunkel) */
+    if (STUFE() === "hoch") {
+      for (let i = 0; i < 7; i++) {
+        const gx = breite * (0.1 + ((i * 0.137) % 0.8)) + Math.sin(t * 0.3 + i * 2) * 30;
+        const gy = hoehe * (0.8 + (i % 3) * 0.03) + Math.cos(t * 0.4 + i) * 12;
+        const a = 0.12 + 0.12 * Math.max(0, Math.sin(t * 0.9 + i * 1.7));
+        g.fillStyle = `rgba(210,255,150,${a.toFixed(3)})`;
+        g.beginPath(); g.arc(gx, gy, 1.8, 0, Math.PI * 2); g.fill();
+      }
+    }
+    for (const w of wolken) wolke(w, t);
     /* Sternschnuppe */
     if (!schnuppe && jetzt > naechsteSchnuppe) {
       schnuppe = { x: Math.random() * breite * 0.6, y: Math.random() * hoehe * 0.3, start: jetzt };
       naechsteSchnuppe = jetzt + 25000 + Math.random() * 35000;
     }
     if (schnuppe) {
-      const p = (jetzt - schnuppe.start) / 1300;
+      const p = (jetzt - schnuppe.start) / 3000;
       if (p >= 1) schnuppe = null;
       else {
         const x = schnuppe.x + p * breite * 0.25, y = schnuppe.y + p * hoehe * 0.12;
@@ -107,7 +187,9 @@ export function starte(canvas) {
   groesse();
   const neu = () => groesse();
   window.addEventListener("resize", neu);
-  timer = setInterval(() => { if (!document.hidden) zeichne(performance.now()); }, 1000 / BILDER_PRO_S);
+  /* 6.8.12: Stufe aus = ein stilles Bild, sparsam = 2, hoch = 10 Bilder pro Sekunde */
+  const bps = BILDER_PRO_S_STUFE[STUFE()] ?? BILDER_PRO_S;
+  if (bps) timer = setInterval(() => { if (!document.hidden) zeichne(performance.now()); }, 1000 / bps);
   zeichne(performance.now());
   return () => { laeuft = false; clearInterval(timer); window.removeEventListener("resize", neu); };
 }

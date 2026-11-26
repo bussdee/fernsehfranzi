@@ -76,7 +76,7 @@ class Telegram(unittest.TestCase):
 
     def test_nachricht_erlaubter_chat_kommt_an_unbekannter_nicht(self):
         TelegramAttrappe.warteschlange = [
-            {"update_id": 1, "message": {"chat": {"id": 111, "first_name": "Sebastian"}, "text": "Essen ist fertig!"}},
+            {"update_id": 1, "message": {"chat": {"id": 111, "first_name": "Papa"}, "text": "Essen ist fertig!"}},
             {"update_id": 2, "message": {"chat": {"id": 999, "first_name": "Fremd"}, "text": "Hallo"}},
             {"update_id": 3, "message": {"chat": {"id": 111}, "text": "/start"}}]
         self.einschalten()

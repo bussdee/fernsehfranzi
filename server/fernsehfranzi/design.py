@@ -12,7 +12,15 @@ DESIGNS = (
     ("rot", "🔴 Rot", False, "gelb"), ("schwarz", "⚫ Schwarz", False, "weiss"),
     ("hellblau", "🌤️ Hellblau", True, "blau"), ("mint", "🍃 Mint", True, "gruen"), ("rosa", "🌸 Rosa", True, "lila"),
     ("gelb", "🌞 Sonnengelb", True, "rot"), ("weiss", "⚪ Weiß", True, "schwarz"),
+    # 6.7: Welten - Farbe, Hintergrund, Bewegung und Franzi-Ausstattung in einem Paket (dunkel, bleiben auch abends)
+    ("rock", "🎸 Rock", False, "rock"), ("unterwasser", "🐠 Unterwasser", False, "unterwasser"),
+    ("raumstation", "🚀 Raumstation", False, "raumstation"),
+    # 6.9.46: gezeichnete Hintergründe (Bilder in web/hintergrund/*.jpg), dunkel, bleiben auch abends
+    ("berge", "🏔️ Berge", False, "berge"), ("liebe", "❤️ Liebe", False, "liebe"),
+    ("system", "💻 System", False, "system"), ("weltraum", "🌌 Weltraum", False, "weltraum"),
 )
+WELTEN = ("rock", "unterwasser", "raumstation")
+BILD_DESIGNS = ("berge", "liebe", "system", "weltraum")
 KENNUNGEN = tuple(k for k, _, _, _ in DESIGNS)
 SCHWESTER = {k: sw for k, _, _, sw in DESIGNS}
 # Namen bis 5.3 -> 6.0 (einmalig umgezogen; alte Werte werden auch beim Lesen noch verstanden)
@@ -22,9 +30,12 @@ ANSICHTEN = (("konsole", "🎮 Konsole"), ("seitenleiste", "📋 Seitenleiste"),
 ANSICHT_IDS = tuple(k for k, _ in ANSICHTEN)
 HELL = frozenset(k for k, _, h, _ in DESIGNS if h)
 DUNKEL = tuple(k for k, _, h, _ in DESIGNS if not h)
-VORGABE = {"erlaubt": list(KENNUNGEN), "ansichten": list(ANSICHT_IDS), "abend_aktiv": False, "abend_ab": "19:00", "morgen_ab": "06:30"}
+VORGABE = {"erlaubt": list(KENNUNGEN), "ansichten": list(ANSICHT_IDS), "abend_aktiv": False, "abend_ab": "19:00", "morgen_ab": "06:30",
+           "animation": "sparsam", "hintergruende": {}, "hintergrund_ordner": ""}   # 6.9.42: eigenes Bild je Farbe
+ANIMATIONEN = ("aus", "sparsam", "hoch")   # 6.8.12: aus = still, sparsam = Pi 3, hoch = flüssig (Pi 5)
 FELDER = set(VORGABE) | {"abend_design"}     # abend_design: bis 5.3, wird nicht mehr gebraucht (abends: dunkle Schwester)
 UHRZEIT = re.compile(r"([01][0-9]|2[0-3]):[0-5][0-9]\Z")
+BILDNAME = re.compile(r"\Ahg-[0-9a-f]{12}\.(png|jpg|webp)\Z")
 
 
 def neu(kennung):
@@ -55,6 +66,13 @@ def migriere(einst):
         if "abend_design" in d:
             del d["abend_design"]
             geaendert = True
+        # 6.9.46: die neuen gezeichneten Hintergründe einmalig zu einer gespeicherten Auswahl dazunehmen
+        if isinstance(d.get("erlaubt"), list) and not einst.get("migration_6946"):
+            d["erlaubt"] = list(dict.fromkeys(d["erlaubt"] + list(BILD_DESIGNS)))
+            geaendert = True
+    if not einst.get("migration_6946"):              # nur einmal (danach entscheiden die Eltern)
+        einst["migration_6946"] = True
+        geaendert = True
     return geaendert
 
 
@@ -73,6 +91,13 @@ def pruefe(roh):
     for feld in ("abend_ab", "morgen_ab"):
         if not isinstance(d[feld], str) or not UHRZEIT.match(d[feld]):
             raise ValueError("Design: Uhrzeit als HH:MM.")
+    if d["animation"] not in ANIMATIONEN:
+        raise ValueError("Design: Animationen aus, sparsam oder hoch.")
+    hg = d["hintergruende"]
+    if not isinstance(hg, dict) or any(k not in KENNUNGEN or not isinstance(v, str) or not BILDNAME.match(v) for k, v in hg.items()):
+        raise ValueError("Design: eigener Hintergrund ungültig.")
+    if not isinstance(d["hintergrund_ordner"], str):
+        raise ValueError("Design: Bilder-Ordner ungültig.")
     return d
 
 
@@ -111,4 +136,8 @@ def fuer_startseite(roh, startseite, jetzt):
             "ansichten": [{"id": k, "name": n} for k, n in ANSICHTEN if k in d["ansichten"]],
             "ansicht": jetzt_ansicht(d, (startseite or {}).get("ansicht", "konsole")),
             "jetzt": aktuell, "hell": aktuell in HELL, "abend": ist_abend(d, jetzt),
-            "abend_ab": d["abend_ab"] if d["abend_aktiv"] else None}
+            "abend_ab": d["abend_ab"] if d["abend_aktiv"] else None,
+            "animation": d["animation"] if d["animation"] in ANIMATIONEN else "sparsam",
+            # 6.9.42: eigenes Bild der Eltern für diese Farbe (sonst das gezeichnete Motiv)
+            "bild": ("/api/hintergrund?datei=" + d["hintergruende"][aktuell]) if isinstance(d["hintergruende"], dict)
+                    and aktuell in d["hintergruende"] else None}

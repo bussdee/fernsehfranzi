@@ -4,8 +4,8 @@
  * Pfeile bleiben Navigation; OK spielt/wählt; STOP geht eine Ebene zurück. */
 import { el, franzi } from "../gemeinsam.js";
 import { ton, konfetti } from "./kern.js";
-import { ctx, zupfe, tonhoehe, naechsterTon, mikroHoeren, tonPasst } from "./bass.js";
-import { stimmSpur, centZu, NAH_CENT } from "./stimme.js";
+import { ctx, zupfe, naechsterTon, mikroHoeren, tonPasst } from "./bass.js";
+import { stimmSpur, centZu, NAH_CENT, stimmHz } from "./stimme.js";
 
 const TOENE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "H"];
 const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
@@ -37,7 +37,7 @@ async function mikroStrom(beiHz) {
   const schleife = () => {
     if (!laeuft) return;
     analyse.getFloatTimeDomainData(puffer);
-    beiHz(tonhoehe(puffer, a.sampleRate));
+    beiHz(stimmHz(puffer, a.sampleRate));          /* 6.8.1: Stimmen-Erkennung (80-1000 Hz) statt der für den Bass */
     setTimeout(schleife, 80);
   };
   schleife();

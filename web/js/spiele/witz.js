@@ -1,4 +1,6 @@
-/* Witz: bleibt, wie er ist - erst die Frage, OK zeigt die Pointe, OK der nächste Witz. */
+/* Witz: erst die Frage, OK zeigt die Pointe, OK der nächste Witz.
+ * 6.8.8: Witze können auch mehrere Zeilen haben (z. B. Gespräche) - jede Zeile erscheint mit OK, die letzte ist die Pointe.
+ * Ein Witz ist eine Liste von Zeilen; die alten Frage/Pointe-Witze haben einfach zwei. */
 import { el } from "../gemeinsam.js";
 import { kopf, ton } from "./kern.js";
 
@@ -58,33 +60,43 @@ const WITZE = [
   ["Was ist grün und läuft weg?", "Ein Fluchtsalat."],
   ["Welcher Ritter trinkt am liebsten Tee?", "Sir Kamille."],
   ["Was ist klein, grün und dreieckig?", "Ein kleines grünes Dreieck."],
+  /* 6.8.8: Witze mit mehreren Zeilen */
+  ["Häschen geht zur Apotheke und fragt: „Haddu Möhrchen?“", "Apothekerin: „Ja.“",
+   "Häschen: „VERDAMMT! Jetzt haddu mir den ganzen Häschen-Witz versaut!“"],
+  ["Mama: „Warum hast du so schlechte Noten?“", "Kind: „Wegen der Hitze.“", "Mama: „Aber es ist doch Winter!“",
+   "Kind: „Eben – die Arbeit lag die ganze Zeit neben der Heizung.“"],
+  ["Ein Pferd geht in eine Bar.", "Der Wirt fragt: „Warum so ein langes Gesicht?“"],
+  ["Zwei Schafe auf der Wiese.", "Sagt das eine: „Mäh.“", "Sagt das andere: „Mäh doch selber!“"],
 ];
 
 export default {
   symbol: "😄",
   oeffne(box, api) {
     const { inhalt, punkte } = kopf(box, "Witz", "OK Weiter · STOP Zurück");
-    let i = Math.floor(Math.random() * WITZE.length), pointe = false;
+    let i = Math.floor(Math.random() * WITZE.length);
     /* 3.5: eigene Witze der Eltern dazu (Eltern-Seite → Mehr → Eigene Inhalte) */
     api?.hole("/api/inhalte").then((d) => {
-      for (const w of d.witze || []) WITZE.push([w.frage, w.pointe]);
+      for (const w of d.witze || []) WITZE.push(Array.isArray(w.zeilen) ? w.zeilen : [w.frage, w.pointe]);
     }).catch(() => {});
-    const frage = el("div"), antwort = el("div", { class: "pointe" });
-    inhalt.append(el("div", { class: "witz" }, frage, antwort));
+    let sichtbar = 1;                                 /* so viele Zeilen des Witzes sind schon zu sehen */
+    const box_ = el("div", { class: "witz" });
+    inhalt.append(box_);
     function zeige() {
-      frage.textContent = WITZE[i][0];
-      antwort.textContent = pointe ? WITZE[i][1] : "…";
+      const zeilen = WITZE[i];
+      box_.replaceChildren(...zeilen.slice(0, sichtbar).map((z, n) =>
+        el("div", { class: "witz-zeile" + (n === zeilen.length - 1 && n > 0 ? " pointe" : "") + (n === sichtbar - 1 && n > 0 ? " neu" : ""), text: z })),
+        sichtbar < zeilen.length ? el("div", { class: "witz-weiter", text: "…" }) : null);
       punkte.textContent = `Witz ${i + 1} von ${WITZE.length}`;
     }
     zeige();
     return {
       taste(t) {
         if (t === "Enter" || t === " " || t === "ArrowRight") {
-          if (!pointe) { pointe = true; ton("ok"); } else { pointe = false; i = (i + 1) % WITZE.length; ton("bewegen"); }
+          if (sichtbar < WITZE[i].length) { sichtbar++; ton("ok"); } else { sichtbar = 1; i = (i + 1) % WITZE.length; ton("bewegen"); }
           zeige();
           return true;
         }
-        if (t === "ArrowLeft") { pointe = false; i = (i + WITZE.length - 1) % WITZE.length; zeige(); return true; }
+        if (t === "ArrowLeft") { sichtbar = 1; i = (i + WITZE.length - 1) % WITZE.length; zeige(); return true; }
         return false;
       },
       schliesse() {},

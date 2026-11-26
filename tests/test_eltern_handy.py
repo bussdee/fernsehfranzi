@@ -60,15 +60,24 @@ class ElternAmHandy(unittest.TestCase):
         seite.wait_for_selector(".eh-leiste")
         return seite
 
-    REITER = {"zeit": "Zeit", "abend": "Zeit", "erinnerungen": "Zeit", "apps": "Inhalte", "youtube": "Inhalte", "musik": "Inhalte",
-              "spiele": "Inhalte", "kinderwelten": "Inhalte", "schule": "Inhalte", "wetter": "Inhalte", "design": "Inhalte",
-              "telegram": "Familie", "bilder": "Familie", "geraet": "Gerät", "internet": "Gerät", "hilfe": "Gerät"}
+    # 6.9.38: sechs Reiter; Apps ist eine eigene Seite (Übersicht + Detailseite je App)
+    REITER = {"zeit": "Regeln", "abend": "Regeln", "erinnerungen": "Regeln", "internet": "Regeln",
+              "meintag": "Franzi", "sterne": "Franzi", "franzi": "Franzi", "shop": "Franzi",
+              "design": "Aussehen", "bildplaetze": "Aussehen", "klaenge": "Aussehen",
+              "telegram": "Mehr", "bilder": "Mehr", "geraet": "Mehr", "hilfe": "Mehr"}
 
     def bereich(self, seite, bereich):
         """6.0: Reiter unten antippen, dann den Bereich aufklappen."""
         seite.click(".eh-leiste >> text=" + self.REITER[bereich])
         seite.click(".eh-abschnitt[data-bereich=%s] .eh-abschnitt-kopf" % bereich)
         seite.wait_for_selector(".eh-abschnitt.offen[data-bereich=%s] .eh-abschnitt-inhalt" % bereich)
+
+    def app(self, seite, app_id):
+        """6.9.38: Reiter „Apps“, dann die Detailseite einer App."""
+        seite.click(".eh-leiste >> text=Apps")
+        seite.click(".eh-app-zeile[data-app=%s] .eh-app-name" % app_id)
+        seite.wait_for_selector(".eh-detail-kopf")
+        return seite.locator(".eh-inhalt")
 
     def gespeichert(self, seite):
         seite.wait_for_selector(".eh-meldung.zeigen:not(.fehler)", timeout=4000)
@@ -83,14 +92,14 @@ class ElternAmHandy(unittest.TestCase):
             for _ in range(sek // 60):
                 self.hub.nutzung.zaehle(jetzt, app, 60, True)
         seite = self.anmelden()
-        for name in ("Heute", "Zeit", "Inhalte", "Familie", "Gerät"):
+        for name in ("Heute", "Regeln", "Apps", "Franzi", "Aussehen", "Mehr"):
             seite.click(".eh-leiste >> text=" + name)
             seite.wait_for_timeout(250)
             breite = seite.evaluate("document.documentElement.scrollWidth")
             self.assertLessEqual(breite, 390, "%s ist breiter als das Handy" % name)
             seite.screenshot(path=os.path.join(FOTOS, "eltern-%s.png" % name.lower()), full_page=True)
         # 6.0: jeder Bereich jedes Reiters klappt ohne Fehler auf; die Zurück-Taste klappt wieder zu
-        self.assertEqual(len(self.REITER), 16)
+        self.assertEqual(len(self.REITER), 15)
         for b in self.REITER:
             self.bereich(seite, b)
             self.assertGreaterEqual(seite.locator(".eh-abschnitt.offen .eh-karte").count(), 1, b)
@@ -100,9 +109,32 @@ class ElternAmHandy(unittest.TestCase):
             if b == "zeit":
                 seite.go_back()                                   # Zurück-Taste des Handys
                 seite.wait_for_selector(".eh-abschnitt[data-bereich=zeit]:not(.offen)")
-        # Lesezeichen von früher führen weiter (#erinnerungen -> Reiter Zeit, aufgeklappt)
+        # 6.9.38: jede App hat eine Detailseite ohne Fehler und ohne Quer-Scrollen; „‹ Apps“ führt zurück
+        seite.click(".eh-leiste >> text=Apps")
+        ids = seite.eval_on_selector_all(".eh-app-zeile", "z => z.map((e) => e.dataset.app)")
+        self.assertGreaterEqual(len(ids), 30)
+        for app_id in ids:
+            seite.evaluate("id => { location.hash = '#apps/' + id; }", app_id)
+            seite.wait_for_selector(".eh-detail-kopf")
+            self.assertGreaterEqual(seite.locator(".eh-inhalt .eh-karte").count(), 1, app_id)
+            self.assertLessEqual(seite.evaluate("document.documentElement.scrollWidth"), 390, app_id)
+        seite.click(".eh-zurueck")
+        seite.wait_for_selector(".eh-app-gruppen")
+        # Suche und Filter
+        seite.fill(".eh-suche", "snake")
+        self.assertEqual(seite.locator(".eh-app-zeile").count(), 1)
+        seite.fill(".eh-suche", "")
+        seite.get_by_role("button", name="⚠️ Einrichten").click()
+        self.assertTrue(all(x in ("gute-nacht", "plex", "familie", "buecher", "klassenkiste", "kinderwelten")
+                            for x in seite.eval_on_selector_all(".eh-app-zeile", "z => z.map((e) => e.dataset.app)")))
+        seite.get_by_role("button", name="Alle", exact=True).click()
+        # Lesezeichen von früher führen weiter (#erinnerungen -> Reiter Regeln, aufgeklappt; alte Bereiche -> App)
         seite.evaluate("location.hash = '#erinnerungen'")
         seite.wait_for_selector(".eh-abschnitt.offen[data-bereich=erinnerungen]")
+        seite.evaluate("location.hash = '#inhalte/youtube'")
+        seite.wait_for_selector(".eh-detail-kopf h2:has-text('YouTube')")
+        seite.evaluate("location.hash = '#regeln/franzi'")
+        seite.wait_for_selector(".eh-abschnitt.offen[data-bereich=franzi]")
         seite.click(".eh-leiste >> text=Heute")
         seite.click(".eh-abschnitt[data-bereich=statistik] .eh-abschnitt-kopf")
         seite.wait_for_selector(".eh-abschnitt.offen[data-bereich=statistik] .eh-abschnitt-inhalt")
@@ -178,7 +210,7 @@ class ElternAmHandy(unittest.TestCase):
 
     def test_hoerbuch_app_anlegen_und_plex_mit_limit(self):
         seite = self.anmelden()
-        self.bereich(seite, "apps")
+        seite.click(".eh-leiste >> text=Apps")
         seite.click("text=➕ Neue App anlegen")
         seite.click("text=🎧 Hörbuch-Ordner")
         neu = seite.locator(".eh-neu")
@@ -189,8 +221,7 @@ class ElternAmHandy(unittest.TestCase):
         app = self.hub.app("gute-nacht-hoerbuecher")
         self.assertEqual((app["typ"], app["zeit"], app["start"]), ("hoerbuch", "frei", "http://server:8080/share/AbCd1234"))
         # Plex: tagsüber frei, nachts gesperrt - in der Sperrzeit "Schule" erlauben, "Nacht" bleibt aus
-        seite.click(".eh-app >> text=Plex")
-        offen = seite.locator(".eh-app[open]")
+        offen = self.app(seite, "plex")
         offen.locator(".eh-chips-breit >> text=Schule").click()
         self.gespeichert(seite)
         self.assertEqual(self.hub.app("plex")["sperr_erlaubt"], ["Schule"])
@@ -223,14 +254,13 @@ class ElternAmHandy(unittest.TestCase):
         self.gespeichert(seite)
         self.assertIn(["2027-05-07", "2027-05-07"], self.hub._regeln()["ferien"])
         # Apps: Klassenkiste nur mit eigenem Limit, Snake ausschalten
-        self.bereich(seite, "apps")
-        seite.click(".eh-app[data-app=klassenkiste] summary")
-        offen = seite.locator(".eh-app[open]")
+        offen = self.app(seite, "klassenkiste")
         offen.locator(".eh-segment").get_by_role("button", name="Nur eigenes Limit", exact=True).click()
         self.gespeichert(seite)
         kk = self.hub.app("klassenkiste")
         self.assertEqual((kk["zeit"], kk["limit_min"]), ("frei", {"schultag": 30, "frei": 60}))
-        seite.locator(".eh-app[data-app=spiel-snake] summary .eh-schalter").click()
+        seite.click(".eh-leiste >> text=Apps")
+        seite.locator(".eh-app-zeile[data-app=spiel-snake] .eh-schalter").click()
         self.gespeichert(seite)
         self.assertIs(self.hub.app("spiel-snake")["aktiv"], False)
         self.assertNotIn("spiel-snake", [k["id"] for k in self.hub.kacheln()])
@@ -249,14 +279,95 @@ class ElternAmHandy(unittest.TestCase):
         seite.screenshot(path=os.path.join(FOTOS, "eltern-46.png"), full_page=True)
         self.assertEqual(self.fehler, [])
 
+    def test_6939_zeit_fuer_alle_eines_bereichs(self):
+        """6.9.39: Eine Sammel-Einstellung setzt alle Apps eines Bereichs (eingebaute und eigene); einzeln abweichen geht weiter."""
+        seite = self.anmelden()
+        seite.click(".eh-leiste >> text=Apps")
+        gruppe = seite.locator(".eh-gruppe[data-gruppe=spiele]")
+        gruppe.locator(".eh-alle > summary").click()
+        gruppe.locator(".eh-alle .eh-segment").get_by_role("button", name="Nur eigenes Limit", exact=True).click()
+        gruppe.locator(".eh-alle .eh-zeile", has_text="Schultag").locator("input").fill("25")
+        gruppe.locator(".eh-alle .eh-zeile", has_text="Wochenende").locator("input").fill("50")
+        gruppe.locator(".eh-alle .eh-knopf").click()
+        seite.wait_for_selector(".eh-meldung.zeigen:has-text('übernommen')")
+        for app_id in ("spiel-snake", "spiel-memory", "spiel-steine"):
+            a = self.hub.app(app_id)
+            self.assertEqual((a["zeit"], a["limit_min"]), ("frei", {"schultag": 25, "frei": 50}), app_id)
+        self.assertIn("eigenes Limit · höchstens 25/50 min",
+                      seite.locator(".eh-gruppe[data-gruppe=spiele] .eh-alle > summary small").inner_text())
+        # eigene Apps (Filme: Plex, YouTube) – Gaming-Zeit ohne Limit
+        gruppe = seite.locator(".eh-gruppe[data-gruppe=filme]")
+        gruppe.locator(".eh-alle > summary").click()
+        gruppe.locator(".eh-alle .eh-segment").get_by_role("button", name="Gaming-Zeit", exact=True).click()
+        gruppe.locator(".eh-alle .eh-knopf").click()
+        seite.wait_for_selector(".eh-gruppe[data-gruppe=filme] .eh-alle > summary small:has-text('Gaming-Zeit')")
+        self.assertEqual(self.hub.app("plex")["zeit"], "gaming")
+        self.assertEqual(self.hub.app("youtube")["zeit"], "gaming")
+        self.assertNotIn("limit_min", self.hub.app("youtube"))
+        self.assertEqual(self.fehler, [])
+
+    def test_6940_klaenge_paket_ereignis_ordner(self):
+        """6.9.40: Paket setzt alle Ereignisse, ein Ereignis einzeln, Ordner je Art wird gespeichert."""
+        seite = self.anmelden()
+        self.bereich(seite, "klaenge")
+        seite.click(".eh-pakete [data-paket=sanft]")
+        self.gespeichert(seite)
+        kl = self.hub.eltern_daten()["einstellungen"]["klaenge"]
+        self.assertEqual((kl["ereignisse"]["stern"], kl["bedienung_laut"]), ("harfe", 40))
+        seite.select_option(".eh-ereignis[data-ereignis=ok] select", "xylophon")
+        self.gespeichert(seite)
+        self.assertEqual(self.hub.eltern_daten()["einstellungen"]["klaenge"]["ereignisse"]["ok"], "xylophon")
+        seite.click("text=Ordner je Art (8)")
+        seite.fill(".eh-klang-ordner[data-art=tasten] input", "http://server:8080/share/Tasten123")
+        seite.wait_for_selector(".eh-meldung.zeigen", timeout=4000)
+        self.assertEqual(self.hub.klaenge_ordner("tasten"), "http://server:8080/share/Tasten123")
+        self.assertEqual(self.hub.startseite_anzeige()["klang"]["ereignisse"]["ok"], "xylophon")
+        self.hub.einstellungen_aendern({"klaenge": {"ordner": ""}})     # der Test-Ordner ist nicht erreichbar - für die anderen Tests weg
+        self.assertEqual([f for f in self.fehler if "klaenge-eigen" not in f and "502" not in f and "400" not in f], [])
+
+    def test_6941_film_archiv_freigeben_und_belohnung(self):
+        """6.9.41: Ordner eintragen, Inhalt erscheint, Film freigeben und als Belohnung markieren."""
+        from test_hoerbuch import starte_attrappe
+        attrappe, link = starte_attrappe()
+        self.addCleanup(attrappe.shutdown)
+        seite = self.anmelden()
+        seite.click(".eh-leiste >> text=Apps")
+        seite.click(".eh-app-zeile[data-app=archiv-video] .eh-app-name")
+        seite.wait_for_selector(".eh-detail-kopf h2:has-text('Filme')")
+        seite.fill(".eh-karte:has-text('Film-Archiv') input[type=url]", link)
+        seite.wait_for_selector(".eh-archiv[data-pfad='Bibi Blocksberg']", timeout=6000)
+        seite.locator(".eh-archiv[data-pfad='Bibi Blocksberg'] .eh-schalter").click()
+        self.gespeichert(seite)
+        seite.locator(".eh-archiv[data-pfad='Bibi Blocksberg']").get_by_role("button", name="🌙 auch in Sperrzeiten").click()
+        self.gespeichert(seite)
+        a = self.hub.archiv()["video"]
+        self.assertEqual(a["ordner"], link)
+        self.assertEqual(a["freigaben"], {"Bibi Blocksberg": {"frei": False, "sperre": True}})
+        self.assertTrue(any(k["id"] == "archiv-video" for k in self.hub.kacheln()))
+        self.hub.einstellungen_aendern({"archiv": {}})               # für die anderen Tests wieder aus
+        self.assertEqual(self.fehler, [])
+
+    def test_6952_kachel_reihenfolge(self):
+        """6.9.52: ↑↓ in der Apps-Übersicht ordnet die Kacheln eines Bereichs (gilt für die Startseite)."""
+        seite = self.anmelden()
+        seite.click(".eh-leiste >> text=Apps")
+        gruppe = seite.locator(".eh-gruppe[data-gruppe=spiele]")
+        zweite = gruppe.locator(".eh-app-zeile").nth(1).get_attribute("data-app")
+        gruppe.locator(".eh-app-zeile").nth(1).locator(".eh-pfeile button").first.click()      # ↑
+        seite.wait_for_selector(".eh-meldung.zeigen:not(.fehler)", timeout=4000)
+        self.assertEqual(self.hub.einstellungen["kachel_reihenfolge"]["spiele"][0], zweite)
+        self.assertEqual(seite.locator(".eh-gruppe[data-gruppe=spiele] .eh-app-zeile").first.get_attribute("data-app"), zweite)
+        self.assertEqual(self.hub.startseite_anzeige()["reihenfolge"]["spiele"][0], zweite)
+        self.hub.einstellungen_aendern({"kachel_reihenfolge": {}})
+        self.assertEqual(self.fehler, [])
+
     def test_youtube_reihenfolge_mit_pfeilen(self):
         """6.0: Kategorien und Videos lassen sich mit ↑ ↓ umsortieren; gespeichert wird sofort."""
         v = lambda i, t: {"art": "video", "id": i * 11, "titel": t}
         self.hub.einstellungen_aendern({"youtube": {"kategorien": [
             {"name": "Musik", "eintraege": [v("a", "Eins"), v("b", "Zwei"), v("c", "Drei")]}, {"name": "Tiere", "eintraege": []}]}})
         seite = self.anmelden()
-        self.bereich(seite, "youtube")
-        karte = seite.locator(".eh-abschnitt[data-bereich=youtube]")
+        karte = self.app(seite, "youtube")
         karte.locator("summary >> text=Musik").click()
         karte.locator("details[open] .eh-eintrag:has-text('Eins') .eh-pfeile >> text=↓").click()
         self.gespeichert(seite)
@@ -267,9 +378,23 @@ class ElternAmHandy(unittest.TestCase):
         self.assertEqual([k["name"] for k in self.hub.youtube()["kategorien"]], ["Tiere", "Musik"])
         self.assertEqual(self.fehler, [])
 
+    def test_standby_test_beim_wecker(self):
+        """6.1: Stand des CEC-Tests und Knopf; das Ergebnis von eingabe.py erscheint."""
+        seite = self.anmelden()
+        self.bereich(seite, "abend")
+        karte = seite.locator(".eh-abschnitt[data-bereich=abend]")
+        karte.locator("text=Fernseher nachts ausschalten").wait_for()
+        karte.locator("text=Noch nicht geprüft").wait_for()
+        karte.locator("text=Jetzt testen").click()
+        karte.locator("text=Test läuft").wait_for()
+        self.assertEqual(self.hub.cec["befehl"], "test")
+        self.hub.cec_test_ergebnis(aus=True, an=True)
+        karte.locator("text=Der Wecker kann den Fernseher einschalten").wait_for(timeout=8000)
+        self.assertEqual(self.fehler, [])
+
     def test_bass_songs_als_felder(self):
         seite = self.anmelden()
-        self.bereich(seite, "musik")
+        self.app(seite, "spiel-bass")
         seite.click("text=+ Song")
         song = seite.locator(".eh-eintrag.spalte").last
         song.locator("input[type=text]").fill("Seven Nation Army")

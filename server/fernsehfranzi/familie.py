@@ -279,7 +279,7 @@ class Familie:
     def zeitende(self):
         """Vom Hub, wenn das Tagesbudget aufgebraucht ist (nach dem Speichern und Zurück)."""
         if self.einstellungen()["tv_aus_bei_zeitende"]:
-            self.hub.cec_befehl("standby")
+            self.hub.cec_befehl("standby")          # tagsüber: der Wecker ist hier kein Thema
 
     # ------------------------------------------------------------ Bewegungspause
     def _bewegung(self, e, jetzt, app, sekunden, aktiv):

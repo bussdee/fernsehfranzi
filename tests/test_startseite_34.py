@@ -63,7 +63,7 @@ class Startseite34(unittest.TestCase):
         seite.on("pageerror", lambda e: self.fehler.append(str(e)))
         seite.add_init_script("window.__ffHoerbuch = { schwarzS: 2, minuteMs: 3000 };")
         seite.goto("http://127.0.0.1:8765/" + anker)
-        seite.wait_for_selector(".kachel")
+        seite.wait_for_selector(".kachel", state="attached")   # 6.8.12: hinter offenem Fenster ausgeblendet
         return seite
 
     def test_gesperrte_kacheln_grau_mit_symbol(self):
@@ -130,7 +130,8 @@ class Startseite34(unittest.TestCase):
             const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let max = 0, summe = 0;
             for (let i = 0; i < d.length; i += 4) { const v = Math.max(d[i], d[i+1], d[i+2]); max = Math.max(max, v); summe += v; }
             return { max, mittel: summe / (d.length / 4) }; }""")
-        self.assertLess(hell["mittel"], 6, "Einschlafbild ist sehr dunkel")
+        # Sterne, Schnuppe und Vogel sind zufällig - der Mittelwert liegt um 5-6; 7 von 255 ist weiter sehr dunkel (6.8.0)
+        self.assertLess(hell["mittel"], 7, "Einschlafbild ist sehr dunkel")
         self.assertLess(hell["max"], 150, "nichts grell")
         self.assertGreater(hell["max"], 20, "aber Mond und Sterne sind zu sehen")
         seite.wait_for_timeout(300)

@@ -45,7 +45,7 @@ export default {
       if (!d) { inhalt.replaceChildren(hinweisZeile("Einen Moment, die Klassenkiste wird gefragt …")); return; }
       if (!d.aktiv) { inhalt.replaceChildren(hinweisZeile("Die Schul-Seite ist ausgeschaltet.", "🔒")); return; }
       if (!d.stand) { inhalt.replaceChildren(hinweisZeile(d.fehler || "Die Klassenkiste wird gerade gefragt …", d.fehler ? "⚠️" : "⏳")); return; }
-      punkte.textContent = d.zeit ? `Stand ${d.zeit}` + (d.fehler ? " · gerade nicht erreichbar" : "") : "";
+      punkte.textContent = d.zeit ? `Stand ${d.zeit}` + (d.fehler || d.hinweis ? " · gerade nicht erreichbar" : "") : "";
       const e = eintraege();
       z.wahl = Math.min(z.wahl, Math.max(0, e.length - 1));
       const leer = ["Heute kein Unterricht eingetragen.", "Keine offenen Hausaufgaben. 🎉", "Keine Termine in nächster Zeit.",

@@ -65,6 +65,11 @@ export function oeffneHoerbuch(box, api, app, opt = {}) {
     if (an && !himmelStopp) { himmelStopp = sternenhimmel(himmel); merke(true); }
     if (!an && himmelStopp) { himmelStopp(); himmelStopp = null; }
   };
+  /* 6.1: Schlaf-Zeit vorbei - geht der Fernseher in den Standby, hält auch der Sternenhimmel an (der Pi spart Strom);
+     bleibt er wegen des Weckers an, läuft der Nachthimmel weiter */
+  const schlafEnde = () => api.sende("/api/hoerbuch/schlaf-ende", {}).then((a) => {
+    if (a?.standby && himmelStopp) { himmelStopp(); himmelStopp = null; }
+  }).catch(() => {});
   const wahlBox = el("div", { class: "hb-wahl", hidden: true });
   box.classList.add("hoerbuch");
   box.append(el("div", { class: "overlay-kopf" }, el("div", {}, kopfTitel, ort), hilfe),
@@ -223,7 +228,7 @@ export function oeffneHoerbuch(box, api, app, opt = {}) {
       if (rest <= 0) {
         z.gestartet = true;                                /* nichts mehr automatisch */
         dunkel(true);
-        api.sende("/api/hoerbuch/schlaf-ende", {}).catch(() => {});
+        schlafEnde();
       }
     }
   }
@@ -234,7 +239,14 @@ export function oeffneHoerbuch(box, api, app, opt = {}) {
       spiele(z.wiedergabe, z.nr + 1, z.ordner, 0);
       if (warDunkel) dunkel(true);                         /* im Dunkeln bleibt es dunkel */
     }
-    else { z.schlafEnde = 0; merke(true); api.hinweis("Das Hörbuch ist zu Ende."); }
+    else {
+      /* 6.1: Zu Ende, während das Kind einschläft (Bild dunkel oder Schlaf-Zeit läuft): wie das Ende der Schlaf-Zeit -
+         der Fernseher geht aus (der Server lässt ihn an, wenn der Wecker ihn sonst nicht wecken könnte) */
+      const imSchlaf = !schwarz.hidden || Boolean(z.schlafEnde);
+      z.schlafEnde = 0; merke(true);
+      if (imSchlaf) { dunkel(true); schlafEnde(); }
+      else api.hinweis("Das Hörbuch ist zu Ende.");
+    }
   });
   audio.addEventListener("error", () => { if (audio.src) api.hinweis("Diese Datei lässt sich nicht abspielen."); });
 
@@ -270,7 +282,7 @@ export function oeffneHoerbuch(box, api, app, opt = {}) {
           z.schlafEnde = 0; z.ausblenden = false;
           merke(true);
           dunkel(true);
-          api.sende("/api/hoerbuch/schlaf-ende", {}).catch(() => {});
+          schlafEnde();
         }
       }, 500);
     }

@@ -256,3 +256,87 @@ details > summary { cursor: pointer; }
 /* 6.0: Reihenfolge mit ↑ ↓ */
 .eh-pfeile { display: inline-flex; gap: 6px; flex: none; }
 .eh-pfeile .eh-knopf.aus { opacity: .3; pointer-events: none; }
+/* 6.8.9: deutlicher Hinweis, wenn etwas angelegt, aber ausgeschaltet ist */
+.eh-warnung { background: #fff3cd; color: #6b4e00; border: 1px solid #f0d27a; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-weight: 600; }
+
+/* ------------------------------------------------------------------ 6.9.38: sechs Reiter, Apps-Übersicht und Detailseite */
+.eh-leiste a { min-width: 0; }
+.eh-leiste a small { font-size: 11px; white-space: nowrap; }
+.eh-app-werkzeug { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 14px; }
+.eh-app-werkzeug .eh-segment { align-self: flex-start; }
+.eh-app-gruppen { display: flex; flex-direction: column; gap: 14px; margin-bottom: 14px; }
+.eh-gruppe { padding: 10px 14px 6px; }
+.eh-gruppe-kopf { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 6px; }
+.eh-gruppe-kopf small { color: var(--leise); font-weight: 600; font-size: 13px; }
+.eh-app-zeile { display: flex; align-items: center; gap: 10px; min-height: 60px; border-top: 1px solid var(--linie); }
+.eh-app-zeile .eh-app-name { background: none; border: 0; color: var(--text); text-align: left; padding: 8px 0; cursor: pointer; font: inherit; }
+.eh-app-zeile .eh-pfeil { color: var(--leise); font-size: 22px; }
+.eh-app-zeile.eh-aus .eh-app-name b { color: var(--leise); text-decoration: line-through; }
+.eh-detail-kopf { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.eh-detail-kopf .eh-reiter-titel { margin: 4px 0 0; }
+.eh-zurueck { color: var(--akzent); text-decoration: none; font-weight: 700; font-size: 15px; }
+.eh-hinweis-warn { background: #4a2a12; color: #ffc98a; border-radius: 12px; padding: 10px 14px; font-size: 14px; margin: 8px 0 12px; }
+.eh-inhalt > .eh-karte + .eh-karte, .eh-inhalt > .eh-karte + .eh-zwischen { margin-top: 14px; }
+/* 6.9.39: Zeit für alle */
+.eh-alle { border-top: 1px solid var(--linie); padding: 6px 0 10px; }
+.eh-alle > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; cursor: pointer;
+  list-style: none; color: var(--akzent); font-weight: 700; }
+.eh-alle > summary::-webkit-details-marker { display: none; }
+.eh-alle > summary small { color: var(--leise); font-weight: 600; text-align: right; }
+.eh-alle .eh-segment { margin: 6px 0; }
+.eh-alle .eh-knopf { margin-top: 8px; }
+/* 6.9.40: Klänge */
+.eh-klang-stand { color: var(--leise); font-weight: 600; }
+.eh-regler { width: 100%; max-width: 150px; accent-color: var(--akzent); }
+.eh-ereignis > span:first-child { font-weight: 600; }
+.eh-eintrag.spalte > .eh-klang { display: flex; gap: 6px; align-items: center; width: 100%; }
+.eh-eintrag.spalte > .eh-klang select { flex: 1; min-width: 0; max-width: none; }
+.eh-pakete { margin-top: 4px; }
+/* 6.9.41: Archiv */
+.eh-archiv-liste .eh-archiv .eh-zeile span:first-child { overflow-wrap: anywhere; }
+/* 6.9.42: eigene Hintergründe */
+.eh-hg-galerie { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.eh-hg { margin: 0; background: var(--flaeche-2); border-radius: 12px; overflow: hidden; border: 1px solid var(--linie); }
+.eh-hg img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.eh-hg figcaption { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; font-size: 13px; }
+.eh-hg figcaption .eh-knopf { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+.eh-datei { width: 100%; }
+.eh-hg-wahl .eh-rechts select { max-width: 44vw; }
+/* 6.9.52: Bild-Plätze */
+.eh-bp { gap: 12px; }
+.eh-bp-bild { width: 84px; height: 64px; object-fit: contain; border-radius: 8px; background: repeating-conic-gradient(#2a3348 0 25%, #1c2333 0 50%) 0 0 / 14px 14px; flex: none; }
+.eh-bp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.eh-bp-text small { color: var(--leise); font-size: 12px; }
+.eh-bp-text .eh-datei { font-size: 12px; }
+/* 6.9.52: Reihenfolge der Kacheln */
+.eh-app-zeile .eh-pfeile { display: flex; flex-direction: column; gap: 2px; flex: none; }
+.eh-app-zeile .eh-pfeile .eh-knopf.rund { width: 30px; height: 24px; min-height: 24px; padding: 0; font-size: 13px; }
+.eh-app-zeile .eh-pfeile .eh-knopf:disabled { opacity: .3; }
+
+/* 6.9.59: Aufgeräumt - Shop als aufklappbare Raster, am PC breiter und zweispaltig */
+.eh-shop-gruppe { border-top: 1px solid var(--linie); }
+.eh-shop-gruppe > summary { cursor: pointer; padding: 12px 2px; font-weight: 800; list-style: none; }
+.eh-shop-gruppe > summary::before { content: "▸ "; color: var(--akzent); }
+.eh-shop-gruppe[open] > summary::before { content: "▾ "; }
+.eh-shop-raster { display: grid; grid-template-columns: 1fr; gap: 0 18px; padding-bottom: 10px; }
+@media (min-width: 1000px) {
+  #eltern { max-width: 1240px; }
+  .eh-shop-raster { grid-template-columns: 1fr 1fr; }
+  /* Bereichs-Übersicht als Kacheln */
+  .eh-inhalt:has(> .eh-abschnitt) { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .eh-inhalt > h2, .eh-inhalt > .eh-titel { grid-column: 1 / -1; }
+  .eh-abschnitt.offen { grid-column: 1 / -1; }
+  .eh-abschnitt.offen .eh-abschnitt-inhalt { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  .eh-abschnitt.offen .eh-abschnitt-inhalt > .eh-karte { margin: 0 !important; }
+  .eh-abschnitt.offen .eh-abschnitt-inhalt > .eh-karte:only-child { grid-column: 1 / -1; }
+}
+@media (min-width: 1400px) { .eh-shop-raster { grid-template-columns: 1fr 1fr 1fr; } }
+
+/* 6.9.65: Mein-Tag-Listen zuklappbar */
+.eh-mt-gruppe { border: 1px solid var(--linie); border-radius: 14px; background: var(--flaeche-2, rgba(255,255,255,.03)); }
+.eh-mt-gruppe + .eh-mt-gruppe { margin-top: 10px; }
+.eh-mt-gruppe > summary { cursor: pointer; padding: 12px 14px; list-style: none; }
+.eh-mt-gruppe > summary::before { content: "▸ "; color: var(--akzent); }
+.eh-mt-gruppe[open] > summary::before { content: "▾ "; }
+.eh-mt-gruppe > summary small { color: var(--leise, #9aa4bd); }
+.eh-mt-gruppe > .eh-meintag { border: 0; padding: 0 14px 14px; }

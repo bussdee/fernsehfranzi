@@ -1,7 +1,7 @@
 /* FernsehFranzi 5.0 - Wetter: jetzt, die nächsten Stunden, fünf Tage, Trockenfenster („Wann können wir raus?“),
  * Anzieh-Tipp und - wenn es gerade trocken ist und die Eltern es erlauben - ein Spiel für draußen aus den Kinderwelten.
  * Die Daten holt der Server von Open-Meteo (Regeln wie im Familien Dashboard). STOP zurück. */
-import { el, bild } from "../gemeinsam.js";
+import { el, bild, franziEcke } from "../gemeinsam.js";
 import { kopf } from "./kern.js";
 import { hinweisZeile } from "./seite.js";
 
@@ -38,6 +38,11 @@ export default {
         : el("div", { class: "wetter-fenster" }, el("div", { class: "wf-titel", text: "🚲 Wann können wir raus?" }),
           el("div", { class: "wf-zeile", text: "Heute und morgen leider kein längeres trockenes Fenster bei Tageslicht." }));
       const teile = [jetzt, stunden, el("div", { class: "wetter-unten" }, tage, fenster)];
+      /* 6.9.62: Franzi zeigt, wie sich das Wetter anfühlt - und zieht sich passend an */
+      const sonnig = /☀/.test(d.symbol || ""), kalt = d.temp <= 3;
+      teile.push(franziEcke(d.regen.nass ? "muede" : kalt ? "grummelig" : sonnig ? "jubel" : "froh",
+        { text: d.regen.nass ? "Regenjacke nicht vergessen!" : kalt ? "Brrr – Mütze auf!" : sonnig ? "Ab nach draußen!" : "",
+          sachen: kalt ? { extra: "schal" } : sonnig ? { brille: "sonne" } : null }));
       if (tipp && d.draussen_gut) teile.push(el("div", { class: "wetter-tipp", text: `🌳 Draußen-Idee: ${tipp.titel} – ${tipp.anriss}` }));
       if (w.fehler) teile.push(el("div", { class: "seite-zeile", text: w.fehler }));
       inhalt.replaceChildren(el("div", { class: "wetter-seite" }, ...teile));
